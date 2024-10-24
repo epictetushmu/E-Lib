@@ -18,5 +18,6 @@ Simple library managment webApp
   2. Find suitable release
   3. Type ```git version``` to verify Git was installed 
   4. Setup your identity:
+     
          ```$ git config --global user.name  "Username"
             $ git config --global user.email "usernameEmail@example.com ```  
