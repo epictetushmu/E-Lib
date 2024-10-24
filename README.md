@@ -16,6 +16,4 @@ Simple library managment webApp
 ## Git setup: 
   1. https://git-scm.com/downloads
   2. Find suitable release
-  3. Type ```cmd
-     git version
-     ``` to verify Git was installed 
+  3. Type ```cmd git version``` to verify Git was installed 
