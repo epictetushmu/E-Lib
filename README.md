@@ -21,3 +21,12 @@ Simple library managment webApp
      
          $ git config --global user.name  "Username"
          $ git config --global user.email "usernameEmail@example.com  
+
+
+## General use: 
+  1. ``` $ git pull ``` To get changes
+  2. Code Code Code ...
+  3. Stage your changes ```  $ git add <filesToTrack> ```
+     Hint use . to track all changed files
+  4. Commit your changes ``` $ git commit -m "Commit message" ```
+  5. Push your changes ``` $ git push ```  
