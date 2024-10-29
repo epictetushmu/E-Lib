@@ -20,7 +20,7 @@ Simple library managment webApp
   4. Setup your identity:
      
          $ git config --global user.name  "Username"
-         $ git config --global user.email "usernameEmail@example.com  
+         $ git config --global user.email "usernameEmail@example.com" 
 
 
 ## General use: 
