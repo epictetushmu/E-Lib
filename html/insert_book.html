@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add Book</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
@@ -64,26 +63,6 @@
         </form>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="../js/insert_book.js"></script>
-    <script> 
-        const form = document.getElementById('bookForm');
-
-        form.addEventListener('submit', (event) => {
-            event.preventDefault();
-            const formData = {
-                title: document.getElementById("title").value,
-                author: document.getElementById("author").value,
-                year: document.getElementById("year").value,
-                copies: document.getElementById("copies").value, 
-                categories: Array.from(document.getElementById("category").selectedOptions),
-                description: document.getElementById("description").value,
-                image: document.getElementById("cover").value
-            };
-
-            // Call the external function
-            handleFormSubmit(formData);
-        });
-    </script>
 </body>
 </html>
