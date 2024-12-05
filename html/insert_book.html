@@ -7,6 +7,10 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <style>
+    body {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+    
     /* Wrapper to match Bootstrap input styling */
     .custom-select-wrapper {
         position: relative;
@@ -84,6 +88,55 @@
     .hidden {
         display: none;
     }
+ 
+    .tooltip.visible {
+        opacity: 1; /* Show the tooltip */
+    }
+    .tooltip {
+        display: block; 
+        position: absolute;
+        background-color: var(--bs-dark);
+        color: var(--bs-light); 
+        padding: 0.375rem 0.75rem; 
+        border-radius: 0.375rem; 
+        font-size: 0.875rem; 
+        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.15);
+        z-index: 1050; 
+        opacity: 0; 
+        transition: opacity 0.15s ease-in-out; 
+        visibility: hidden; 
+        background-color: #212529; 
+    }    
+    
+    .tooltip.visible {
+        opacity: 1; 
+        visibility: visible;
+    }
+    
+    .tooltip::before {
+        content: '';
+        position: absolute;
+        border-style: solid;
+        border-width: 0.5rem;
+        display: block;
+        z-index: 1060;
+    }
+    
+    .tooltip.top::before {
+        border-color: transparent transparent var(--bs-dark) transparent;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    .tooltip.bottom::before {
+        border-color: var(--bs-dark) transparent transparent transparent;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    
 </style>
 
 <body>
@@ -103,21 +156,58 @@
     <div class="container mt-5">
         <h2>Add a New Book</h2>
         <form id="bookForm">
+
             <div class="mb-3">
                 <label for="title" class="form-label">Book Title</label>
-                <input type="text" class="form-control" id="title" required>
+                <input type="text" class="form-control" id="title" data-description="Enter the book title">
+                <div class="tooltip hidden">Enter the book title</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="author" class="form-label">Author</label>
+                <input type="text" class="form-control" id="author" data-description="Enter the author's name">
+                <div class="tooltip hidden">Enter the author's name</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="category" class="form-label">Category</label>
+                <div class="custom-select-wrapper" data-description="Select one or more categories">
+                    <div id="customDropdown" class="custom-select-display">Select categories</div>
+                    <ul id="dropdownOptions" class="custom-dropdown hidden">
+                        <li data-value="Literature">Literature</li>
+                        <li data-value="Science Fiction">Science Fiction</li>
+                        <li data-value="Non-Fiction">Non-Fiction</li>
+                        <li data-value="Fantasy">Fantasy</li>
+                    </ul>
+                </div>
+                <div class="tooltip hidden">Select one or more categories</div>
+            </div>
+
+            
+
+            <div class="mb-3">
+                <label for="title" class="form-label">Book Title</label>
+                <input type="text" class="form-control" id="title" required data-description="Enter the title of the book">
             </div>
             <div class="mb-3">
                 <label for="author" class="form-label">Author</label>
-                <input type="text" class="form-control" id="author">
+                <input type="text" class="form-control" id="author" data-description="Enter the author's name">
             </div>
             <div class="mb-3">
                 <label for="year" class="form-label">Publication Year</label>
-                <input type="number" class="form-control" id="year">
+                <input type="number" class="form-control" id="year" data-description="Enter the year the book was published">
+            </div>
+            <div class="mb-3">
+                <label for="copies" class="form-label">Number of Copies</label>
+                <input type="number" class="form-control" id="copies" required data-description="Enter the number of copies available">
+            </div>
+            <div>
+                <label for="description" class="form-label">Description</label>
+                <textarea class="form-control" id="description" rows="3" data-description="Provide a brief description of the book"></textarea>
             </div>
             <div class="mb-3">
                 <label for="category" class="form-label">Category</label>
-                <div class="custom-select-wrapper">
+                <div class="custom-select-wrapper" data-description="Select one or more categories for the book">
                     <div id="customDropdown" class="custom-select-display">Select categories</div>
                     <ul id="dropdownOptions" class="custom-dropdown hidden">
                         <li data-value="Literature">Literature</li>
@@ -134,17 +224,10 @@
                 </div>
             </div>
             <div class="mb-3">
-                <label for="copies" class="form-label">Number of Copies</label>
-                <input type="number" class="form-control" id="copies" required>
-            </div>
-            <div>
-                <label for="description" class="form-label">Description</label>
-                <textarea class="form-control" id="description" rows="3"></textarea>
-            </div>
-            <div class="mb-3">
                 <label for="cover" class="form-label">Cover Image</label>
-                <input type="file" class="form-control" id="cover">
+                <input type="file" class="form-control" id="cover" data-description="Upload the book's cover image">
             </div>
+            
             <button type="submit" class="btn btn-primary">Insert</button>
             <button type="button" class="btn btn-secondary" id="clearFormBtn" onclick="clearForm()">Clear Form</button>
         </form>
@@ -158,12 +241,10 @@
             const dropdownOptions = document.getElementById("dropdownOptions");
             const select = document.getElementById("category");
         
-            // Toggle dropdown visibility
             dropdown.addEventListener("click", () => {
                 dropdownOptions.classList.toggle("hidden");
             });
         
-            // Handle option selection
             dropdownOptions.addEventListener("click", (event) => {
                 const target = event.target;
         
@@ -171,32 +252,61 @@
                     const value = target.getAttribute("data-value");
                     const option = Array.from(select.options).find(opt => opt.value === value);
         
-                    // Toggle selection in the real <select>
                     option.selected = !option.selected;
         
-                    // Update displayed selection
                     updateDisplay();
                 }
             });
         
-            // Function to update the dropdown display
             const updateDisplay = () => {
                 const selected = Array.from(select.selectedOptions).map(option => option.text).join(", ");
                 dropdown.textContent = selected || "Select categories";
             };
         
-            // Close dropdown when clicking outside
             document.addEventListener("click", (event) => {
                 if (!dropdown.parentElement.contains(event.target)) {
                     dropdownOptions.classList.add("hidden");
                 }
             });
         });
-
+        
         function clearForm() {
             document.getElementById("bookForm").reset();
             document.getElementById("customDropdown").textContent = "Select categories";
         }
+
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const elementsWithDescriptions = document.querySelectorAll("input, textarea, .custom-select-wrapper");
+        
+            elementsWithDescriptions.forEach(element => {
+                element.addEventListener("mouseenter", showTooltip);
+                element.addEventListener("mouseleave", hideTooltip);
+            });
+        
+            function showTooltip(event) {
+                const target = event.target;
+                const tooltip = target.parentElement.querySelector(".tooltip");
+        
+                if (tooltip) {
+                    const rect = target.getBoundingClientRect();
+                    tooltip.style.top = `${window.scrollY + rect.top - tooltip.offsetHeight - 10}px`;
+                    tooltip.style.left = `${window.scrollX + rect.left}px`;
+        
+                    tooltip.classList.add("visible");
+                }
+            }
+        
+            function hideTooltip(event) {
+                const target = event.target;
+                const tooltip = target.parentElement.querySelector(".tooltip");
+        
+                if (tooltip) {
+                    tooltip.classList.remove("visible");
+                }
+            }
+        });
+           
         
     </script>
 </body>
