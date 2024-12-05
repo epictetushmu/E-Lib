@@ -63,14 +63,12 @@ document.getElementById("bookForm").addEventListener("submit", (event) => {
         image: document.getElementById("cover").files[0] // Use `.files[0]` to get the file object
     };
 
-    // Call the external function to process formData
     handleFormSubmit(formData);
 
-    // Display a success message
     alert("Book added successfully!");
+    clearForm();
 });
 
-// Clear form function
 function clearForm() {
     document.getElementById("bookForm").reset();
 }
