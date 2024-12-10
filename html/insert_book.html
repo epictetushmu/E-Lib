@@ -71,7 +71,17 @@
         overflow-y: auto;
         max-height: 200px; /* Optional to control dropdown height */
     }
-
+    .custom-dropdown.hidden {
+        display: none;
+    }
+    .custom-dropdown li {
+        padding: 5px;
+        cursor: pointer;
+    }
+    .custom-dropdown li.selected {
+        background-color: #007bff;
+        color: white;
+    }
     /* Individual dropdown options */
     .custom-dropdown li {
         padding: 0.5rem 1rem;
@@ -207,7 +217,7 @@
             </div>
             <div class="mb-3">
                 <label for="category" class="form-label">Category</label>
-                <div class="custom-select-wrapper" data-description="Select one or more categories for the book">
+                <div class="custom-select-wrapper">
                     <div id="customDropdown" class="custom-select-display">Select categories</div>
                     <ul id="dropdownOptions" class="custom-dropdown hidden">
                         <li data-value="Literature">Literature</li>
@@ -215,13 +225,17 @@
                         <li data-value="Non-Fiction">Non-Fiction</li>
                         <li data-value="Fantasy">Fantasy</li>
                     </ul>
-                    <select id="category" multiple class="hidden">
-                        <option value="Literature">Literature</option>
-                        <option value="Science Fiction">Science Fiction</option>
-                        <option value="Non-Fiction">Non-Fiction</option>
-                        <option value="Fantasy">Fantasy</option>
-                    </select>
+                    <input type="text" id="category" class="form-control" readonly placeholder="Select categories" />
                 </div>
+            </div>
+            <div class="mb-3">
+                <label for="condition" class="form-label">Condition</label>
+                <div class="custom-select-wrapper" data-description="Select condition of the book">
+                <select id="condition" class="form-select">
+                    <option value="New">New</option>
+                    <option value="Used">Used</option>
+                    <option value="Damaged">Damaged</option>
+                </select>
             </div>
             <div class="mb-3">
                 <label for="cover" class="form-label">Cover Image</label>
@@ -306,7 +320,23 @@
                 }
             }
         });
-           
+
+        document.getElementById('customDropdown').addEventListener('click', function () {
+            document.getElementById('dropdownOptions').classList.toggle('hidden');
+        });
+    
+        const options = document.querySelectorAll('#dropdownOptions li');
+        const inputField = document.getElementById('category');
+    
+        options.forEach(option => {
+            option.addEventListener('click', function () {
+                option.classList.toggle('selected');
+                const selectedOptions = [...document.querySelectorAll('#dropdownOptions .selected')]
+                    .map(option => option.textContent)
+                    .join(', ');
+                inputField.value = selectedOptions;
+            });
+        });
         
     </script>
 </body>
