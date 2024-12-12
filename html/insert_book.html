@@ -71,17 +71,7 @@
         overflow-y: auto;
         max-height: 200px; /* Optional to control dropdown height */
     }
-    .custom-dropdown.hidden {
-        display: none;
-    }
-    .custom-dropdown li {
-        padding: 5px;
-        cursor: pointer;
-    }
-    .custom-dropdown li.selected {
-        background-color: #007bff;
-        color: white;
-    }
+
     /* Individual dropdown options */
     .custom-dropdown li {
         padding: 0.5rem 1rem;
@@ -117,36 +107,6 @@
         visibility: hidden; 
         background-color: #212529; 
     }    
-    
-    .tooltip.visible {
-        opacity: 1; 
-        visibility: visible;
-    }
-    
-    .tooltip::before {
-        content: '';
-        position: absolute;
-        border-style: solid;
-        border-width: 0.5rem;
-        display: block;
-        z-index: 1060;
-    }
-    
-    .tooltip.top::before {
-        border-color: transparent transparent var(--bs-dark) transparent;
-        top: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-    
-    .tooltip.bottom::before {
-        border-color: var(--bs-dark) transparent transparent transparent;
-        bottom: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-    
-    
 </style>
 
 <body>
@@ -189,20 +149,16 @@
                         <li data-value="Non-Fiction">Non-Fiction</li>
                         <li data-value="Fantasy">Fantasy</li>
                     </ul>
+                    <select id="category" class="hidden" multiple>
+                        <option value="Literature">Literature</option>
+                        <option value="Science Fiction">Science Fiction</option>
+                        <option value="Non-Fiction">Non-Fiction</option>
+                        <option value="Fantasy">Fantasy</option>
+                    </select>
                 </div>
                 <div class="tooltip hidden">Select one or more categories</div>
             </div>
 
-            
-
-            <div class="mb-3">
-                <label for="title" class="form-label">Book Title</label>
-                <input type="text" class="form-control" id="title" required data-description="Enter the title of the book">
-            </div>
-            <div class="mb-3">
-                <label for="author" class="form-label">Author</label>
-                <input type="text" class="form-control" id="author" data-description="Enter the author's name">
-            </div>
             <div class="mb-3">
                 <label for="year" class="form-label">Publication Year</label>
                 <input type="number" class="form-control" id="year" data-description="Enter the year the book was published">
@@ -214,28 +170,6 @@
             <div>
                 <label for="description" class="form-label">Description</label>
                 <textarea class="form-control" id="description" rows="3" data-description="Provide a brief description of the book"></textarea>
-            </div>
-            <div class="mb-3">
-                <label for="category" class="form-label">Category</label>
-                <div class="custom-select-wrapper">
-                    <div id="customDropdown" class="custom-select-display">Select categories</div>
-                    <ul id="dropdownOptions" class="custom-dropdown hidden">
-                        <li data-value="Literature">Literature</li>
-                        <li data-value="Science Fiction">Science Fiction</li>
-                        <li data-value="Non-Fiction">Non-Fiction</li>
-                        <li data-value="Fantasy">Fantasy</li>
-                    </ul>
-                    <input type="text" id="category" class="form-control" readonly placeholder="Select categories" />
-                </div>
-            </div>
-            <div class="mb-3">
-                <label for="condition" class="form-label">Condition</label>
-                <div class="custom-select-wrapper" data-description="Select condition of the book">
-                <select id="condition" class="form-select">
-                    <option value="New">New</option>
-                    <option value="Used">Used</option>
-                    <option value="Damaged">Damaged</option>
-                </select>
             </div>
             <div class="mb-3">
                 <label for="cover" class="form-label">Cover Image</label>
@@ -320,23 +254,7 @@
                 }
             }
         });
-
-        document.getElementById('customDropdown').addEventListener('click', function () {
-            document.getElementById('dropdownOptions').classList.toggle('hidden');
-        });
-    
-        const options = document.querySelectorAll('#dropdownOptions li');
-        const inputField = document.getElementById('category');
-    
-        options.forEach(option => {
-            option.addEventListener('click', function () {
-                option.classList.toggle('selected');
-                const selectedOptions = [...document.querySelectorAll('#dropdownOptions .selected')]
-                    .map(option => option.textContent)
-                    .join(', ');
-                inputField.value = selectedOptions;
-            });
-        });
+           
         
     </script>
 </body>
