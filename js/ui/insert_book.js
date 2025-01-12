@@ -1,9 +1,13 @@
+import { handleFormSubmit } from '../logic/insert_book.js';
+
 document.addEventListener("DOMContentLoaded", () => {
     const dropdown = document.getElementById("customDropdown");
     const dropdownOptions = document.getElementById("dropdownOptions");
     const select = document.getElementById("category");
     const condition = document.getElementById("condition");
     
+
+    document.getElementById("submitForm").addEventListener("click", handleFormSubmit(event));
 
     condition.addEventListener("change", (event) => {
         const value = event.target.value;

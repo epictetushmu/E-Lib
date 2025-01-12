@@ -85,13 +85,17 @@
                 <input type="file" class="form-control" id="cover" data-description="Upload the book's cover image">
             </div>
             
-            <button type="submit" class="btn btn-primary">Insert</button>
+            <button type="submit" id="submitForm" class="btn btn-primary">Insert</button>
             <button type="button" class="btn btn-secondary" id="clearForm" >Clear Form</button>
         </form>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script type="module" src="../js/main.js"></script>   
     <script type="module" src="../js/ui/insert_book.js"></script>
+    <script type="module" src="../js/logic/insert_book.js"></script>
+    <!-- Add Axios CDN in the <head> section -->
+
 
 </body>
 </html>
