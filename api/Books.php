@@ -57,6 +57,7 @@ class Books {
         $data = json_decode(file_get_contents('php://input'), true);
 
         $title = $data['title'];
+        $author = $data['author']; 
         $description = $data['description'];
         $year = $data['year'];
         $copies = $data['copies'];
@@ -66,7 +67,7 @@ class Books {
         // Validate and sanitize input data as needed
 
         // Insert the book into the database
-        $stmt = $this->book->addBook($title, $description, $year, $copies, $category, $condition);
+        $stmt = $this->book->addBook($title, $description, $year, $author, $copies, $category, $condition);
 
         if ($stmt) {
             echo json_encode(['message' => 'Book added successfully']);
@@ -105,5 +106,5 @@ class Books {
 }
 
 // Handle the API request
-$api = new Api();
+$api = new Books();
 $api->handleRequest();

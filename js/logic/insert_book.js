@@ -4,6 +4,7 @@ export function handleFormSubmit(event) {
     // event.preventDefault();
 
     const titleField = document.getElementById("title");
+    const authorField = document.getElementById("author"); 
     const descriptionField = document.getElementById("description");
     const yearField = document.getElementById("year");
     const copiesField = document.getElementById("copies");
@@ -11,11 +12,13 @@ export function handleFormSubmit(event) {
     const conditionField = document.getElementById("condition");
 
     const titleError = document.getElementById("titleError");
+    const authorError = document.getElementById("authorError"); 
     const descriptionError = document.getElementById("descriptionError");
     const yearError = document.getElementById("yearError");
     const copiesError = document.getElementById("copiesError");
 
     const title = titleField.value.trim();
+    const author = authorField.value.trim(); 
     const description = descriptionField.value.trim();
     const year = yearField.value;
     const copies = copiesField.value;
@@ -73,6 +76,7 @@ export function handleFormSubmit(event) {
             try {
                 const response = await api.post('?api=addBook', {
                     title: title,
+                    author: author, 
                     description: description,
                     year: year,
                     copies: copies,
