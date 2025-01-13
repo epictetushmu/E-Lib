@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const condition = document.getElementById("condition");
     
 
-    document.getElementById("submitForm").addEventListener("submit", (event) => {
+    document.getElementById("submitForm").addEventListener("click", (event) => {
         event.preventDefault();
         handleFormSubmit();
     });

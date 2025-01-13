@@ -1,6 +1,6 @@
 // import axios from 'axios';   
 
-export function handleFormSubmit() {  
+export async function handleFormSubmit() {  
     // event.preventDefault();
 
     const titleField = document.getElementById("title");
@@ -84,7 +84,7 @@ export function handleFormSubmit() {
                     condition: condition
                 });
                 console.log("Form submitted successfully with data:", response.data);
-                alert("Book added successfully!");
+                // alert("Book added successfully!");
                 // document.getElementById("bookForm").reset();
             } catch (error) {
                 console.error('Error adding book:', error.response);
