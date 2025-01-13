@@ -102,7 +102,12 @@ class Books {
             return;
         }
 
-        $title = $_GET['title'] ?? '';
+        $title = $_GET['title'];
+        if(!$title) {
+            $this->respond(400, ['error' => 'Invalid input data']);
+            return;
+        }
+        
         $books = $this->book->searchBooks($title);
         $this->respond(200, $books);
     }
