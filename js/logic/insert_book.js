@@ -1,6 +1,6 @@
 // import axios from 'axios';   
 
-export function handleFormSubmit(event) {  
+export function handleFormSubmit() {  
     // event.preventDefault();
 
     const titleField = document.getElementById("title");
@@ -24,7 +24,7 @@ export function handleFormSubmit(event) {
     const copies = copiesField.value;
     const category = categoryField.value;
     const condition = conditionField.value;
-
+    console.log(title, author, description, year, copies, category, condition);
     let isValid = true;
 
     // if (!title || !/^[a-zA-Z0-9,-]+$/.test(title)) {
@@ -85,7 +85,7 @@ export function handleFormSubmit(event) {
                 });
                 console.log("Form submitted successfully with data:", response.data);
                 alert("Book added successfully!");
-                document.getElementById("bookForm").reset();
+                // document.getElementById("bookForm").reset();
             } catch (error) {
                 console.error('Error adding book:', error.response);
                 alert("Error adding book. Please try again.");

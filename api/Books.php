@@ -1,18 +1,21 @@
 <?php
 require('../db/connection.php');
 require('../models/Books.php');
+require('../models/Category.php');
 
 class Books {
     private $db;
     private $book;
+    private $category; 
 
     public function __construct() {
         // Initialize the database connection and the Book model
         $this->db = new Database();
         $this->book = new Book($this->db->getConnection());
+        $this->category = new Category($this->db->getConnection());
         
         // Enable CORS
-        header("Access-Control-Allow-Origin: http://localhost:8000"); // Allow only your frontend origin
+        header("Access-Control-Allow-Origin: http://localhost:8080"); // Allow only your frontend origin
         header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
         header("Access-Control-Allow-Headers: Content-Type, Authentication, Authorization");
         
@@ -56,6 +59,11 @@ class Books {
 
         $data = json_decode(file_get_contents('php://input'), true);
 
+        if (!$data) {
+            $this->respond(400, ['error' => 'Invalid input data']);
+            return;
+        }
+        
         $title = $data['title'];
         $author = $data['author']; 
         $description = $data['description'];
@@ -65,9 +73,10 @@ class Books {
         $condition = $data['condition'];
 
         // Validate and sanitize input data as needed
+        $category_id = $this->category->addCategory($category);
 
         // Insert the book into the database
-        $stmt = $this->book->addBook($title, $description, $year, $author, $copies, $category, $condition);
+        $stmt = $this->book->addBook($title, $author, $year, $condition, $copies, $description, $category_id);
 
         if ($stmt) {
             echo json_encode(['message' => 'Book added successfully']);
