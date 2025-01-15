@@ -12,9 +12,9 @@ class Category {
 
         if($stmt->execute()){ 
             $stmt->close();
-            return $this->db->insert_id; 
+            return ['status' => true , 'categoryId' => $this->db->insert_id]; 
         }else { 
-            return $stmt->error; 
+            return ['status' => false , 'error' =>$stmt->error]; 
         }
     }
 }

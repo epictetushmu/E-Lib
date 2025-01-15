@@ -17,9 +17,9 @@ class BookCat extends Books{
         $stmt->bind_param("ii", $book_id, $category_id);
         if($stmt->execute()){
             $stmt->close();
-            return $this->db->insert_id;
+            return ['status' => true, 'data' => $this->db->insert_id];
         }else{
-            return $stmt->error;
+            return ['status' => false, 'error' => $stmt->error];
         }
     }   
 }

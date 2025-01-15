@@ -47,8 +47,7 @@ class Categories{
         if ($stmt) {
             echo json_encode(['message' => 'Book added successfully']);
         } else {
-            http_response_code(500);
-            echo json_encode(['message' => 'Error adding book', 'error' => $stmt]);
+           $this->respond(500, data: ['error'=> 'Book not added']);
         }
     }
 

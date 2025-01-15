@@ -27,16 +27,17 @@ class Book {
         // Execute the statement and check if successful
         if ($stmt->execute()) {
             $stmt->close();
-            return $this->db->insert_id; // Return the last inserted book ID
+            $bookId = $this->db->insert_id; // Return the ID of the inserted row
+            return ['status' => true, 'bookId' => $bookId];
         } else {
-            return $stmt->error; // Return the error message if execution fails
+            return ['status'=> false , 'error' => 'Something went wrong']; // Return the error message if execution fails
         }
     }    
 
     // Method to retrieve all books
     public function getAllBooks() {
         $result = $this->db->query("SELECT * FROM book");
-        return $result->fetch_all(MYSQLI_ASSOC);
+        return ['status' => 'success', 'data' => $result->fetch_all(MYSQLI_ASSOC)];
     }
 
     // Method to search books by title
@@ -47,6 +48,7 @@ class Book {
         $stmt->execute();
 
         $result = $stmt->get_result();
-        return $result->fetch_all(MYSQLI_ASSOC);
+        return ['status' => 'success', 'data' => $result->fetch_all(MYSQLI_ASSOC)];
+
     }
 }

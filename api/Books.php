@@ -74,19 +74,29 @@ class Books {
     
         // Insert the book into the database
         $bookId = $this->book->addBook($title, $author, $year, $condition, $copies, $description);
-    
+        
+        if (!$bookId[['status']]) {
+            $this->respond(500, ['message' => 'Error adding book', 'error' => $bookId]);
+            return;
+        }
+
         if ($bookId) {
     
             // Insert categories into the BookCategory table
             foreach ($categories as $category) {
                 $categoryId = $this->category->addCategory($category);
-                $stmt = $this->bookCat->addBookCategory($bookId, $categoryId);
+                if (!$categoryId['status']) {
+                    $this->respond(500, ['message' => 'Error adding category', 'error'=> $categoryId]);
+                    return;
+                }
+                $bookCat = $this->bookCat->addBookCategory($bookId, $categoryId);
+                if (!$bookCat['status']) {
+                    $this->respond(500, ['message' => 'Error adding book category', 'error'=> $bookCat]);
+                    return;
+                }
             }
-    
-            echo json_encode(['message' => 'Book added successfully']);
-        } else {
-            http_response_code(500);
-            echo json_encode(['message' => 'Error adding book', 'error' => $bookId]);
+            $this->respond(200, ['message' => 'Book added successfully', 'data' => $bookId]);
+            return;
         }
     }
     private function getAllBooks($method) {
