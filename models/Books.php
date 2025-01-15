@@ -7,26 +7,27 @@ class Book {
         $this->db = $dbConnection;
     }
 
-    public function addBook($title, $author, $year, $condition, $copies, $description, $category_id) {
+    public function addBook($title, $author, $year, $condition, $copies, $description) {
         // Ensure $year and $copies are integers
         $year = (int) $year;
         $copies = (int) $copies;
-    
+        
         // Prepare the SQL query with positional placeholders
-        $query = "INSERT INTO book (title, author, `publication_year`, `condition`, number_of_copies, `description`, category_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $query = "INSERT INTO book (title, author, `publication_year`, `condition`, number_of_copies, `description`)
+        VALUES (?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->db->prepare($query);
 
         // Check if statement preparation succeeded
         if (!$stmt) {
-        die('Prepare failed: ' . $this->db->error);
+         die('Prepare failed: ' . $this->db->error);
         }
 
-        $stmt->bind_param("ssissis", $title, $author, $year, $condition, $copies, $description, $category_id);
+        $stmt->bind_param("ssissis", $title, $author, $year, $condition, $copies, $description);
         // Execute the statement and check if successful
         if ($stmt->execute()) {
-            return true;
+            $stmt->close();
+            return $this->db->insert_id; // Return the last inserted book ID
         } else {
             return $stmt->error; // Return the error message if execution fails
         }

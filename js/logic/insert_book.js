@@ -1,7 +1,7 @@
 // import axios from 'axios';   
 
-export async function handleFormSubmit() {  
-    // event.preventDefault();
+export async function handleFormSubmit(event) {  
+    event.preventDefault();
 
     const titleField = document.getElementById("title");
     const authorField = document.getElementById("author"); 
@@ -22,9 +22,14 @@ export async function handleFormSubmit() {
     const description = descriptionField.value.trim();
     const year = yearField.value;
     const copies = copiesField.value;
-    const category = categoryField.value;
+    const categoryOptions = categoryField.options;
+    let categories = []; 
+    categories = Array.from(categoryOptions)
+        .filter(option => option.selected)
+        .map(option => option.value);
+
     const condition = conditionField.value;
-    console.log(title, author, description, year, copies, category, condition);
+    console.log(categories);
     let isValid = true;
 
     // if (!title || !/^[a-zA-Z0-9,-]+$/.test(title)) {
@@ -80,7 +85,7 @@ export async function handleFormSubmit() {
                     description: description,
                     year: year,
                     copies: copies,
-                    category: category,
+                    category: categories,
                     condition: condition
                 });
                 console.log("Form submitted successfully with data:", response.data);

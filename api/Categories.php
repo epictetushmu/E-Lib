@@ -29,7 +29,7 @@ class Categories{
                 $this->addCategory($method); 
                 break; 
             default: 
-                $this->respond(status_code: 404 , data: ['error' => 'Endpoint not found']);
+                $this->respond( 404 , data: ['error' => 'Endpoint not found']);
         }
     }
 
@@ -50,5 +50,11 @@ class Categories{
             http_response_code(500);
             echo json_encode(['message' => 'Error adding book', 'error' => $stmt]);
         }
+    }
+
+    private function respond($statusCode, $data) {
+        http_response_code($statusCode);
+        header('Content-Type: application/json');
+        echo json_encode($data);
     }
 }

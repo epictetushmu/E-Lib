@@ -2,18 +2,20 @@
 require('../db/connection.php');
 require('../models/Books.php');
 require('../models/Category.php');
+require('../models/BookCat.php');
 
 class Books {
     private $db;
     private $book;
     private $category; 
+    private $bookCat; 
 
     public function __construct() {
         // Initialize the database connection and the Book model
         $this->db = new Database();
         $this->book = new Book($this->db->getConnection());
         $this->category = new Category($this->db->getConnection());
-        
+        $this->bookCat = new BookCat($this->db->getConnection());
         // Enable CORS
         header("Access-Control-Allow-Origin: http://localhost:8080"); // Allow only your frontend origin
         header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
@@ -49,43 +51,44 @@ class Books {
                 $this->respond(404, ['error' => 'Endpoint not found']);
         }
     }
-
     private function addBook($method) {
-        
         if ($method != 'POST') {
             $this->respond(405, ['error' => 'Method not allowed']);
             return;
         }
-
+    
         $data = json_decode(file_get_contents('php://input'), true);
-
+    
         if (!$data) {
             $this->respond(400, ['error' => 'Invalid input data']);
             return;
         }
-        
+    
         $title = $data['title'];
         $author = $data['author']; 
         $description = $data['description'];
         $year = $data['year'];
         $copies = $data['copies'];
-        $category = $data['category'];
+        $categories = $data['category'];
         $condition = $data['condition'];
-
-        // Validate and sanitize input data as needed
-        $category_id = $this->category->addCategory($category);
-
+    
         // Insert the book into the database
-        $stmt = $this->book->addBook($title, $author, $year, $condition, $copies, $description, $category_id);
-
-        if ($stmt) {
+        $bookId = $this->book->addBook($title, $author, $year, $condition, $copies, $description);
+    
+        if ($bookId) {
+    
+            // Insert categories into the BookCategory table
+            foreach ($categories as $category) {
+                $categoryId = $this->category->addCategory($category);
+                $stmt = $this->bookCat->addBookCategory($bookId, $categoryId);
+            }
+    
             echo json_encode(['message' => 'Book added successfully']);
         } else {
             http_response_code(500);
-            echo json_encode(['message' => 'Error adding book', 'error' => $stmt]);
+            echo json_encode(['message' => 'Error adding book', 'error' => $bookId]);
         }
     }
-
     private function getAllBooks($method) {
         if ($method !== 'GET') {
             $this->respond(405, ['error' => 'Method not allowed']);

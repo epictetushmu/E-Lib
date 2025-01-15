@@ -11,6 +11,7 @@ class Category {
         $stmt->bind_param("s", $category); 
 
         if($stmt->execute()){ 
+            $stmt->close();
             return $this->db->insert_id; 
         }else { 
             return $stmt->error; 
