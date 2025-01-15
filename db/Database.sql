@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Jan 15, 2025 at 05:44 PM
+-- Generation Time: Jan 15, 2025 at 08:33 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -34,8 +34,7 @@ CREATE TABLE `Book` (
   `publication_year` int(11) DEFAULT NULL,
   `condition` varchar(10) DEFAULT NULL,
   `number_of_copies` int(11) DEFAULT NULL,
-  `description` varchar(255) DEFAULT NULL,
-  `category_id` int(11) DEFAULT NULL
+  `description` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -83,8 +82,7 @@ CREATE TABLE `Category` (
 -- Indexes for table `Book`
 --
 ALTER TABLE `Book`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `category_id` (`category_id`);
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `BookCategory`
@@ -138,12 +136,6 @@ ALTER TABLE `Category`
 --
 -- Constraints for dumped tables
 --
-
---
--- Constraints for table `Book`
---
-ALTER TABLE `Book`
-  ADD CONSTRAINT `book_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `Category` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `BookCategory`
