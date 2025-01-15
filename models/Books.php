@@ -50,4 +50,18 @@ class Book {
         return ['status' => 'success', 'data' => $result->fetch_all(MYSQLI_ASSOC)];
 
     }
+
+    public function getBookDetails($bookId) {
+        try{
+            $stmt = $this->db->prepare("SELECT * FROM book WHERE id = ?");
+            $stmt->bind_param("i", $bookId);
+            $stmt->execute();
+
+            $result = $stmt->get_result();
+            $stmt->close();
+            return ['status' => true, 'data' => $result->fetch_assoc()];
+        } catch (\Exception $e) {
+            return ['status' => false, 'error' => $e->getMessage()];   
+        }
+    }
 }

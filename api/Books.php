@@ -47,6 +47,12 @@ class Books {
             case 'searchBooks':
                 $this->searchBooks($method);
                 break;
+            case 'getBookDetails': 
+                $this->getBookDetails($method);
+                break;
+            case 'getCategories':
+                $this->getCategories($method);
+                break;
             default:
                 $this->respond(404, ['error' => 'Endpoint not found']);
         }
@@ -110,6 +116,22 @@ class Books {
         $this->respond(200, $books);
     }
 
+    private function getBookDetails($method) {
+        if ($method !== 'GET') {
+            $this->respond(405, ['error' => 'Method not allowed']);
+            return;
+        }
+
+        $bookId = $_GET['bookId'];
+        if(!$bookId) {
+            $this->respond(400, ['error' => 'Invalid input data']);
+            return;
+        }
+        
+        $book = $this->book->getBookDetails($bookId);
+        $this->respond(200, $book);
+    }
+
     private function searchBooks($method) {
         if ($method !== 'GET') {
             $this->respond(405, ['error' => 'Method not allowed']);
@@ -124,12 +146,33 @@ class Books {
         
         $books = $this->book->searchBooks($title);
         $this->respond(200, $books);
+        return; 
     }
 
     private function respond($statusCode, $data) {
         http_response_code($statusCode);
         header('Content-Type: application/json');
         echo json_encode($data);
+    }
+
+    private function getCategories($method){
+        if ($method !== 'GET') {
+            $this->respond(405, ['error' => 'Method not allowed']);
+            return;
+        }
+
+        $bookId = $_GET['bookId'];
+        if(!$bookId) {
+            $this->respond(400, ['error' => 'Invalid input data']);
+            return;
+        }
+        $categories = $this->category->getBookCategories($bookId);
+        $this->respond(200, $categories);
+        return; 
+
+    }
+    private function getBookId($bookId) {
+        
     }
 }
 
