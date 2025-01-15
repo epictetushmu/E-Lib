@@ -81,19 +81,24 @@ class Books {
             return;
         }
         // Insert categories into the BookCategory table
-        foreach ($categories as $category) {
-            $categoryId = $this->category->addCategory($category);
-            if (!$categoryId['status']) {
-                $this->respond(500, ['message' => 'Error adding category', 'error'=> $categoryId]);
+        try{
+            foreach ($categories as $category) {
+                $categoryId = $this->category->addCategory($category);
+                if (!$categoryId['status']) {
+                    $this->respond(500, ['message' => 'Error adding category', 'error'=> $categoryId]);
+                }
+                $bookCat = $this->bookCat->addBookCategory($bookId['bookId'], $categoryId['categoryId']);
+                if (!$bookCat['status']) {
+                    $this->respond(500, ['message' => 'Error adding book category', 'error'=> $bookCat]);
+                    return;
+                }
             }
-            $bookCat = $this->bookCat->addBookCategory($bookId['bookId'], $categoryId['categoryId']);
-            if (!$bookCat['status']) {
-                $this->respond(500, ['message' => 'Error adding book category', 'error'=> $bookCat]);
-                return;
-            }
+            $this->respond(200, ['message' => 'Book added successfully', 'data' => $bookId]);
+            return;
+        }catch (\Exception $e){
+            $this->respond(500, ['message' => 'Error adding book category', 'error'=> $e->getMessage()]);
+            return;
         }
-        $this->respond(200, ['message' => 'Book added successfully', 'data' => $bookId]);
-        return;
     }
     private function getAllBooks($method) {
         if ($method !== 'GET') {
