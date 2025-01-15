@@ -13,22 +13,21 @@ class Book {
         $copies = (int) $copies;
         
         // Prepare the SQL query with positional placeholders
-        $query = "INSERT INTO book (title, author, `publication_year`, `condition`, number_of_copies, `description`)
+        $query = "INSERT INTO book (title, author, publication_year, `condition`, number_of_copies, `description`)
         VALUES (?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->db->prepare($query);
-
         // Check if statement preparation succeeded
         if (!$stmt) {
          die('Prepare failed: ' . $this->db->error);
         }
 
-        $stmt->bind_param("ssissis", $title, $author, $year, $condition, $copies, $description);
+        $stmt->bind_param("ssisis", $title, $author, $year, $condition, $copies, $description);
         // Execute the statement and check if successful
         if ($stmt->execute()) {
+            $bookId = $stmt->insert_id;
             $stmt->close();
-            $bookId = $this->db->insert_id; // Return the ID of the inserted row
-            return ['status' => true, 'bookId' => $bookId];
+            return ['status' => true, 'data' => 'Book added successfully', 'bookId' => $bookId];
         } else {
             return ['status'=> false , 'error' => 'Something went wrong']; // Return the error message if execution fails
         }

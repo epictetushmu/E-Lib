@@ -58,7 +58,7 @@ class Books {
         }
     
         $data = json_decode(file_get_contents('php://input'), true);
-    
+       
         if (!$data) {
             $this->respond(400, ['error' => 'Invalid input data']);
             return;
@@ -74,30 +74,26 @@ class Books {
     
         // Insert the book into the database
         $bookId = $this->book->addBook($title, $author, $year, $condition, $copies, $description);
-        
-        if (!$bookId[['status']]) {
+        // return $bookId; 
+        // echo($bookId);
+        if (!$bookId['status']) {
             $this->respond(500, ['message' => 'Error adding book', 'error' => $bookId]);
             return;
         }
-
-        if ($bookId) {
-    
-            // Insert categories into the BookCategory table
-            foreach ($categories as $category) {
-                $categoryId = $this->category->addCategory($category);
-                if (!$categoryId['status']) {
-                    $this->respond(500, ['message' => 'Error adding category', 'error'=> $categoryId]);
-                    return;
-                }
-                $bookCat = $this->bookCat->addBookCategory($bookId, $categoryId);
-                if (!$bookCat['status']) {
-                    $this->respond(500, ['message' => 'Error adding book category', 'error'=> $bookCat]);
-                    return;
-                }
+        // Insert categories into the BookCategory table
+        foreach ($categories as $category) {
+            $categoryId = $this->category->addCategory($category);
+            if (!$categoryId['status']) {
+                $this->respond(500, ['message' => 'Error adding category', 'error'=> $categoryId]);
             }
-            $this->respond(200, ['message' => 'Book added successfully', 'data' => $bookId]);
-            return;
+            $bookCat = $this->bookCat->addBookCategory($bookId['bookId'], $categoryId['categoryId']);
+            if (!$bookCat['status']) {
+                $this->respond(500, ['message' => 'Error adding book category', 'error'=> $bookCat]);
+                return;
+            }
         }
+        $this->respond(200, ['message' => 'Book added successfully', 'data' => $bookId]);
+        return;
     }
     private function getAllBooks($method) {
         if ($method !== 'GET') {

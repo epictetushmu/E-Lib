@@ -9,11 +9,6 @@ class Database {
     public function __construct() {
         // Create a new MySQLi connection
         $this->connection = new mysqli($this->host, $this->username, $this->password, $this->dbname);
-
-        // Check connection
-        if ($this->connection->connect_error) {
-            die("Connection failed: " . $this->connection->connect_error);
-        }
     }
 
     // Method to get the connection

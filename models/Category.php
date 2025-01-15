@@ -11,8 +11,9 @@ class Category {
         $stmt->bind_param("s", $category); 
 
         if($stmt->execute()){ 
+            $categoryId = $stmt->insert_id; 
             $stmt->close();
-            return ['status' => true , 'categoryId' => $this->db->insert_id]; 
+            return ['status' => true , 'categoryId' => $categoryId]; 
         }else { 
             return ['status' => false , 'error' =>$stmt->error]; 
         }
