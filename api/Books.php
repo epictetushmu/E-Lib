@@ -1,21 +1,16 @@
 <?php
 require('../db/connection.php');
 require('../models/Books.php');
-require('../models/Category.php');
-require('../models/BookCat.php');
-
+require('./Categories.php');
 class Books {
     private $db;
     private $book;
     private $category; 
-    private $bookCat; 
-
     public function __construct() {
         // Initialize the database connection and the Book model
         $this->db = new Database();
         $this->book = new Book($this->db->getConnection());
-        $this->category = new Category($this->db->getConnection());
-        $this->bookCat = new BookCat($this->db->getConnection());
+        $this->category = new Categories(); 
         // Enable CORS
         header("Access-Control-Allow-Origin: http://localhost:8080"); // Allow only your frontend origin
         header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
@@ -75,32 +70,19 @@ class Books {
         $description = $data['description'];
         $year = $data['year'];
         $copies = $data['copies'];
-        $categories = $data['category'];
         $condition = $data['condition'];
-    
-        // Insert the book into the database
-        $bookId = $this->book->addBook($title, $author, $year, $condition, $copies, $description);
-        // return $bookId; 
-        // echo($bookId);
-        if (!$bookId['status']) {
-            $this->respond(500, ['message' => 'Error adding book', 'error' => $bookId]);
-            return;
-        }
-        // Insert categories into the BookCategory table
+
         try{
-            foreach ($categories as $category) {
-                $categoryId = $this->category->addCategory($category);
-                if (!$categoryId['status']) {
-                    $this->respond(500, ['message' => 'Error adding category', 'error'=> $categoryId]);
-                }
-                $bookCat = $this->bookCat->addBookCategory($bookId['bookId'], $categoryId['categoryId']);
-                if (!$bookCat['status']) {
-                    $this->respond(500, ['message' => 'Error adding book category', 'error'=> $bookCat]);
-                    return;
-                }
+            $bookId = $this->book->addBook($title, $author, $year, $condition, $copies, $description);
+            if (!$bookId['status']) {
+                $this->respond(500, ['message' => 'Error adding book', 'error' => $bookId]);
+                return;
             }
-            $this->respond(200, ['message' => 'Book added successfully', 'data' => $bookId]);
-            return;
+            $response = $this->category->addCategories();
+            if ($response['status']) {
+                $this->respond(200, ['message' => 'Book added successfully', 'data' => $response]);
+                return;
+            }
         }catch (\Exception $e){
             $this->respond(500, ['message' => 'Error adding book category', 'error'=> $e->getMessage()]);
             return;
