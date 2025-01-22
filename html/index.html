@@ -9,39 +9,47 @@
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
         <div class="container">
-            <a class="navbar-brand" href="index.html">Library</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <a class="navbar-brand fw-bold" href="index.html">Library</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="insert_book.html">Add Book</a></li>
-                    <li class="nav-item"><a class="nav-link" href="search_results.html">Search</a></li>
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="insert_book.html">Add Book</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="search_results.html">Search</a>
+                    </li>
                 </ul>
                 <form class="d-flex ms-3">
-                    <input class="form-control me-2" type="search" id="bookToSearch"  placeholder="Search by title" aria-label="Search">
-                    <button class="btn btn-outline-success" id="search" >Search</button>
+                    <input class="form-control me-2" type="search" id="bookToSearch" placeholder="Search by title" aria-label="Search">
+                    <button class="btn btn-success" id="search">Search</button>
                 </form>
             </div>
         </div>
     </nav>
 
+    <!-- Hero Section -->
+    <div class="bg-light py-5">
+        <div class="container text-center">
+            <h1 class="display-4 fw-bold">Welcome to the Epictetus Library</h1>
+            <p class="lead">Discover, explore, and enjoy a world of knowledge.</p>
+        </div>
+    </div>
+
     <!-- Featured Books Section -->
     <div class="container mt-5">
-        <div class="row">
-            <div class="col-md-12">
-                <h1>Welcome to the Library</h1>
-            </div>
-        </div>
-        <div id="searchResults"></div>
-        <h2>Featured Books</h2>
-        <div class="row">
+        <h2 class="fw-bold text-center mb-4">Featured Books</h2>
+        <div class="row g-4">
             <!-- Example Book Card -->
             <div class="col-md-4">
-                <div class="card">
+                <div class="card h-100 shadow-sm">
                     <img src="book-cover.jpg" class="card-img-top" alt="Book Cover">
                     <div class="card-body">
                         <h5 class="card-title">Book Title</h5>
@@ -53,6 +61,19 @@
             <!-- Repeat for more books -->
         </div>
     </div>
+
+    <!-- Search Results Section -->
+    <div class="container mt-5" id="searchResults">
+        <!-- Search results dynamically inserted here -->
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-light py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2025 Library. All rights reserved.</p>
+        </div>
+    </footer>
+
     <script type="module" src="../js/ui/navBar.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
