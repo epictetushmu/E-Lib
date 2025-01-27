@@ -28,18 +28,21 @@ class BookController extends Controller {
     }
 
     public function addBook() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $title = $_POST['title'];
-            $author = $_POST['author'];
-            $description = $_POST['description'];
+        $title = $_POST['title'];
+        $author = $_POST['author'];
+        $description = $_POST['description'];
+        $year = $_POST['year'];
+        $condition = $_POST['condition'];
+        $copies = $_POST['copies'];
+        $description = $_POST['description']; 
+        $category = $_POST['category'];
+        
+        $success = $this->bookService->addBook($title, $author,$year , $condition, $copies,  $description, $category);
 
-            $success = $this->bookService->addBook($title, $author, $description);
-
-            if ($success) {
-                $this->redirect('/');
-            } else {
-                echo "Failed to add book.";
-            }
+        if ($success) {
+            $this->redirect('/');
+        } else {
+            echo "Failed to add book.";
         }
     }
 }

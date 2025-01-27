@@ -1,6 +1,6 @@
 <?php
 require_once('../includes/database.php');
-
+require_once('../models/Category.php');
 class Book {
     private $pdo;
 
@@ -21,11 +21,25 @@ class Book {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function addBook($title, $author, $description) {
-        $stmt = $this->pdo->prepare("INSERT INTO books (title, author, `description`) VALUES (:title, :author, :description)");
-        $stmt->bindParam(':title', $title);
-        $stmt->bindParam(':author', $author);
-        $stmt->bindParam(':description', $description);
-        return $stmt->execute();
+    public function addBook($title, $author, $year, $condition, $copies, $description, $categories) {
+        $sql = "INSERT INTO books (title, author, year, `condition`, copies, description, cover) VALUES (:title, :author, :year, :condition, :copies, :description, :cover)";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindParam(":title", $title);
+        $stmt->bindParam(":author", $author);
+        $stmt->bindParam(":year", $year);
+        $stmt->bindParam(":condition", $condition);
+        $stmt->bindParam(":copies", $copies);
+        $stmt->bindParam(":description", $description);
+        $stmt->execute();
+        $book_id = $this->pdo->lastInsertId();
+        $category = new Categories();
+        foreach ($categories as $category_id) {
+            $categoryId = $category->addCategory($category_id);
+            $stmt = $this->pdo->prepare("INSERT INTO book_categories (book_id, category_id) VALUES (:book_id, :category_id)");
+            $stmt->bindParam("i", $book_id);
+            $stmt->bindParam("i", $categoryId);
+            $stmt->execute();
+        }
+        return $book_id;
     }
 }

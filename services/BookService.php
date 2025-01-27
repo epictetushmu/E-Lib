@@ -16,7 +16,7 @@ class BookService {
         return $this->book->getBookById($id);
     }
 
-    public function addBook($title, $author, $description) {
-        return $this->book->addBook($title, $author, $description);
+    public function addBook($title, $author, $year, $condition, $copies,  $description, $category) {
+        return $this->book->addBook($title, $author,$year , $condition, $copies,  $description, $category);
     }
 }
