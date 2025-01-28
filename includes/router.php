@@ -3,35 +3,40 @@
 require_once('../controllers/BookController.php');
 require_once('../controllers/UserController.php');
 
-// Define the router function
-function handleRoute() {
-    $uri = $_SERVER['REQUEST_URI']; // Get the current URL
-    $method = $_SERVER['REQUEST_METHOD']; // Get the HTTP request method (GET or POST)
+class Router {
+    private $routes = [];
 
-    // Define routes
-    $routes = [
-        '/' => ['GET', 'BookController', 'listBooks'],
-        '/book/(\d+)' => ['GET', 'BookController', 'viewBook'],
-        '/add-book' => ['GET', 'BookController', 'addBookForm'],
-        '/add-book' => ['POST', 'BookController', 'addBook'],
-        '/login' => ['GET', 'UserController', 'showLoginForm'],
-        '/login' => ['POST', 'UserController', 'handleLogin'],
-        '/logout' => ['GET', 'UserController', 'handleLogout'],
-    ];
-
-
-
-    // Loop through the routes and match the URI
-    foreach ($routes as $route => $handler) {
-        if (preg_match("~^$route$~", $uri, $matches) && $method == $handler[0]) {
-            $controller = $handler[1];
-            $action = $handler[2];
-            $controllerInstance = new $controller;
-            call_user_func_array([$controllerInstance, $action], array_slice($matches, 1));
-            return;
-        }
+    public function __construct() {
+        $this->defineRoutes();
     }
 
-    // If no route is matched, show a 404 page
-    echo '404 - Page not found';
+    private function defineRoutes() {
+        $this->routes = [
+            ['method' => 'GET', 'path' => '/', 'handler' => [new BookController(), 'listBooks']],
+            ['method' => 'GET', 'path' => '/book/(\d+)', 'handler' => [new BookController(), 'viewBook']],
+            ['method' => 'GET', 'path' => '/add-book', 'handler' => [new BookController(), 'addBookForm']],
+            ['method' => 'POST', 'path' => '/add-book', 'handler' => [new BookController(), 'addBook']],
+            ['method' => 'GET', 'path' => '/login', 'handler' => [new UserController(), 'showLoginForm']],
+            ['method' => 'POST', 'path' => '/login', 'handler' => [new UserController(), 'handleLogin']],
+            ['method' => 'GET', 'path' => '/logout', 'handler' => [new UserController(), 'handleLogout']],
+        ];
+    }
+
+    public function handleRoute($method, $path) {
+        foreach ($this->routes as $route) {
+            if ($route['method'] === $method && preg_match("#^{$route['path']}$#", $path, $matches)) {
+                array_shift($matches); // Remove the full match from the matches array
+                call_user_func_array($route['handler'], $matches);
+                return;
+            }
+        }
+        // Handle 404 Not Found
+        http_response_code(404);
+        echo "404 Not Found";
+    }
 }
+
+$router = new Router();
+$method = $_SERVER['REQUEST_METHOD'];
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$router->handleRoute($method, $path);
