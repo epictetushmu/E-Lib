@@ -12,11 +12,13 @@ class Router {
 
     private function defineRoutes() {
         $this->routes = [
-            ['method' => 'GET', 'path' => '/', 'handler' => [new BookController(), 'listBooks']],
+            ['method' => 'GET', 'path' => '/book', 'handler' => [new BookController(), 'listBooks']],
             ['method' => 'GET', 'path' => '/book/(\d+)', 'handler' => [new BookController(), 'viewBook']],
             ['method' => 'GET', 'path' => '/add-book', 'handler' => [new BookController(), 'addBookForm']],
             ['method' => 'POST', 'path' => '/add-book', 'handler' => [new BookController(), 'addBook']],
-            ['method' => 'GET', 'path' => '/login', 'handler' => [new UserController(), 'showLoginForm']],
+            ['method' => 'PUT', 'path' => '/book/(\d+)', 'handler' => [new BookController(), 'updateBook']],
+            ['method' => 'GET', 'path' => '/search/(\w+)', 'handler' => [new BookController(), 'searchBooks']],
+            // ['method' => 'GET', 'path' => '/login', 'handler' => [new UserController(), 'showLoginForm']],
             ['method' => 'POST', 'path' => '/login', 'handler' => [new UserController(), 'handleLogin']],
             ['method' => 'GET', 'path' => '/logout', 'handler' => [new UserController(), 'handleLogout']],
         ];

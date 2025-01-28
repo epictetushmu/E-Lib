@@ -14,7 +14,7 @@ class Book {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getBookById($id) {
+    public function getBookDetails($id) {
         $stmt = $this->pdo->prepare("SELECT * FROM books WHERE id = :id");
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
@@ -41,5 +41,12 @@ class Book {
             $stmt->execute();
         }
         return $book_id;
+    }
+
+    public function searchBooks($search) {
+        $stmt = $this->pdo->prepare("SELECT * FROM books WHERE title LIKE :search");
+        $stmt->bindParam(":search", "%$search%");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
