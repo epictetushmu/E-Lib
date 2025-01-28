@@ -19,4 +19,9 @@ class BookService {
     public function addBook($title, $author, $year, $condition, $copies,  $description, $category) {
         return $this->book->addBook($title, $author,$year , $condition, $copies,  $description, $category);
     }
+
+    public function searchBooks($search) {
+        return $this->book->searchBooks($search);
+    }
 }
+
