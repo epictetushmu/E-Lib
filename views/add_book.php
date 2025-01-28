@@ -48,16 +48,16 @@
                 <div class="custom-select-wrapper" data-description="Select one or more categories">
                     <div id="customDropdown" class="custom-select-display">Select categories</div>
                     <ul id="dropdownOptions" class="custom-dropdown hidden">
-                        <li data-value="1">Literature</li>
-                        <li data-value="2">Science Fiction</li>
-                        <li data-value="3">Non-Fiction</li>
-                        <li data-value="4">Fantasy</li>
+                        <li data-value="Literature">Literature</li>
+                        <li data-value="Science Fiction">Science Fiction</li>
+                        <li data-value="Non-Fiction">Non-Fiction</li>
+                        <li data-value="Fantasy">Fantasy</li>
                     </ul>
                     <select id="category" class="hidden" multiple>
-                        <option value="1">Literature</option>
-                        <option value="2">Science Fiction</option>
-                        <option value="3">Non-Fiction</option>
-                        <option value="4">Fantasy</option>
+                        <option value="Literature">Literature</option>
+                        <option value="Science Fiction">Science Fiction</option>
+                        <option value="Non-Fiction">Non-Fiction</option>
+                        <option value="Fantasy">Fantasy</option>
                     </select>
                 </div>
                 <div class="tooltip hidden">Select one or more categories</div>
@@ -91,7 +91,7 @@
             </div>
             
             <button type="submit" id="submitForm" class="btn btn-primary">Insert</button>
-            <button type="button" class="btn btn-secondary" id="clearForm" >Clear Form</button>
+            <button type="button" class="btn btn-secondary" id="clearForm">Clear Form</button>
         </form>
     </div>
     <script type="module" src="../js/ui/navBar.js"></script>
@@ -117,7 +117,7 @@
             formData.append('copies', copies);
             formData.append('description', description);
             formData.append('cover', cover);
-            formData.append('categories', JSON.stringify(categories));
+            formData.append('category', JSON.stringify(categories));
 
             axios.post('/api/add_book.php', formData)
                 .then(response => {
