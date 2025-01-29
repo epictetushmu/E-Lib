@@ -3,14 +3,14 @@
 require_once('../controllers/BookController.php');
 require_once('../controllers/UserController.php');
 
-class Router {
+class Api {
     private $routes = [];
 
     public function __construct() {
-        $this->defineRoutes();
+        $this->defineEndPoints();
     }
 
-    private function defineRoutes() {
+    private function defineEndPoints() {
         $this->routes = [
             ['method' => 'GET', 'path' => '/book', 'handler' => [new BookController(), 'listBooks']],
             ['method' => 'GET', 'path' => '/book/(\d+)', 'handler' => [new BookController(), 'viewBook']],
@@ -38,7 +38,7 @@ class Router {
     }
 }
 
-$router = new Router();
+$router = new Api();
 $method = $_SERVER['REQUEST_METHOD'];
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $router->handleRoute($method, $path);
