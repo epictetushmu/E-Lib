@@ -9,44 +9,40 @@ class Book {
     }
 
     public function getAllBooks() {
-        $stmt = $this->pdo->prepare("SELECT * FROM books");
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $sql = 'SELECT * FROM books';
+        return $this->pdo->execQuery($sql);
     }
 
     public function getBookDetails($id) {
-        $stmt = $this->pdo->prepare("SELECT * FROM books WHERE id = :id");
-        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $sql = " SELECT * FROM books WHERE id = :id";
+        return $this->pdo->execQuery($sql, array(""=> $id));
     }
 
     public function addBook($title, $author, $year, $condition, $copies, $description, $categories) {
         $sql = "INSERT INTO books (title, author, year, `condition`, copies, description, cover) VALUES (:title, :author, :year, :condition, :copies, :description, :cover)";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->bindParam(":title", $title);
-        $stmt->bindParam(":author", $author);
-        $stmt->bindParam(":year", $year);
-        $stmt->bindParam(":condition", $condition);
-        $stmt->bindParam(":copies", $copies);
-        $stmt->bindParam(":description", $description);
-        $stmt->execute();
-        $book_id = $this->pdo->lastInsertId();
+        $book = [
+            "title" => $title,
+            "author" => $author,
+            "year" => $year,
+            "condition" => $condition,
+            "copies" => $copies,
+            "description" => $description,
+            "cover" => "default.jpg"
+        ];
+        $bookId = $this->pdo->execQuery($sql, $book, true); 
+
         $category = new Categories();
         foreach ($categories as $category_id) {
             $categoryId = $category->addCategory($category_id);
-            $stmt = $this->pdo->prepare("INSERT INTO book_categories (book_id, category_id) VALUES (:book_id, :category_id)");
-            $stmt->bindParam("i", $book_id);
-            $stmt->bindParam("i", $categoryId);
-            $stmt->execute();
+            $sql = "INSERT INTO book_categories (book_id, category_id) VALUES (:book_id, :category_id)"; 
+            $this->pdo->execQuery($sql, ["book_id" => $bookId, "category_id" => $categoryId]);
         }
-        return $book_id;
+        return $bookId;
     }
 
     public function searchBooks($search) {
-        $stmt = $this->pdo->prepare("SELECT * FROM books WHERE title LIKE :search");
-        $stmt->bindParam(":search", "%$search%");
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $sql = "SELECT * FROM books WHERE title LIKE :search";
+        return $this->pdo->execQuery($sql, [$search]);
+       
     }
 }

@@ -20,6 +20,22 @@ class Database {
         if (self::$instance == null) {
             self::$instance = new Database();
         }
-        return self::$instance->pdo;
+        return self::$instance;
+    }
+
+    public function execQuery($sql, $params = array(), $returnLastInsertId = false) {
+        try{
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+        
+            if ($returnLastInsertId) {
+                return $this->pdo->lastInsertId();
+            }
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);    
+        }catch (PDOException $e) {
+            echo 'Error:'. $e->getMessage();
+            return false; 
+        }
     }
 }
