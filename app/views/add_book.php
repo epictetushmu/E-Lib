@@ -6,7 +6,6 @@
     <title>Add Book</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
 </head>
 <link rel="stylesheet" href="../styles/insert_book.css">
 
@@ -92,12 +91,43 @@
             </div>
             
             <button type="submit" id="submitForm" class="btn btn-primary">Insert</button>
-            <button type="button" class="btn btn-secondary" id="clearForm" >Clear Form</button>
+            <button type="button" class="btn btn-secondary" id="clearForm">Clear Form</button>
         </form>
     </div>
     <script type="module" src="../js/ui/navBar.js"></script>
     <script type="module" src="../js/ui/insert_book.js"></script>
+    <script>
+        document.getElementById('bookForm').addEventListener('submit', function(event) {
+            event.preventDefault();
 
+            const title = document.getElementById('title').value;
+            const author = document.getElementById('author').value;
+            const year = document.getElementById('year').value;
+            const condition = document.getElementById('condition').value;
+            const copies = document.getElementById('copies').value;
+            const description = document.getElementById('description').value;
+            const cover = document.getElementById('cover').files[0];
+            const categories = Array.from(document.getElementById('category').selectedOptions).map(option => option.value);
 
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('author', author);
+            formData.append('year', year);
+            formData.append('condition', condition);
+            formData.append('copies', copies);
+            formData.append('description', description);
+            formData.append('cover', cover);
+            formData.append('category', JSON.stringify(categories));
+
+            axios.post('/api/add_book.php', formData)
+                .then(response => {
+                    alert('Book added successfully!');
+                    document.getElementById('bookForm').reset();
+                })
+                .catch(error => {
+                    console.error('There was an error adding the book!', error);
+                });
+        });
+    </script>
 </body>
 </html>
