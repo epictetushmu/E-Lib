@@ -15,13 +15,8 @@ class ResponseHandler {
         }
     }
 
-    public static function redirect($status) {
-    if ($status<400) {
-        header("Location: success_page.php");
+    public static function redirect($statusCode , $url) {
+        header('Location: ' . $url, true, $statusCode);
         exit();
-    } else {
-        header("Location: error_page.php");
-        exit();
-    }
     }
 }

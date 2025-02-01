@@ -22,9 +22,9 @@ class UserController extends Controller {
         if ($user && $user['password'] === $password) {
             session_start();
             $_SESSION['user'] = $user;
-            $this->respond->redirect('');    
+            $this->respond->redirect('301', '');    
         } else {
-            echo "Invalid credentials!";
+            $this->respond->redirect('304',  '');
         }
     }
 
