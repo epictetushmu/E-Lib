@@ -1,3 +1,6 @@
 <?php
-require_once('../includes/router.php');
-handleRoute();
+require_once('../router/Router.php');
+
+$router = new Router(); 
+$router->handleRequest();
+include('../app/views/home.php');
