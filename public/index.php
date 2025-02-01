@@ -1,4 +1,6 @@
 <?php
-require_once('../includes/router.php');
-require_once('../includes/api.php');
-// handleRoute();
+require_once('../router/Router.php');
+
+$router = new Router(); 
+$router->handleRequest();
+include('./index.php')
