@@ -15,24 +15,12 @@ class Router {
         $method = $_SERVER['REQUEST_METHOD'];
         $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-        if ($this->isApiRequest($path)) {
+        if (strpos($path, '/api') === 0) {
             $this->apiRouter->handleRequest($method, $path);
         } else {
             $this->pageRouter->handleRequest($path);
         }
     }
 
-    private function isApiRequest($path) {
-        // Define API prefixes (adjust if necessary)
-        $apiPrefixes = ['/api', '/book', '/search', '/login', '/logout', '/add-book'];
-
-        foreach ($apiPrefixes as $prefix) {
-            if (strpos($path, $prefix) === 0) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }
 
