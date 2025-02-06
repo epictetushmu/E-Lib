@@ -1,5 +1,7 @@
 {
     "require": {
-        "firebase/php-jwt": "^6.11"
+        "firebase/php-jwt": "^6.11",
+        "jasig/phpcas": "^1.3",
+        "apereo/phpcas": "^1.3"
     }
 }
