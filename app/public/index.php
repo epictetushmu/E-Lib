@@ -7,4 +7,3 @@ require_once('../router/router.php');
 
 $router = new Router(); 
 $router->handleRequest();
-include('../app/views/home.php');
