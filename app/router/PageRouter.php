@@ -31,20 +31,22 @@ class PageRouter{
             ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
             ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'updateBook']],
             ['path' => '/search/(\w+)', 'handler' => [new PageController(), 'searchBooks']],
+            ['path' => '/error', 'handler' => [new PageController(), 'error']]
         ];            
     }
 
     public function handleRequest($path) {
         foreach ($this->routes as $route) {
-            if ($route['path'] === $path) {
+            if (preg_match('#^' . $route['path'] . '$#', $path, $matches)) {
+                echo $route['path'];
                 call_user_func($route['handler']);
                 return;
             }
         }
-        
-        ResponseHandler::respond($path,  'Page not found');
-        include('../views/404.php'); // Load a custom 404 page
-    }
+    
+        ResponseHandler::respond('/404ß', "Page not found");
+        include('../views/404.php'); // Load custom 404 page
+    }    
 
     private function setSecurityHeaders() {
         header('X-Content-Type-Options: nosniff');

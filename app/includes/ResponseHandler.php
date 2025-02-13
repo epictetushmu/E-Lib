@@ -15,7 +15,7 @@ class ResponseHandler {
         }
     }
 
-    public static function redirect($statusCode , $url) {
+    public static function redirect($url , $statusCode = 303) {
         header('Location: ' . $url, true, $statusCode);
         exit();
     }
