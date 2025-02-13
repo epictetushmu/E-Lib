@@ -1,6 +1,7 @@
 <?php
 require_once('../includes/database.php');
-require_once('../models/Category.php');
+require_once('../models/Categories.php');
+
 class Book {
     private $pdo;
 

@@ -1,7 +1,8 @@
 <?php 
-require_once('../views/PageRouter.php');
+// require_once('../views/PageRouter.php');
 require_once('../includes/ResponseHandler.php');
-require_once('../vendor/autoload.php'); 
+require_once('../controllers/PageController.php');
+require_once('../../vendor/autoload.php'); 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
@@ -21,28 +22,31 @@ class PageRouter{
 
     private function defineRoutes(){ 
         $this->routes = [
-            ['path' =>'/', 'handler' => [new PageRouter(), 'home']],
-            ['path' => '/login', 'handler' => [new PageRouter(), 'loginForm']],
-            ['path'=> '/signup', 'handler' => [new PageRouter(), 'signupForm']],
-            ['path' => '/book', 'handler' => [new PageRouter(), 'listBooks']],
-            ['path' => '/book/(\d+)', 'handler' => [new PageRouter(), 'viewBooks']],
-            ['path' => '/add-book', 'handler' => [new PageRouter(), 'addBookForm']],
-            ['path' => '/book/(\d+)', 'handler' => [new PageRouter(), 'updateBook']],
-            ['path' => '/search/(\w+)', 'handler' => [new PageRouter(), 'searchBooks']],
+            ['path' =>'/index', 'handler' => [new PageController(), 'home']],
+            ['path' =>'/', 'handler' => [new PageController(), 'home']],
+            ['path' => '/login', 'handler' => [new PageController(), 'loginForm']],
+            ['path'=> '/signup', 'handler' => [new PageController(), 'signupForm']],
+            ['path' => '/book', 'handler' => [new PageController(), 'listBooks']],
+            ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'viewBooks']],
+            ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
+            ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'updateBook']],
+            ['path' => '/search/(\w+)', 'handler' => [new PageController(), 'searchBooks']],
+            ['path' => '/error', 'handler' => [new PageController(), 'error']]
         ];            
     }
 
     public function handleRequest($path) {
         foreach ($this->routes as $route) {
-            if ($route['path'] === $path) {
+            if (preg_match('#^' . $route['path'] . '$#', $path, $matches)) {
+                echo $route['path'];
                 call_user_func($route['handler']);
                 return;
             }
         }
-        
-        ResponseHandler::respond($path,  'Page not found');
-        include('../views/404.php'); // Load a custom 404 page
-    }
+    
+        ResponseHandler::respond('/404ß', "Page not found");
+        include('../views/404.php'); // Load custom 404 page
+    }    
 
     private function setSecurityHeaders() {
         header('X-Content-Type-Options: nosniff');

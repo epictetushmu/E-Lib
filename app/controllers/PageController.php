@@ -20,4 +20,8 @@ class PageController {
     public function register() {
         include('../views/register.php');
     }
+
+    public function error(){
+        include('../views/404.php');
+    }
 }
