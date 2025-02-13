@@ -1,8 +1,8 @@
 <?php
+require_once("../includes/Controller.php"); 
 require_once('../services/BookService.php');
-require_once('./services/Categories.php');
-require_once('./Controller.php');
-require_once('../utils/ResponseHandler.php');
+require_once('../services/CategoriesService.php');
+require_once('../includes/ResponseHandler.php');
 
 class BookController extends Controller {
     private $bookService;

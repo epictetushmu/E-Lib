@@ -1,6 +1,6 @@
 <?php
-require_once('../routers/ApiRouter.php');
-require_once('../routers/PageRouter.php');
+require_once('../router/ApiRouter.php');
+require_once('../router/PageRouter.php');
 
 class Router {
     private $apiRouter;
