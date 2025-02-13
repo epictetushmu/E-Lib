@@ -1,7 +1,3 @@
-<?php
-echo "home.php is included";
-?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
