@@ -62,7 +62,7 @@ echo "home.php is included";
                         <a class="nav-link active" href="index.php">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="add_book.php">Add Book</a>
+                        <a class="nav-link" href="../views/add_book.php">Add Book</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="search_results.php">Advanced Search</a>

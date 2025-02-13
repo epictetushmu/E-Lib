@@ -12,12 +12,13 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container">
-            <a class="navbar-brand" href="index.php">Library</a>
+            <a class="navbar-brand" href="/elib/views/home.php">Library</a>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="./`index.php">Home</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="./add_book.php">Add Book</a></li>
-                    <li class="nav-item"><a class="nav-link" href="./search_results.php">Search</a></li>
+                <a class="nav-link" href="/elib/views/home.php">Home</a>
+                <a class="nav-link active" href="/elib/views/add_book.php">Add Book</a>
+                <a class="nav-link" href="/elib/public/search_results.php">Search</a>
+
                 </ul>
                 <form class="d-flex ms-3">
                     <input class="form-control me-2" id="search" type="search" id="bookToSearch"  placeholder="Search by title" aria-label="Search">
