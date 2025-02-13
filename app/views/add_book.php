@@ -7,17 +7,17 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
-<link rel="stylesheet" href="../styles/insert_book.css">
+<link rel="stylesheet" href="../styles/add_book.php.css">
 
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container">
-            <a class="navbar-brand" href="index.html">Library</a>
+            <a class="navbar-brand" href="index.php">Library</a>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="insert_book.html">Add Book</a></li>
-                    <li class="nav-item"><a class="nav-link" href="search_results.html">Search</a></li>
+                    <li class="nav-item"><a class="nav-link" href="./`index.php">Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="./add_book.php">Add Book</a></li>
+                    <li class="nav-item"><a class="nav-link" href="./search_results.php">Search</a></li>
                 </ul>
                 <form class="d-flex ms-3">
                     <input class="form-control me-2" id="search" type="search" id="bookToSearch"  placeholder="Search by title" aria-label="Search">
@@ -95,7 +95,7 @@
         </form>
     </div>
     <script type="module" src="../js/ui/navBar.js"></script>
-    <script type="module" src="../js/ui/insert_book.js"></script>
+    <script type="module" src="../js/ui/add_book.php.js"></script>
     <script>
         document.getElementById('bookForm').addEventListener('submit', function(event) {
             event.preventDefault();

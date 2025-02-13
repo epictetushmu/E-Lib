@@ -50,7 +50,7 @@ echo "home.php is included";
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="index.html">
+            <a class="navbar-brand fw-bold" href="index.php">
                 <i class="fas fa-book-open me-2"></i>Epictetus Library
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -59,13 +59,13 @@ echo "home.php is included";
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" href="index.html">Home</a>
+                        <a class="nav-link active" href="index.php">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="insert_book.html">Add Book</a>
+                        <a class="nav-link" href="add_book.php">Add Book</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="search_results.html">Advanced Search</a>
+                        <a class="nav-link" href="search_results.php">Advanced Search</a>
                     </li>
                 </ul>
                 <form class="d-flex" id="searchForm">
@@ -193,7 +193,7 @@ echo "home.php is included";
                 e.preventDefault();
                 const query = document.getElementById('bookToSearch').value;
                 // Implement search logic
-                window.location.href = `search_results.html?q=${encodeURIComponent(query)}`;
+                window.location.href = `search_results.php?q=${encodeURIComponent(query)}`;
             });
 
             loadFeaturedBooks();

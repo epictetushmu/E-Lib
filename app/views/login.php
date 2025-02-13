@@ -36,7 +36,7 @@
             .then(response => {
                 if (response.data.status === 'success') {
                     alert('Login successful!');
-                    window.location.href = '/index.html';
+                    window.location.href = '/index.php';
                 } else {
                     alert('Login failed: ' + response.data.message);
                 }
