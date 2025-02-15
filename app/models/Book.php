@@ -19,6 +19,11 @@ class Book {
         return $this->pdo->execQuery($sql, array(""=> $id));
     }
 
+    public function getFeaturedBooks() {
+        $sql = "SELECT * FROM booksORDER BY id DESC LIMIT 20; ";
+        return $this->pdo->execQuery($sql);
+    }
+
     public function addBook($title, $author, $year, $condition, $copies, $description, $categories) {
         $sql = "INSERT INTO books (title, author, year, `condition`, copies, description, cover) VALUES (:title, :author, :year, :condition, :copies, :description, :cover)";
         $book = [
