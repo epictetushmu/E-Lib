@@ -15,6 +15,14 @@ class BookController extends Controller {
         $this->categoriesService = new CategoriesService();
     }   
 
+    public function featuredBooks() {
+        $books = $this->bookService->getFeaturedBooks();
+        if ($books) {
+            $this->respond->respond( 200, $books);
+        }
+        $this->respond->respond(404,'No books found');
+    }   
+
     public function listBooks() {
         $books = $this->bookService->getAllBooks();
         if ($books) { 

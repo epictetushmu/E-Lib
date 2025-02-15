@@ -13,6 +13,7 @@ class ApiRouter {
 
     private function defineRequests() {
         $this->routes = [
+            ['method' => 'GET', 'path' => '/api/featured-books', 'handler' => [new BookController(), 'featuredBooks']],
             ['method' => 'GET', 'path' => '/api/book', 'handler' => [new BookController(), 'listBooks']],
             ['method' => 'GET', 'path' => '/api/book/(\d+)', 'handler' => [new BookController(), 'viewBook']],
             ['method' => 'GET', 'path' => '/api/add-book', 'handler' => [new BookController(), 'addBookForm']],
@@ -25,6 +26,7 @@ class ApiRouter {
     }
 
     public function handleRequest($method, $path) {
+        echo $path; 
         foreach ($this->routes as $route) {
             if ($route['method'] === $method && preg_match("#^{$route['path']}$#", $path, $matches)) {
                 array_shift($matches); // Remove the full match from the matches array
