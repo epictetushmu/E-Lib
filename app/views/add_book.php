@@ -98,7 +98,7 @@
     <script type="module" src="../js/ui/navBar.js"></script>
     <script type="module" src="../js/ui/add_book.php.js"></script>
     <script>
-        document.getElementById('bookForm').addEventListener('submit', function(event) {
+        document.getElementById('bookForm').addEventListener('submitForm', function(event) {
             event.preventDefault();
 
             const title = document.getElementById('title').value;
@@ -120,7 +120,7 @@
             formData.append('cover', cover);
             formData.append('category', JSON.stringify(categories));
 
-            axios.post('/api/add_book.php', formData)
+            axios.post('/api/add_book', formData)
                 .then(response => {
                     alert('Book added successfully!');
                     document.getElementById('bookForm').reset();
