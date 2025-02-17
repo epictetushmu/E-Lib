@@ -1,6 +1,6 @@
 <?php
-require_once('../includes/database.php');
-require_once('../models/Categories.php');
+require_once(__DIR__ . '/../includes/database.php');
+require_once(__DIR__ . '/../models/Categories.php');
 
 class Book {
     private $pdo;
