@@ -6,26 +6,21 @@ require_once(__DIR__ . '/../../vendor/autoload.php');
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-
-class PageRouter{ 
-
+class PageRouter { 
     private $routes = [];
+    private $secretKey = 'your-secret-key'; // Check what this is about
 
-    private $secretKey = 'your-secret-key';     //Check what this is about
-
-
-    public function __construct(){
+    public function __construct() {
         $this->defineRoutes();
         $this->setSecurityHeaders();
-
     }
 
-    private function defineRoutes(){ 
+    private function defineRoutes() { 
         $this->routes = [
-            ['path' =>'/index', 'handler' => [new PageController(), 'home']],
-            ['path' =>'/', 'handler' => [new PageController(), 'home']],
+            ['path' => '/index', 'handler' => [new PageController(), 'home']],
+            ['path' => '/', 'handler' => [new PageController(), 'home']],
             ['path' => '/login', 'handler' => [new PageController(), 'loginForm']],
-            ['path'=> '/signup', 'handler' => [new PageController(), 'signupForm']],
+            ['path' => '/signup', 'handler' => [new PageController(), 'signupForm']],
             ['path' => '/book', 'handler' => [new PageController(), 'listBooks']],
             ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'viewBooks']],
             ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
@@ -44,8 +39,8 @@ class PageRouter{
             }
         }
     
-        ResponseHandler::respond('/404ß', "Page not found");
-        include('../views/404.php'); // Load custom 404 page
+        ResponseHandler::respond(404, "Page not found");
+        include(__DIR__ . '/../views/404.php'); // Load custom 404 page
     }    
 
     private function setSecurityHeaders() {
@@ -55,5 +50,4 @@ class PageRouter{
         header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
         header('Content-Security-Policy: default-src \'self\'');
     }
-    
 }

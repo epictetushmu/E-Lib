@@ -15,12 +15,12 @@ class Book {
     }
 
     public function getBookDetails($id) {
-        $sql = " SELECT * FROM books WHERE id = :id";
-        return $this->pdo->execQuery($sql, array(""=> $id));
+        $sql = "SELECT * FROM books WHERE id = :id";
+        return $this->pdo->execQuery($sql, array("id" => $id));
     }
 
     public function getFeaturedBooks() {
-        $sql = "SELECT * FROM booksORDER BY id DESC LIMIT 20; ";
+        $sql = "SELECT * FROM books ORDER BY id DESC LIMIT 20";
         return $this->pdo->execQuery($sql);
     }
 
@@ -47,8 +47,7 @@ class Book {
     }
 
     public function searchBooks($search) {
-        $sql = "SELECT * FROM books WHERE title LIKE :search";
-        return $this->pdo->execQuery($sql, [$search]);
-       
+        $sql = "SELECT * FROM books WHERE title LIKE :search OR author LIKE :search";
+        return $this->pdo->execQuery($sql, ["search" => "%$search%"]);
     }
 }

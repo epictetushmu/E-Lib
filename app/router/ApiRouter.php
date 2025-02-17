@@ -16,7 +16,6 @@ class ApiRouter {
             ['method' => 'GET', 'path' => '/api/featured-books', 'handler' => [new BookController(), 'featuredBooks']],
             ['method' => 'GET', 'path' => '/api/book', 'handler' => [new BookController(), 'listBooks']],
             ['method' => 'GET', 'path' => '/api/book/(\d+)', 'handler' => [new BookController(), 'viewBook']],
-            ['method' => 'GET', 'path' => '/api/add-book', 'handler' => [new BookController(), 'addBookForm']],
             ['method' => 'POST', 'path' => '/api/add-book', 'handler' => [new BookController(), 'addBook']],
             ['method' => 'PUT', 'path' => '/api/book/(\d+)', 'handler' => [new BookController(), 'updateBook']],
             ['method' => 'GET', 'path' => '/api/search/(\w+)', 'handler' => [new BookController(), 'searchBooks']],
@@ -26,7 +25,9 @@ class ApiRouter {
     }
 
     public function handleRequest($method, $path) {
-        echo $path; 
+        // Debugging output
+        echo "Method: $method, Path: $path";
+
         foreach ($this->routes as $route) {
             if ($route['method'] === $method && preg_match("#^{$route['path']}$#", $path, $matches)) {
                 array_shift($matches); // Remove the full match from the matches array
