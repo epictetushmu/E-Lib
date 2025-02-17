@@ -1,8 +1,8 @@
 <?php 
 // require_once('../views/PageRouter.php');
-require_once('../includes/ResponseHandler.php');
-require_once('../controllers/PageController.php');
-require_once('../../vendor/autoload.php'); 
+require_once(__DIR__ . '/../includes/ResponseHandler.php');
+require_once(__DIR__ . '/../controllers/PageController.php');
+require_once(__DIR__ . '/../../vendor/autoload.php'); 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
