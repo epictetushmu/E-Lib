@@ -57,7 +57,7 @@ class BookController extends Controller {
         $copies = $data['copies'];
         $description = $data['description'];
         $book = $_FILES['cover']['name'];
-        $categories = $data['category']; 
+        $categories = json_decode($data['category'], true); 
 
         move_uploaded_file($_FILES['book']['bookPdf'], '../uploads/' . $book);
 
