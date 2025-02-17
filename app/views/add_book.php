@@ -18,7 +18,6 @@
                 <a class="nav-link" href="/elib/views/home.php">Home</a>
                 <a class="nav-link active" href="/elib/views/add_book.php">Add Book</a>
                 <a class="nav-link" href="/elib/public/search_results.php">Search</a>
-
                 </ul>
                 <form class="d-flex ms-3">
                     <input class="form-control me-2" id="search" type="search" id="bookToSearch"  placeholder="Search by title" aria-label="Search">
@@ -31,7 +30,6 @@
     <div class="container mt-5">
         <h2>Add a New Book</h2>
         <form id="bookForm">
-
             <div class="mb-3">
                 <label for="title" class="form-label">Book Title</label>
                 <input type="text" class="form-control" id="title" data-description="Enter the book title" required>
@@ -96,9 +94,8 @@
         </form>
     </div>
     <script type="module" src="../js/ui/navBar.js"></script>
-    <script type="module" src="../js/ui/add_book.php.js"></script>
     <script>
-        document.getElementById('bookForm').addEventListener('submitForm', function(event) {
+        document.getElementById('bookForm').addEventListener('submit', function(event) {
             event.preventDefault();
 
             const title = document.getElementById('title').value;
@@ -120,7 +117,7 @@
             formData.append('cover', cover);
             formData.append('category', JSON.stringify(categories));
 
-            axios.post('/api/add_book', formData)
+            axios.post('/api/add-book', formData)
                 .then(response => {
                     alert('Book added successfully!');
                     document.getElementById('bookForm').reset();
