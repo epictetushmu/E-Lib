@@ -1,5 +1,5 @@
-# WebUni
-Simple library managment webApp 
+# E-Lib
+Simple library managment webApp for HMU
 
 
 ## How to get: 
