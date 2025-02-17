@@ -1,7 +1,6 @@
 <?php
-require_once('../services/UserService.php');
-require_once('../includes/Controller.php');
-require_once('../includes/ResponseHandler.php');
+require_once(__DIR__ . '/../services/UserService.php');
+require_once(__DIR__ . '/../includes/ResponseHandler.php');
 
 class UserController extends Controller {
     private $userService;
