@@ -1,8 +1,8 @@
 <?php
 // Include all necessary controllers
-require_once('../controllers/BookController.php');
-require_once('../controllers/UserController.php');
-require_once('../includes/ResponseHandler.php');
+require_once(__DIR__ . '/../controllers/BookController.php');
+require_once(__DIR__ . '/../controllers/UserController.php');
+require_once(__DIR__ . '/../includes/ResponseHandler.php');
 
 class ApiRouter {
     private $routes = [];

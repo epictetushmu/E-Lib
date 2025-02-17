@@ -1,8 +1,8 @@
 <?php
-require_once("../includes/Controller.php"); 
-require_once('../services/BookService.php');
-require_once('../services/CategoriesService.php');
-require_once('../includes/ResponseHandler.php');
+require_once(__DIR__ . '/../includes/Controller.php'); 
+require_once(__DIR__ . '/../services/BookService.php');
+require_once(__DIR__ . '/../services/CategoriesService.php');
+require_once(__DIR__ . '/../includes/ResponseHandler.php');
 
 class BookController extends Controller {
     private $bookService;
