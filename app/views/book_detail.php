@@ -11,21 +11,26 @@
             max-height: 400px;
             object-fit: cover;
             object-position: top;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         .book-details {
             margin-top: 20px;
         }
+        .container {
+            max-width: 900px;
+        }
     </style>
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
     <div class="container mt-5">
         <div class="row">
             <div class="col-md-4">
                 <img src="<?= htmlspecialchars($book['cover']) ?>" alt="<?= htmlspecialchars($book['title']) ?> cover" class="img-fluid book-cover">
             </div>
             <div class="col-md-8 book-details">
-                <h1><?= htmlspecialchars($book['title']) ?></h1>
-                <p><?= htmlspecialchars($book['description']) ?></p>
+                <h1 class="fw-bold"><?= htmlspecialchars($book['title']) ?></h1>
+                <p class="text-muted">"<?= htmlspecialchars($book['description']) ?>"</p>
                 <p><strong>Author:</strong> <?= htmlspecialchars($book['author']) ?></p>
                 <p><strong>Published:</strong> <?= htmlspecialchars($book['published_date']) ?></p>
                 <a href="/E-Lib/" class="btn btn-primary mt-3">
@@ -34,6 +39,9 @@
             </div>
         </div>
     </div>
+    <footer class="mt-auto py-3 bg-light text-center">
+        <p class="mb-0">&copy; 2025 Epictetus Library. All rights reserved.</p>
+    </footer>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
