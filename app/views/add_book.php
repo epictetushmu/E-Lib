@@ -6,7 +6,6 @@
     <title>Add Book | Epictetus Library</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/E-Lib/app/styles/add_book.css">
 </head>
 <body class="d-flex flex-column min-vh-100">
     
@@ -100,7 +99,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="/E-Lib/app/views/js/ui/navBar.js"></script>
     <script>
         document.getElementById('bookForm').addEventListener('submit', function(event) {
             event.preventDefault();
