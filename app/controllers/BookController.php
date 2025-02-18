@@ -6,9 +6,9 @@ require_once(__DIR__ . '/../includes/ResponseHandler.php');
 
 class BookController extends Controller {
     private $bookService;
-
     private $categoriesService;
     private $respond; 
+
     public function __construct() {
         $this->bookService = new BookService();
         $this->respond = new ResponseHandler();
@@ -18,34 +18,37 @@ class BookController extends Controller {
     public function featuredBooks() {
         $books = $this->bookService->getFeaturedBooks();
         if ($books) {
-            $this->respond->respond( 200, $books);
+            $this->respond->respond(200, $books);
+        } else {
+            $this->respond->respond(404, 'No books found');
         }
-        $this->respond->respond(404,'No books found');
     }   
 
     public function listBooks() {
         $books = $this->bookService->getAllBooks();
         if ($books) { 
-            $this->respond->respond( 200, $books);
+            $this->respond->respond(200, $books);
+        } else {
+            $this->respond->respond(404, 'No books found');
         }
-        $this->respond->respond(404,'No books found');
     }
 
     public function viewBook($id) {
         $book = $this->bookService->getBookDetails($id);
-        if (!$book) {
-            echo "Book not found!";
-            return;
+        if ($book) {
+            $this->respond->respond(200, $book);
+        } else {
+            $this->respond->respond(404, 'Book not found');
         }
-       $this->respond->respond( 200, $book );
     }
 
     public function searchBooks($search) {
         $books = $this->bookService->searchBooks($search);
         if ($books) {
-            $this->respond->respond( 200, $books);
+            $this->respond->respond(200, $books);
+        } else {
+            $this->respond->respond(404, 'No books found');
         }
-        $this->respond->respond(404,'No books found');
     }
     
     public function addBook() {
@@ -56,10 +59,11 @@ class BookController extends Controller {
         $condition = $data['condition'];
         $copies = $data['copies'];
         $description = $data['description'];
-        $book = $_FILES['cover']['name'];
+        // $cover = $_FILES['cover']['name'];
         $categories = json_decode($data['category'], true); 
 
-        move_uploaded_file($_FILES['book']['bookPdf'], '../uploads/' . $book);
+        //file upload
+        // move_uploaded_file($_FILES['cover']['tmp_name'], '../uploads/' . $cover);
 
         // Convert category names to category IDs
         $categoryIds = [];
@@ -73,7 +77,7 @@ class BookController extends Controller {
             }
         }
 
-        $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description, $categoryIds);
-        $this->respond->respond(200,$response);
+        $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description, $categories);
+        $this->respond->respond(200, $response);
     }
 }

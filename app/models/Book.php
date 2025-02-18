@@ -15,17 +15,17 @@ class Book {
     }
 
     public function getBookDetails($id) {
-        $sql = "SELECT * FROM books WHERE id = :id";
+        $sql = "SELECT * FROM Book WHERE id = :id";
         return $this->pdo->execQuery($sql, array("id" => $id));
     }
 
     public function getFeaturedBooks() {
-        $sql = "SELECT * FROM books ORDER BY id DESC LIMIT 20";
+        $sql = "SELECT * FROM Book ORDER BY id DESC LIMIT 20";
         return $this->pdo->execQuery($sql);
     }
 
     public function addBook($title, $author, $year, $condition, $copies, $description, $categories) {
-        $sql = "INSERT INTO books (title, author, year, `condition`, copies, description, cover) VALUES (:title, :author, :year, :condition, :copies, :description, :cover)";
+        $sql = "INSERT INTO Book (title, author, publication_year, `condition`, number_of_copies, `description`) VALUES (:title, :author, :year, :condition, :copies, :description)";
         $book = [
             "title" => $title,
             "author" => $author,
@@ -33,7 +33,6 @@ class Book {
             "condition" => $condition,
             "copies" => $copies,
             "description" => $description,
-            "cover" => "default.jpg"
         ];
         $bookId = $this->pdo->execQuery($sql, $book, true); 
 
@@ -47,7 +46,7 @@ class Book {
     }
 
     public function searchBooks($search) {
-        $sql = "SELECT * FROM books WHERE title LIKE :search OR author LIKE :search";
+        $sql = "SELECT * FROM Book WHERE title LIKE :search OR author LIKE :search";
         return $this->pdo->execQuery($sql, ["search" => "%$search%"]);
     }
 }
