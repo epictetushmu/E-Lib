@@ -1,5 +1,5 @@
 <?php
-require_once('../includes/database.php');
+require_once(__DIR__ . '/../includes/database.php');
 
 class User {
     private $pdo;
@@ -9,16 +9,25 @@ class User {
     }
 
     public function getUserByEmail($email) {
-        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE email = :email");
-        $stmt->bindParam(':email', $email, PDO::PARAM_STR);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $sql = "SELECT * FROM users WHERE email = :email";
+        return $this->pdo->execQuery($sql, array("email" => $email));
     }
 
     public function registerUser($email, $password) {
-        $stmt = $this->pdo->prepare("INSERT INTO users (email, password) VALUES (:email, :password)");
-        $stmt->bindParam(':email', $email);
-        $stmt->bindParam(':password', $password);
-        return $stmt->execute();
+        $sql = "INSERT INTO users (email, password) VALUES (:email, :password)";
+        $user = [
+            "email" => $email,
+            "password" => password_hash($password, PASSWORD_BCRYPT)
+        ];
+        return $this->pdo->execQuery($sql, $user);
+    }
+
+    public function login($username, $password) {
+        $sql = "SELECT * FROM users WHERE email = :email";
+        $user = $this->pdo->execQuery($sql, array("email" => $username));
+        if ($user && password_verify($password, $user[0]['password'])) {
+            return $user[0];
+        }
+        return false;
     }
 }

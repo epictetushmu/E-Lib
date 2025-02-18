@@ -1,5 +1,5 @@
 <?php
-require_once('../models/Book.php');
+require_once(__DIR__ . '/../models/Book.php');
 
 class BookService {
     private $book;

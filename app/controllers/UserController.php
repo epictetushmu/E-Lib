@@ -1,17 +1,14 @@
 <?php
-require_once('../services/UserService.php');
-require_once('../includes/Controller.php');
-require_once('../includes/ResponseHandler.php');
+require_once(__DIR__ . '/../services/UserService.php');
+require_once(__DIR__ . '/../includes/ResponseHandler.php');
 
-class UserController extends Controller {
+class UserController {
     private $userService;
-
-    private $respond; 
+    private $respond;
 
     public function __construct() {
         $this->userService = new UserService();
         $this->respond = new ResponseHandler();
-
     }
 
     public function handleLogin() {
@@ -24,13 +21,12 @@ class UserController extends Controller {
             $_SESSION['user'] = $user;
             $this->respond->redirect('301', '');    
         } else {
-            $this->respond->redirect('304',  '');
+            $this->respond->respond(401, 'Invalid credentials');
         }
     }
 
     public function handleLogout() {
-        session_start();
-        session_destroy();
-        $this->redirect('/login');
+        // Logout logic here...
+        $this->respond->respond(200, 'Logout successful');
     }
 }
