@@ -22,7 +22,7 @@ class PageRouter {
             ['path' => '/login', 'handler' => [new PageController(), 'loginForm']],
             ['path' => '/signup', 'handler' => [new PageController(), 'signupForm']],
             ['path' => '/book', 'handler' => [new PageController(), 'listBooks']],
-            ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'viewBooks']],
+            ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'viewBook']],
             ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
             ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'updateBook']],
             ['path' => '/search/(\w+)', 'handler' => [new PageController(), 'searchBooks']],
@@ -33,8 +33,7 @@ class PageRouter {
     public function handleRequest($path) {
         foreach ($this->routes as $route) {
             if (preg_match('#^' . $route['path'] . '$#', $path, $matches)) {
-                echo $route['path'];
-                call_user_func($route['handler']);
+                call_user_func_array($route['handler'], $matches);
                 return;
             }
         }
