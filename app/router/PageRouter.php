@@ -40,7 +40,7 @@ class PageRouter {
         }
     
         ResponseHandler::respond(404, "Page not found");
-        include(__DIR__ . '/../views/404.php'); // Load custom 404 page
+        PageController::error();
     }    
 
     private function setSecurityHeaders() {

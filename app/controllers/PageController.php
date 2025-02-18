@@ -21,7 +21,7 @@ class PageController {
         include('../views/register.php');
     }
 
-    public function error(){
+    public static function error(){
         include('../views/404.php');
     }
 }
