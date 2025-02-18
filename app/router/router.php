@@ -19,7 +19,7 @@ class Router {
         echo "Original Path: $path";
 
         // Update path to remove /E-Lib if it exists
-        $path = str_replace('/E-Lib', '', $path);
+        $path = str_replace('/E-Lib/app', '', $path);
 
         // Debugging output
         echo "Updated Path: $path";
