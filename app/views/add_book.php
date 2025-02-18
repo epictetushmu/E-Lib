@@ -23,7 +23,7 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" href="/E-Lib/">Home</a></li>
                     <li class="nav-item"><a class="nav-link active" href="/E-Lib/add-book">Add Book</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/E-Lib/search_results.php">Search</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/E-Lib/search_results">Search</a></li>
                 </ul>
                 <form class="d-flex" id="searchForm">
                     <div class="input-group">

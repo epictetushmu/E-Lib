@@ -61,7 +61,7 @@
                         <a class="nav-link" href="/E-Lib/add-book">Add Book</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/E-Lib/search_results.php">Advanced Search</a>
+                        <a class="nav-link" href="/E-Lib/search_results">Advanced Search</a>
                     </li>
                 </ul>
                 <form class="d-flex" id="searchForm">
@@ -189,7 +189,7 @@
                 e.preventDefault();
                 const query = document.getElementById('bookToSearch').value;
                 // Implement search logic
-                window.location.href = `/E-Lib/search_results.php?q=${encodeURIComponent(query)}`;
+                window.location.href = `/E-Lib/search_results?q=${encodeURIComponent(query)}`;
             });
 
             loadFeaturedBooks();
