@@ -46,7 +46,7 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="index.php">
+            <a class="navbar-brand fw-bold" href="/E-Lib/">
                 <i class="fas fa-book-open me-2"></i>Epictetus Library
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -55,13 +55,13 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" href="index.php">Home</a>
+                        <a class="nav-link active" href="/E-Lib/">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="../views/add_book.php">Add Book</a>
+                        <a class="nav-link" href="/E-Lib/add-book">Add Book</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="search_results.php">Advanced Search</a>
+                        <a class="nav-link" href="/E-Lib/search_results">Advanced Search</a>
                     </li>
                 </ul>
                 <form class="d-flex" id="searchForm">
@@ -152,7 +152,7 @@
                 try {
                     loader.style.display = 'block';
                     // Replace with your actual API endpoint
-                    const response = await axios.get('/api/featured-books');
+                    const response = await axios.get('/E-Lib/api/featured-books');
                     booksGrid.innerHTML = response.data.map(book => `
                         <div class="col-md-4 col-lg-3">
                             <div class="card book-card h-100">
@@ -164,7 +164,7 @@
                                     <p class="card-text text-muted">${book.author}</p>
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span class="badge bg-info">${book.genre}</span>
-                                        <a href="/book/${book.id}" class="btn btn-sm btn-primary">
+                                        <a href="/E-Lib/book/${book.id}" class="btn btn-sm btn-primary">
                                             Details <i class="fas fa-arrow-right ms-1"></i>
                                         </a>
                                     </div>
@@ -189,7 +189,7 @@
                 e.preventDefault();
                 const query = document.getElementById('bookToSearch').value;
                 // Implement search logic
-                window.location.href = `search_results.php?q=${encodeURIComponent(query)}`;
+                window.location.href = `/E-Lib/search_results?q=${encodeURIComponent(query)}`;
             });
 
             loadFeaturedBooks();

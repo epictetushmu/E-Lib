@@ -17,16 +17,9 @@ class Router {
         $method = $_SERVER['REQUEST_METHOD'];
         $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-        // Debugging output
-        echo "Original Path: $path";
-
-        // Update path to remove the base URL if it exists
         if (strpos($path, $this->baseUrl) === 0) {
             $path = substr($path, strlen($this->baseUrl));
         }
-
-        // Debugging output
-        echo "Updated Path: $path";
 
         if (strpos($path, '/api') === 0) {
             $this->apiRouter->handleRequest($method, $path);
