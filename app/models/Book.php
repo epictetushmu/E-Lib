@@ -9,11 +9,6 @@ class Book {
         $this->pdo = Database::getInstance();
     }
 
-    public function getFeaturedBooks() {
-        $sql = 'SELECT * FROM Book ORDER BY RAND() LIMIT 20';
-        return $this->pdo->execQuery($sql);
-    }
-
     public function getAllBooks() {
         $sql = 'SELECT * FROM Book';
         return $this->pdo->execQuery($sql);
@@ -24,8 +19,13 @@ class Book {
         return $this->pdo->execQuery($sql, array("id" => $id));
     }
 
+    public function getFeaturedBooks() {
+        $sql = "SELECT * FROM Book ORDER BY id DESC LIMIT 20";
+        return $this->pdo->execQuery($sql);
+    }
+
     public function addBook($title, $author, $year, $condition, $copies, $description, $categories) {
-        $sql = "INSERT INTO Book (title, author, year, `condition`, copies, description, cover) VALUES (:title, :author, :year, :condition, :copies, :description, :cover)";
+        $sql = "INSERT INTO Book (title, author, publication_year, `condition`, number_of_copies, `description`) VALUES (:title, :author, :year, :condition, :copies, :description)";
         $book = [
             "title" => $title,
             "author" => $author,
@@ -33,7 +33,6 @@ class Book {
             "condition" => $condition,
             "copies" => $copies,
             "description" => $description,
-            "cover" => "default.jpg"
         ];
         $bookId = $this->pdo->execQuery($sql, $book, true); 
 
