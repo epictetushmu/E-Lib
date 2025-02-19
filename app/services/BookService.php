@@ -7,11 +7,7 @@ class BookService {
     public function __construct() {
         $this->book = new Book();
     }
-     
-    public function getFeaturedBooks(){ 
-        return $this->book->getFeaturedBooks(); 
-    }
-
+    
     public function getAllBooks() {
         return $this->book->getAllBooks();
     }
