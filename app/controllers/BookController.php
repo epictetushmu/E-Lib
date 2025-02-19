@@ -3,6 +3,10 @@ require_once(__DIR__ . '/../includes/Controller.php');
 require_once(__DIR__ . '/../services/BookService.php');
 require_once(__DIR__ . '/../services/CategoriesService.php');
 require_once(__DIR__ . '/../includes/ResponseHandler.php');
+require_once(__DIR__ . '/../includes/Controller.php'); 
+require_once(__DIR__ . '/../services/BookService.php');
+require_once(__DIR__ . '/../services/CategoriesService.php');
+require_once(__DIR__ . '/../includes/ResponseHandler.php');
 
 class BookController extends Controller {
     private $bookService;
@@ -73,7 +77,7 @@ class BookController extends Controller {
             }
         }
 
-        $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description, $categoryIds);
+        $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description);
         $this->respond->respond(200,$response);
     }
 }

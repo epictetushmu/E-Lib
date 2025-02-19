@@ -29,8 +29,11 @@ class PageController {
         include __DIR__ . '/../views/update_book.php';
     }
 
-    public function searchBooks($query) {
-        include __DIR__ . '/../views/search_results.php';
+    public function searchBooks() {
+        $query = $_GET['q'] ?? '';
+        $bookService = new BookService();
+        $books = $bookService->searchBooks($query);
+        include(__DIR__ . '/../views/search_results.php');
     }
 
     public static function error() {

@@ -1,5 +1,4 @@
 <?php 
-// require_once('../views/PageRouter.php');
 require_once(__DIR__ . '/../includes/ResponseHandler.php');
 require_once(__DIR__ . '/../controllers/PageController.php');
 require_once(__DIR__ . '/../../vendor/autoload.php'); 
@@ -25,7 +24,7 @@ class PageRouter {
             ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'viewBook']],
             ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
             ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'updateBook']],
-            ['path' => '/search/(\w+)', 'handler' => [new PageController(), 'searchBooks']],
+            ['path' => '/search_results', 'handler' => [new PageController(), 'searchBooks']],
             ['path' => '/error', 'handler' => [new PageController(), 'error']]
         ];            
     }
