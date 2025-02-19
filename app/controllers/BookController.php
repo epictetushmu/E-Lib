@@ -73,7 +73,7 @@ class BookController extends Controller {
             }
         }
 
-        $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description);
+        $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description, $categoryIds);
         $this->respond->respond(200,$response);
     }
 }
