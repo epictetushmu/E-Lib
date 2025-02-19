@@ -7,7 +7,7 @@ class Router {
     private $pageRouter;
     private $baseUrl;
 
-    public function __construct($baseUrl = '/E-Lib') {
+    public function __construct($baseUrl) {
         $this->apiRouter = new ApiRouter();
         $this->pageRouter = new PageRouter();
         $this->baseUrl = $baseUrl;

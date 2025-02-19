@@ -158,7 +158,7 @@
                     <input type="file" class="form-control" id="cover">
                 </div>
                 <div class="text-center">
-                    <button type="submit" id="submitForm" class="btn btn-primary">Insert</button>
+                    <button type="submit"  class="btn btn-primary">Insert</button>
                     <button type="button" class="btn btn-secondary" id="clearForm">Clear</button>
                 </div>
             </form>
@@ -180,6 +180,48 @@
             const dropdownOptions = document.getElementById("dropdownOptions");
             const select = document.getElementById("category");
             const condition = document.getElementById("condition");
+            const submitForm = document.getElementById("bookForm");
+            const clearForm = document.getElementById("clearForm");
+
+            clearForm.addEventListener("click", () => {
+                submitForm.reset();
+                updateDisplay();
+                updateOptionStyles();
+            });
+
+            submitForm.addEventListener("submit", (event) => {
+                event.preventDefault();
+
+                const title = document.getElementById("title").value;
+                const author = document.getElementById("author").value;
+                const categories = Array.from(select.selectedOptions).map(option => option.value);
+                const year = document.getElementById("year").value;
+                const condition = document.getElementById("condition").value;
+                const copies = document.getElementById("copies").value;
+                const description = document.getElementById("description").value;
+                const cover = document.getElementById("cover").files[0];
+
+                const formData = new FormData();
+                formData.append("title", title);
+                formData.append("author", author);
+                formData.append("categories", JSON.stringify(categories));
+                formData.append("year", year);
+                formData.append("condition", condition);
+                formData.append("copies", copies);
+                formData.append("description", description);
+                formData.append("cover", cover);
+
+                axios.post("/E-Lib/api/add_book", formData)
+                    .then(response => {
+                        alert("Book added successfully!");
+                        submitForm.reset();
+                        updateDisplay();
+                        updateOptionStyles();
+                    })
+                    .catch(error => {
+                        alert("An error occurred. Please try again.");
+                    });
+            });
 
             condition.addEventListener("change", (event) => {
                 const value = event.target.value;
