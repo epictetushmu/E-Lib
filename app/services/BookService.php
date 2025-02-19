@@ -16,6 +16,9 @@ class BookService {
         return $this->book->getAllBooks();
     }
 
+    public function getFeaturedBooks(){ 
+        return $this->book->getFeaturedBooks(); 
+    }
     public function getBookDetails($id) {
         return $this->book->getBookDetails($id);
     }

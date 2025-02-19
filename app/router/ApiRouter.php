@@ -21,6 +21,7 @@ class ApiRouter {
             ['method' => 'GET', 'path' => '/api/search/(\w+)', 'handler' => [new BookController(), 'searchBooks']],
             ['method' => 'POST', 'path' => '/api/login', 'handler' => [new UserController(), 'handleLogin']],
             ['method' => 'GET', 'path' => '/api/logout', 'handler' => [new UserController(), 'handleLogout']],
+            ['method' => 'GET', 'path' => '/api/featured', 'handler' => [new BookController(), 'featuredBooks']]
         ];
     }
 
