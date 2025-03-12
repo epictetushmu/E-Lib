@@ -10,7 +10,7 @@ class Book {
     }
 
     public function getAllBooks() {
-        $sql = 'SELECT * FROM books';
+        $sql = 'SELECT * FROM Book';
         return $this->pdo->execQuery($sql);
     }
 
