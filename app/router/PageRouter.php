@@ -4,12 +4,20 @@ require_once(__DIR__ . '/../controllers/PageController.php');
 require_once(__DIR__ . '/../../vendor/autoload.php'); 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Dotenv\Dotenv;
 
 class PageRouter { 
     private $routes = [];
-    private $secretKey = 'your-secret-key'; // Check what this is about
+    private $secretKey;
 
     public function __construct() {
+        // Load environment variables
+        $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
+        $dotenv->load();
+
+        // Set the secret key from the environment variable
+        $this->secretKey = $_ENV['SECRET_KEY'];
+
         $this->defineRoutes();
         $this->setSecurityHeaders();
     }
