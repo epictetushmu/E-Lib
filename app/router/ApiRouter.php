@@ -13,15 +13,15 @@ class ApiRouter {
 
     private function defineRequests() {
         $this->routes = [
-            ['method' => 'GET', 'path' => '/api/featured-books', 'handler' => [new BookController(), 'featuredBooks']],
-            ['method' => 'GET', 'path' => '/api/book', 'handler' => [new BookController(), 'listBooks']],
-            ['method' => 'GET', 'path' => '/api/book/(\d+)', 'handler' => [new BookController(), 'viewBook']],
-            ['method' => 'POST', 'path' => '/api/add-book', 'handler' => [new BookController(), 'addBook']],
-            ['method' => 'PUT', 'path' => '/api/book/(\d+)', 'handler' => [new BookController(), 'updateBook']],
-            ['method' => 'GET', 'path' => '/api/search/(\w+)', 'handler' => [new BookController(), 'searchBooks']],
-            ['method' => 'POST', 'path' => '/api/login', 'handler' => [new UserController(), 'handleLogin']],
-            ['method' => 'GET', 'path' => '/api/logout', 'handler' => [new UserController(), 'handleLogout']],
-            ['method' => 'GET', 'path' => '/api/featured', 'handler' => [new BookController(), 'featuredBooks']]
+            ['method' => 'GET', 'path' => '/api/v1/featured-books', 'handler' => [new BookController(), 'featuredBooks']],
+            ['method' => 'GET', 'path' => '/api/v1/books', 'handler' => [new BookController(), 'listBooks']],
+            ['method' => 'GET', 'path' => '/api/v1/books/(\d+)', 'handler' => [new BookController(), 'viewBook']],
+            ['method' => 'POST', 'path' => '/api/v1/books', 'handler' => [new BookController(), 'addBook']],
+            ['method' => 'PUT', 'path' => '/api/v1/books/(\d+)', 'handler' => [new BookController(), 'updateBook']],
+            ['method' => 'GET', 'path' => '/api/v1/featured', 'handler' => [new BookController(), 'featuredBooks']]
+            ['method' => 'GET', 'path' => '/api/v1/search/(\w+)', 'handler' => [new BookController(), 'searchBooks']],
+            ['method' => 'POST', 'path' => '/api/v1/login', 'handler' => [new UserController(), 'handleLogin']],
+            ['method' => 'GET', 'path' => '/api/v1/logout', 'handler' => [new UserController(), 'handleLogout']],
         ];
     }
 
