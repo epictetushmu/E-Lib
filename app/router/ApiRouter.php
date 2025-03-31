@@ -18,7 +18,7 @@ class ApiRouter {
             ['method' => 'GET', 'path' => '/api/v1/books/(\d+)', 'handler' => [new BookController(), 'viewBook']],
             ['method' => 'POST', 'path' => '/api/v1/books', 'handler' => [new BookController(), 'addBook']],
             ['method' => 'PUT', 'path' => '/api/v1/books/(\d+)', 'handler' => [new BookController(), 'updateBook']],
-            ['method' => 'GET', 'path' => '/api/v1/featured', 'handler' => [new BookController(), 'featuredBooks']]
+            ['method' => 'GET', 'path' => '/api/v1/featured', 'handler' => [new BookController(), 'featuredBooks']],
             ['method' => 'GET', 'path' => '/api/v1/search/(\w+)', 'handler' => [new BookController(), 'searchBooks']],
             ['method' => 'POST', 'path' => '/api/v1/login', 'handler' => [new UserController(), 'handleLogin']],
             ['method' => 'GET', 'path' => '/api/v1/logout', 'handler' => [new UserController(), 'handleLogout']],
