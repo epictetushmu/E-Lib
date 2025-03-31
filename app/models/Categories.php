@@ -1,5 +1,7 @@
 <?php
-require_once(__DIR__ . '/../includes/database.php');
+namespace App\Models;
+
+use App\Includes\Database;
 
 class Categories {
     private $pdo;

@@ -1,6 +1,7 @@
 <?php
-require_once(__DIR__ . '/../models/Book.php');
+namespace App\Services;
 
+use App\Models\Book;
 class BookService {
     private $book;
 

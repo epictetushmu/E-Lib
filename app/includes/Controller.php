@@ -1,5 +1,7 @@
 <?php
 
+namespace App\Includes;
+
 class Controller {
     protected function render($view, $data = []) {
         extract($data);

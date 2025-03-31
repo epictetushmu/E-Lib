@@ -1,6 +1,9 @@
 <?php 
-require_once(__DIR__ . '/../includes/ResponseHandler.php');
-require_once(__DIR__ . '/../controllers/PageController.php');
+namespace App\Router;
+
+use App\Controllers\PageController;
+use App\Includes\ResponseHandler;
+
 require_once(__DIR__ . '/../../vendor/autoload.php'); 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;

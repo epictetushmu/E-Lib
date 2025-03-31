@@ -1,4 +1,7 @@
 <?php
+namespace App\Controllers;
+
+use App\Services\BookService; 
 
 class PageController {
     public function home() {

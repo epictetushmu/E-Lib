@@ -1,6 +1,6 @@
 <?php 
-require_once(__DIR__ . '/../models/Categories.php');
-
+namespace App\Services;
+use App\Models\Categories;
 class CategoriesService{ 
     private $categories; 
 

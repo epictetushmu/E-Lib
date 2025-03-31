@@ -1,5 +1,5 @@
 <?php
-
+namespace App\Auth;
 require_once '../vendor/autoload.php';
 
 class CasAuth {
@@ -8,7 +8,7 @@ class CasAuth {
     private $cas_port = 443; // Default HTTPS port
 
     public function __construct() {
-        \phpCAS::client(CAS_VERSION_2_0, $this->cas_host, $this->cas_port, $this->cas_context);
+        \phpCAS::client(CAS_VERSION_2_0, $this->cas_host, $this->cas_port, $this->cas_context, 'http://yourwebsite.com');
         \phpCAS::setNoCasServerValidation(); // Disable SSL validation (for testing only)
     }
 

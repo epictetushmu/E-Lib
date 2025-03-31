@@ -1,5 +1,6 @@
 <?php
-require_once(__DIR__ . '/../models/User.php');
+namespace App\Services;
+use App\Models\User;
 
 class UserService {
     private $user;

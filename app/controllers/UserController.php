@@ -1,6 +1,8 @@
 <?php
-require_once(__DIR__ . '/../services/UserService.php');
-require_once(__DIR__ . '/../includes/ResponseHandler.php');
+namespace App\Controllers;
+
+use App\Services\UserService; 
+use App\Includes\ResponseHandler;
 
 class UserController {
     private $userService;

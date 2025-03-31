@@ -1,6 +1,9 @@
 <?php
-require_once(__DIR__ . '/ApiRouter.php');
-require_once(__DIR__ . '/PageRouter.php');
+namespace App\Router;
+
+use App\Router\ApiRouter;
+use App\Router\PageRouter;
+
 
 class Router {
     private $apiRouter;

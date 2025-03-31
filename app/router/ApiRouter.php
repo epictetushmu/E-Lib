@@ -1,8 +1,9 @@
 <?php
+namespace App\Router;
 // Include all necessary controllers
-require_once(__DIR__ . '/../controllers/BookController.php');
-require_once(__DIR__ . '/../controllers/UserController.php');
-require_once(__DIR__ . '/../includes/ResponseHandler.php');
+use App\Controllers\BookController;
+use App\Controllers\UserController;
+use App\Includes\ResponseHandler;
 
 class ApiRouter {
     private $routes = [];

@@ -1,8 +1,10 @@
 <?php
-require_once(__DIR__ . '/../includes/Controller.php'); 
-require_once(__DIR__ . '/../services/BookService.php');
-require_once(__DIR__ . '/../services/CategoriesService.php');
-require_once(__DIR__ . '/../includes/ResponseHandler.php');
+namespace App\Controllers;
+
+use App\Services\BookService; 
+use App\Services\CategoriesService;
+use App\Includes\ResponseHandler;
+use App\Includes\Controller;
 
 class BookController extends Controller {
     private $bookService;

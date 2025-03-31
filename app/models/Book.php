@@ -1,6 +1,8 @@
 <?php
-require_once(__DIR__ . '/../includes/database.php');
-require_once(__DIR__ . '/../models/Categories.php');
+namespace App\Models;
+
+use App\Includes\Database;
+use App\Models\Categories;
 
 class Book {
     private $pdo;
