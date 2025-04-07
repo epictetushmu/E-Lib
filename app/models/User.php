@@ -13,21 +13,28 @@ class User {
         return $this->pdo->execQuery($sql, array("email" => $email));
     }
 
-    public function registerUser($email, $password) {
-        $sql = "INSERT INTO users (email, password) VALUES (:email, :password)";
+    public function registerUser($email, $password, $username = null) {
+        $sql = "INSERT INTO users (email, password, username) VALUES (:email, :password, :username)";
         $user = [
             "email" => $email,
-            "password" => password_hash($password, PASSWORD_BCRYPT)
+            "password" => password_hash($password, PASSWORD_BCRYPT),
+            "username" => $username ?: $email
         ];
-        return $this->pdo->execQuery($sql, $user);
+        return $this->pdo->execQuery($sql, $user, true);
     }
 
-    public function login($username, $password) {
+    public function login($email, $password) {
         $sql = "SELECT * FROM users WHERE email = :email";
-        $user = $this->pdo->execQuery($sql, array("email" => $username));
-        if ($user && password_verify($password, $user[0]['password'])) {
+        $user = $this->pdo->execQuery($sql, array("email" => $email));
+        if (!empty($user) && password_verify($password, $user[0]['password'])) {
             return $user[0];
         }
         return false;
+    }
+    
+    public function getUserProfile($userId) {
+        $sql = "SELECT id, email, username, created_at FROM users WHERE id = :id";
+        $result = $this->pdo->execQuery($sql, array("id" => $userId));
+        return !empty($result) ? $result[0] : false;
     }
 }
