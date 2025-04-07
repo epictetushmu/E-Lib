@@ -27,46 +27,56 @@
 <body>
     <div class="login-container">
         <h2 class="text-center">Login</h2>
+        <div id="error-message" class="alert alert-danger d-none"></div>
         <form id="loginForm">
             <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control" id="username" required>
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" required>
             </div>
             <div class="mb-3">
                 <label for="password" class="form-label">Password</label>
                 <input type="password" class="form-control" id="password" required>
             </div>
             <button type="submit" class="btn btn-primary w-100">Login</button>
+            <div class="mt-3 text-center">
+                <p>Don't have an account? <a href="/E-Lib/signup">Sign up</a></p>
+            </div>
         </form>
         <div class="container mt-5 text-center">
-        <h5>Or-with-Cas</h5>
-        <p>Click the button below to login using CAS authentication.</p>
-        <a href="https://auth.hmu.gr/cas/login?service=https:%2F%2Feclass.hmu.gr%2Fmodules%2Fauth%2Faltsearch.php%3Fauth%3D7%26is_submit%3Dtrue" class="btn btn-primary">
-            Login with CAS
-        </a>
-    </div>
+            <h5>Or login with</h5>
+            <p>Click the button below to login using CAS authentication.</p>
+            <a href="https://auth.hmu.gr/cas/login?service=https://your-callback-url" class="btn btn-secondary">
+                Login with CAS
+            </a>
+        </div>
     </div>
     <script>
         document.getElementById('loginForm').addEventListener('submit', function(event) {
             event.preventDefault();
 
-            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
 
-            axios.post('/E-Lib/api/login.php', {
-                username: username,
+            // Reset error message
+            errorMessage.classList.add('d-none');
+
+            axios.post('/E-Lib/api/login', {
+                email: email,
                 password: password
             })
             .then(response => {
                 if (response.data.status === 'success') {
-                    alert('Login successful!');
                     window.location.href = '/E-Lib/';
                 } else {
-                    alert('Login failed: ' + response.data.message);
+                    errorMessage.textContent = response.data.message || 'Login failed. Please check your credentials.';
+                    errorMessage.classList.remove('d-none');
                 }
             })
             .catch(error => {
-                console.error('There was an error logging in!', error);
+                errorMessage.textContent = 'An error occurred while trying to log in. Please try again later.';
+                errorMessage.classList.remove('d-none');
+                console.error('Login error:', error);
             });
         });
     </script>

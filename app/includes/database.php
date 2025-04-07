@@ -36,10 +36,29 @@ class Database {
                 return $this->pdo->lastInsertId();
             }
             
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);    
-        }catch (PDOException $e) {
-            echo 'Error:'. $e->getMessage();
+            // For SELECT queries
+            if (stripos($sql, 'SELECT') === 0) {
+                return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+            
+            // For other queries (UPDATE, DELETE)
+            return $stmt->rowCount();    
+        } catch (PDOException $e) {
+            error_log('Database Error: '. $e->getMessage());
             return false; 
         }
+    }
+    
+    // Methods for transaction handling
+    public function beginTransaction() {
+        return $this->pdo->beginTransaction();
+    }
+    
+    public function commit() {
+        return $this->pdo->commit();
+    }
+    
+    public function rollBack() {
+        return $this->pdo->rollBack();
     }
 }

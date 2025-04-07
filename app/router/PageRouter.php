@@ -30,11 +30,12 @@ class PageRouter {
             ['path' => '/index', 'handler' => [new PageController(), 'home']],
             ['path' => '/', 'handler' => [new PageController(), 'home']],
             ['path' => '/login', 'handler' => [new PageController(), 'loginForm']],
+            ['path' => '/logout', 'handler' => [new PageController(), 'logout']],
             ['path' => '/signup', 'handler' => [new PageController(), 'signupForm']],
+            ['path' => '/profile', 'handler' => [new PageController(), 'profile']],
             ['path' => '/book', 'handler' => [new PageController(), 'listBooks']],
             ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'viewBook']],
             ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
-            ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'updateBook']],
             ['path' => '/search_results', 'handler' => [new PageController(), 'searchBooks']],
             ['path' => '/error', 'handler' => [new PageController(), 'error']]
         ];            
@@ -59,11 +60,5 @@ class PageRouter {
         header('X-XSS-Protection: 1; mode=block');
         header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
         header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;");
-
-        // API-specific headers
-        header('Access-Control-Allow-Origin: *'); 
-        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-        header('Access-Control-Allow-Headers: Content-Type, Authorization'); 
-        header('Content-Type: application/json');
     }
 }
