@@ -1,4 +1,5 @@
 <?php
+namespace App\Includes;
 
 class ResponseHandler {
     public static function respond($status, $data) {

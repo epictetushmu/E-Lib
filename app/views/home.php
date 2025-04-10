@@ -1,7 +1,3 @@
-<?php
-echo "home.php is included";
-?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,7 +9,7 @@ echo "home.php is included";
     <style>
         .hero-section {
             background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
-                        url('library-bg.jpg') center/cover;
+                        url('/E-Lib/assets/images/library-bg.jpg') center/cover;
             color: white;
             min-height: 60vh;
             display: flex;
@@ -44,13 +40,25 @@ echo "home.php is included";
             width: 3rem;
             height: 3rem;
         }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #6c757d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="index.php">
+            <a class="navbar-brand fw-bold" href="/E-Lib/">
                 <i class="fas fa-book-open me-2"></i>Epictetus Library
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -59,24 +67,46 @@ echo "home.php is included";
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" href="index.php">Home</a>
+                        <a class="nav-link active" href="/E-Lib/">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="../views/add_book.php">Add Book</a>
+                        <a class="nav-link" href="/E-Lib/book">Books</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="search_results.php">Advanced Search</a>
+                        <a class="nav-link" href="/E-Lib/add-book">Add Book</a>
                     </li>
                 </ul>
-                <form class="d-flex" id="searchForm">
+                <form class="d-flex me-3" id="searchForm" action="/E-Lib/search_results" method="GET">
                     <div class="input-group">
-                        <input type="search" id="bookToSearch" class="form-control" 
+                        <input type="search" name="q" id="bookToSearch" class="form-control" 
                                placeholder="Search titles..." aria-label="Search">
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-search"></i>
                         </button>
                     </div>
                 </form>
+                
+                <?php if (isset($_SESSION['user_id'])): ?>
+                <!-- User is logged in -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="user-avatar me-2"><?= substr($_SESSION['username'] ?? 'U', 0, 1) ?></div>
+                        <span class="d-none d-md-inline"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li><a class="dropdown-item" href="/E-Lib/profile"><i class="fas fa-user me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" href="/E-Lib/book"><i class="fas fa-bookmark me-2"></i>My Books</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/E-Lib/api/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+                <?php else: ?>
+                <!-- User is not logged in -->
+                <div class="d-flex">
+                    <a href="/E-Lib/login" class="btn btn-outline-light me-2">Login</a>
+                    <a href="/E-Lib/signup" class="btn btn-primary">Sign Up</a>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
     </nav>
@@ -116,9 +146,9 @@ echo "home.php is included";
                 <div class="col-md-4 mb-3">
                     <h5 class="text-warning">Quick Links</h5>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-light text-decoration-none">About Us</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Events</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Membership</a></li>
+                        <li><a href="/E-Lib/" class="text-light text-decoration-none">Home</a></li>
+                        <li><a href="/E-Lib/book" class="text-light text-decoration-none">Books</a></li>
+                        <li><a href="/E-Lib/login" class="text-light text-decoration-none">Login</a></li>
                     </ul>
                 </div>
                 <div class="col-md-4 mb-3">
@@ -147,7 +177,6 @@ echo "home.php is included";
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
-        // Sample API integration
         document.addEventListener('DOMContentLoaded', () => {
             const loader = document.querySelector('.loading-spinner');
             const booksGrid = document.getElementById('booksGrid');
@@ -155,45 +184,65 @@ echo "home.php is included";
             async function loadFeaturedBooks() {
                 try {
                     loader.style.display = 'block';
-                    // Replace with your actual API endpoint
-                    const response = await axios.get('/api/featured-books');
-                    booksGrid.innerHTML = response.data.map(book => `
-                        <div class="col-md-4 col-lg-3">
-                            <div class="card book-card h-100">
-                                <img src="${book.cover || 'placeholder-book.jpg'}" 
-                                     class="book-cover card-img-top" 
-                                     alt="${book.title} cover">
-                                <div class="card-body">
-                                    <h5 class="card-title">${book.title}</h5>
-                                    <p class="card-text text-muted">${book.author}</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="badge bg-info">${book.genre}</span>
-                                        <a href="/book/${book.id}" class="btn btn-sm btn-primary">
-                                            Details <i class="fas fa-arrow-right ms-1"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
+                    const response = await axios.get('/E-Lib/api/featured-books');
+                    
+                    if (response.data.status === 'success' && response.data.books) {
+                        displayBooks(response.data.books);
+                    } else {
+                        showError('No books found');
+                    }
                 } catch (error) {
-                    booksGrid.innerHTML = `
-                        <div class="col-12 text-center text-danger">
-                            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
-                            <p>Failed to load books. Please try again later.</p>
-                        </div>
-                    `;
+                    console.error('Error loading books:', error);
+                    showError('Failed to load books');
                 } finally {
                     loader.style.display = 'none';
                 }
             }
 
+            function displayBooks(books) {
+                if (!books || books.length === 0) {
+                    showError('No books found in the library');
+                    return;
+                }
+                
+                booksGrid.innerHTML = books.map(book => `
+                    <div class="col-md-4 col-lg-3">
+                        <div class="card book-card h-100">
+                            <img src="${book.cover || '/E-Lib/assets/images/placeholder-book.jpg'}" 
+                                 class="book-cover card-img-top" 
+                                 alt="${book.title} cover"
+                                 onerror="this.src='/E-Lib/assets/images/placeholder-book.jpg'">
+                            <div class="card-body">
+                                <h5 class="card-title">${book.title}</h5>
+                                <p class="card-text text-muted">${book.author}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-info">${book.genre || 'General'}</span>
+                                    <a href="/E-Lib/book/${book.id}" class="btn btn-sm btn-primary">
+                                        Details <i class="fas fa-arrow-right ms-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            function showError(message) {
+                booksGrid.innerHTML = `
+                    <div class="col-12 text-center text-danger">
+                        <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+
             // Search functionality
-            document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            document.getElementById('searchForm').addEventListener('submit', (e) => {
                 e.preventDefault();
-                const query = document.getElementById('bookToSearch').value;
-                // Implement search logic
-                window.location.href = `search_results.php?q=${encodeURIComponent(query)}`;
+                const query = document.getElementById('bookToSearch').value.trim();
+                if (query) {
+                    window.location.href = `/E-Lib/search_results?q=${encodeURIComponent(query)}`;
+                }
             });
 
             loadFeaturedBooks();

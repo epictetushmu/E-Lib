@@ -1,6 +1,7 @@
 <?php
-require_once('../models/Book.php');
+namespace App\Services;
 
+use App\Models\Book;
 class BookService {
     private $book;
 
@@ -10,6 +11,10 @@ class BookService {
 
     public function getAllBooks() {
         return $this->book->getAllBooks();
+    }
+
+    public function getFeaturedBooks(){ 
+        return $this->book->getFeaturedBooks(); 
     }
 
     public function getBookDetails($id) {

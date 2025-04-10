@@ -1,4 +1,5 @@
 <?php
+namespace App\Controllers;
 require_once('../vendor/autoload.php'); // Include Composer autoload
 
 use Firebase\JWT\JWT;

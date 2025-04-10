@@ -6,43 +6,77 @@
     <title>Login</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h2>Login</h2>
+    <div class="login-container">
+        <h2 class="text-center">Login</h2>
+        <div id="error-message" class="alert alert-danger d-none"></div>
         <form id="loginForm">
             <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control" id="username" required>
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" required>
             </div>
             <div class="mb-3">
                 <label for="password" class="form-label">Password</label>
                 <input type="password" class="form-control" id="password" required>
             </div>
-            <button type="submit" class="btn btn-primary">Login</button>
+            <button type="submit" class="btn btn-primary w-100">Login</button>
+            <div class="mt-3 text-center">
+                <p>Don't have an account? <a href="/E-Lib/signup">Sign up</a></p>
+            </div>
         </form>
+        <div class="container mt-5 text-center">
+            <h5>Or login with</h5>
+            <p>Click the button below to login using CAS authentication.</p>
+            <a href="https://auth.hmu.gr/cas/login?service=https://your-callback-url" class="btn btn-secondary">
+                Login with CAS
+            </a>
+        </div>
     </div>
     <script>
         document.getElementById('loginForm').addEventListener('submit', function(event) {
             event.preventDefault();
 
-            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
 
-            axios.post('/api/login.php', {
-                username: username,
+            // Reset error message
+            errorMessage.classList.add('d-none');
+
+            axios.post('/E-Lib/api/login', {
+                email: email,
                 password: password
             })
             .then(response => {
                 if (response.data.status === 'success') {
-                    alert('Login successful!');
-                    window.location.href = '/index.php';
+                    window.location.href = '/E-Lib/';
                 } else {
-                    alert('Login failed: ' + response.data.message);
+                    errorMessage.textContent = response.data.message || 'Login failed. Please check your credentials.';
+                    errorMessage.classList.remove('d-none');
                 }
             })
             .catch(error => {
-                console.error('There was an error logging in!', error);
+                errorMessage.textContent = 'An error occurred while trying to log in. Please try again later.';
+                errorMessage.classList.remove('d-none');
+                console.error('Login error:', error);
             });
         });
     </script>

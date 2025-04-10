@@ -1,5 +1,9 @@
 <?php
-require_once('config.php');
+namespace App\Includes;
+
+use PDO; 
+use PDOException; 
+
 
 class Database {
     private static $instance = null;

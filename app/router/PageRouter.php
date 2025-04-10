@@ -1,36 +1,41 @@
 <?php 
-// require_once('../views/PageRouter.php');
-require_once('../includes/ResponseHandler.php');
-require_once('../controllers/PageController.php');
-require_once('../../vendor/autoload.php'); 
+namespace App\Router;
+
+use App\Controllers\PageController;
+use App\Includes\ResponseHandler;
+
+require_once(__DIR__ . '/../../vendor/autoload.php'); 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Dotenv\Dotenv;
 
-
-class PageRouter{ 
-
+class PageRouter { 
     private $routes = [];
+    private $secretKey;
 
-    private $secretKey = 'your-secret-key';     //Check what this is about
+    public function __construct() {
+        // Load environment variables
+        $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
+        $dotenv->load();
 
+        // Set the secret key from the environment variable
+        $this->secretKey = $_ENV['SECRET_KEY'];
 
-    public function __construct(){
         $this->defineRoutes();
         $this->setSecurityHeaders();
-
     }
 
-    private function defineRoutes(){ 
+    private function defineRoutes() { 
         $this->routes = [
-            ['path' =>'/index', 'handler' => [new PageController(), 'home']],
-            ['path' =>'/', 'handler' => [new PageController(), 'home']],
+            ['path' => '/index', 'handler' => [new PageController(), 'home']],
+            ['path' => '/', 'handler' => [new PageController(), 'home']],
             ['path' => '/login', 'handler' => [new PageController(), 'loginForm']],
-            ['path'=> '/signup', 'handler' => [new PageController(), 'signupForm']],
+            ['path' => '/signup', 'handler' => [new PageController(), 'signupForm']],
             ['path' => '/book', 'handler' => [new PageController(), 'listBooks']],
-            ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'viewBooks']],
+            ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'viewBook']],
             ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
             ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'updateBook']],
-            ['path' => '/search/(\w+)', 'handler' => [new PageController(), 'searchBooks']],
+            ['path' => '/search_results', 'handler' => [new PageController(), 'searchBooks']],
             ['path' => '/error', 'handler' => [new PageController(), 'error']]
         ];            
     }
@@ -38,22 +43,27 @@ class PageRouter{
     public function handleRequest($path) {
         foreach ($this->routes as $route) {
             if (preg_match('#^' . $route['path'] . '$#', $path, $matches)) {
-                echo $route['path'];
-                call_user_func($route['handler']);
+                call_user_func_array($route['handler'], $matches);
                 return;
             }
         }
     
-        ResponseHandler::respond('/404ß', "Page not found");
-        include('../views/404.php'); // Load custom 404 page
+        ResponseHandler::respond(404, "Page not found");
+        include __DIR__ . '/../views/404.php'; // Load custom 404 page
     }    
 
     private function setSecurityHeaders() {
+        // Security headers
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: DENY');
         header('X-XSS-Protection: 1; mode=block');
         header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
-        header('Content-Security-Policy: default-src \'self\'');
+        header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;");
+
+        // API-specific headers
+        header('Access-Control-Allow-Origin: *'); 
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization'); 
+        header('Content-Type: application/json');
     }
-    
 }
