@@ -11,9 +11,9 @@ class Router {
     private $baseUrl;
 
     public function __construct($baseUrl) {
+        $this->baseUrl = $baseUrl;
         $this->apiRouter = new ApiRouter();
         $this->pageRouter = new PageRouter();
-        $this->baseUrl = $baseUrl;
     }
 
     public function handleRequest() {
