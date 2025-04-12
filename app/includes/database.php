@@ -1,30 +1,34 @@
 <?php
 namespace App\Includes;
+
 use Dotenv\Dotenv;
-
-use PDO; 
-use PDOException; 
-
+use MongoDB\Client;
+use MongoDB\Collection;
+use MongoDB\Exception\Exception;
 
 class Database {
     private static $instance = null;
     private $connection;
+    private $db;
 
     private function __construct() {
         // Load environment variables
         $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
         $dotenv->load();
 
-        // Use environment variables to configure the database connection
+        // Use environment variables to configure the MongoDB connection
         $host = $_ENV['DB_HOST'];
         $port = $_ENV['DB_PORT'];
         $dbname = $_ENV['DB_DATABASE'];
-        $username = $_ENV['DB_USERNAME'];
-        $password = $_ENV['DB_PASSWORD'];
 
-        $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
-        $this->connection = new PDO($dsn, $username, $password);
-        $this->connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        try {
+            // Create a MongoDB client
+            $this->connection = new Client("mongodb://$host:$port");
+            $this->db = $this->connection->selectDatabase($dbname);
+        } catch (Exception $e) {
+            echo 'Error connecting to MongoDB: ' . $e->getMessage();
+            exit;
+        }
     }
 
     public static function getInstance() {
@@ -34,23 +38,27 @@ class Database {
         return self::$instance;
     }
 
-    public function getConnection() {
-        return $this->connection;
+    public function getCollection(string $collectionName): Collection {
+        return $this->db->selectCollection($collectionName);
     }
 
-    public function execQuery($sql, $params = array(), $returnLastInsertId = false) {
-        try{
-            $stmt = $this->connection->prepare($sql);
-            $stmt->execute($params);
-        
-            if ($returnLastInsertId) {
-                return $this->connection->lastInsertId();
-            }
-            
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);    
-        }catch (PDOException $e) {
-            echo 'Error:'. $e->getMessage();
-            return false; 
-        }
+    public function insert(string $collection, array $data) {
+        return $this->getCollection($collection)->insertOne($data);
+    }
+
+    public function find(string $collection, array $filter = [], array $options = []) {
+        return $this->getCollection($collection)->find($filter, $options)->toArray();
+    }
+
+    public function findOne(string $collection, array $filter = [], array $options = []) {
+        return $this->getCollection($collection)->findOne($filter, $options);
+    }
+
+    public function update(string $collection, array $filter, array $update, array $options = []) {
+        return $this->getCollection($collection)->updateMany($filter, ['$set' => $update], $options);
+    }
+
+    public function delete(string $collection, array $filter, array $options = []) {
+        return $this->getCollection($collection)->deleteMany($filter, $options);
     }
 }
