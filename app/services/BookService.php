@@ -1,12 +1,12 @@
 <?php
 namespace App\Services;
 
-use App\Models\Book;
+use App\Models\Books;
 class BookService {
     private $book;
 
     public function __construct() {
-        $this->book = new Book();
+        $this->book = new Books();
     }
 
     public function getAllBooks() {
