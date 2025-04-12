@@ -6,40 +6,7 @@
     <title>My Profile | Epictetus Library</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .profile-header {
-            background-color: #f8f9fa;
-            border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 30px;
-        }
-        .profile-avatar {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background-color: #6c757d;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            color: white;
-            font-weight: bold;
-            margin: 0 auto 20px;
-        }
-        .book-cover {
-            height: 180px;
-            object-fit: cover;
-        }
-        .nav-pills .nav-link.active {
-            background-color: #0d6efd;
-        }
-        .book-card {
-            transition: transform 0.3s;
-        }
-        .book-card:hover {
-            transform: translateY(-5px);
-        }
-    </style>
+    <link rel="stylesheet" href="./styles/profile.css"> 
 </head>
 <body class="d-flex flex-column min-vh-100">
     <!-- Navbar -->

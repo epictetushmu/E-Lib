@@ -1,0 +1,19 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f8f9fa;
+}
+.error-container {
+    text-align: center;
+}
+.error-code {
+    font-size: 6rem;
+    font-weight: bold;
+    color: #dc3545;
+}
+.error-message {
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+}

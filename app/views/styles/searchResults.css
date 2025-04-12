@@ -1,0 +1,15 @@
+.book-cover {
+    height: 250px;
+    object-fit: cover;
+    object-position: top;
+}
+.card-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.badge {
+    font-size: 0.8rem;
+}

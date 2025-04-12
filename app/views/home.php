@@ -6,53 +6,7 @@
     <title>Epictetus Library - Home of Knowledge</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .hero-section {
-            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
-                        url('/E-Lib/assets/images/library-bg.jpg') center/cover;
-            color: white;
-            min-height: 60vh;
-            display: flex;
-            align-items: center;
-        }
-        
-        .book-card {
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-        
-        .book-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
-        
-        .book-cover {
-            height: 300px;
-            object-fit: cover;
-            object-position: top;
-        }
-        
-        footer {
-            background: #2c3e50;
-        }
-        
-        .loading-spinner {
-            display: none;
-            width: 3rem;
-            height: 3rem;
-        }
-        
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: #6c757d;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-        }
-    </style>
+    <link rel="stylesheet" href="styles/home.css"> 
 </head>
 <body class="d-flex flex-column min-vh-100">
     <!-- Navbar -->

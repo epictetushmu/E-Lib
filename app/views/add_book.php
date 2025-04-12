@@ -6,71 +6,7 @@
     <title>Add Book | Epictetus Library</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/E-Lib/app/styles/add_book.css">
-    <style>
-        .custom-select-wrapper {
-            position: relative;
-            display: inline-block;
-            width: 100%;
-        }
-
-        .custom-select-display {
-            border: 1px solid #ccc;
-            padding: 10px;
-            cursor: pointer;
-            background: #fff;
-            border-radius: 5px;
-        }
-
-        .custom-dropdown {
-            position: absolute;
-            width: 100%;
-            background: #fff;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: none;
-            z-index: 10;
-        }
-
-        .custom-dropdown li {
-            padding: 10px;
-            cursor: pointer;
-        }
-        
-        .custom-dropdown li:hover {
-            background: #f0f0f0;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .selected {
-            font-weight: bold;
-            background: #d1e7dd;
-        }
-
-        .dull {
-            opacity: 0.5;
-        }
-
-        .tooltip {
-            position: absolute;
-            background: #333;
-            color: #fff;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            display: none;
-        }
-
-        .tooltip.visible {
-            display: block;
-        }
-    </style>
+    <link rel="stylesheet" href="./styles/add_book.css">
 </head>
 <body class="d-flex flex-column min-vh-100">
     

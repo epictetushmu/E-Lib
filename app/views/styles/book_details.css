@@ -1,0 +1,22 @@
+.book-cover {
+    max-height: 400px;
+    object-fit: cover;
+    object-position: top;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.book-details {
+    margin-top: 20px;
+}
+.container {
+    max-width: 900px;
+}
+.badge {
+    font-size: 0.9rem;
+}
+.review-card {
+    border-left: 4px solid #6c757d;
+}
+.star-rating .active {
+    color: #ffc107;
+}
