@@ -4,37 +4,42 @@ namespace App\Models;
 use App\Includes\Database;
 
 class Categories {
-    private $pdo;
+    private $db;
+    private $collection = 'categories';
 
     public function __construct() {
-        $this->pdo = Database::getInstance();
+        $this->db = Database::getInstance();
     }
 
-    public function getCategory($id){
-        $sql = "SELECT * FROM categories WHERE id = :id";
-        return $this->pdo->execQuery($sql, [$id]); 
-    }   
+    public function getCategory($id) {
+        return $this->db->findOne($this->collection, ['id' => $id]);
+    }
 
-    public function getCategoryId($name){
-        $sql = "SELECT id FROM categories WHERE name = :name";
-        return $this->pdo->execQuery($sql , [$name]); 
+    public function getCategoryId($name) {
+        $category = $this->db->findOne($this->collection, ['name' => $name]);
+        return $category ? $category['id'] : null;
     }
 
     public function addCategory($category_id) {
-        $sql = "SELECT id FROM categories WHERE id = :id";
-        $result = $this->pdo->execQuery($sql, ["id" => $category_id]);
-        if ($result) {
-            return $result[0]['id'];
+        // Check if the category already exists
+        $existing = $this->db->findOne($this->collection, ['id' => $category_id]);
+
+        if ($existing) {
+            return $existing['id'];
         } else {
-            $sql = "INSERT INTO categories (id) VALUES (:id)";
-            $this->pdo->execQuery($sql, ["id" => $category_id]);
+            $this->db->insert($this->collection, ['id' => $category_id]);
             return $category_id;
         }
     }
 
-    public function deleteCategory($id){
-        $sql = "DELETE FROM categories WHERE id = :id";
-        return $this->pdo->execQuery($sql, [$id]);
+    public function deleteCategory($id) {
+        return $this->db->delete($this->collection, ['id' => $id]);
+    }
+    public function getAllCategories() {
+        return $this->db->find($this->collection);
     }
 
+    public function updateCategory($id, $data) {
+        return $this->db->update($this->collection, ['id' => $id], $data);
+    }
 }

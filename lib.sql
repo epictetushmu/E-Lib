@@ -24,10 +24,10 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
--- Table structure for table `Book`
+-- Table structure for table `Books`
 --
 
-CREATE TABLE `Book` (
+CREATE TABLE `Books` (
   `id` int(11) NOT NULL,
   `title` varchar(255) NOT NULL,
   `author` varchar(255) NOT NULL,
@@ -73,9 +73,9 @@ CREATE TABLE `Category` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Indexes for table `Book`
+-- Indexes for table `Books`
 --
-ALTER TABLE `Book`
+ALTER TABLE `Books`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -104,9 +104,9 @@ ALTER TABLE `Category`
 --
 
 --
--- AUTO_INCREMENT for table `Book`
+-- AUTO_INCREMENT for table `Books`
 --
-ALTER TABLE `Book`
+ALTER TABLE `Books`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
 
 --
@@ -135,14 +135,14 @@ ALTER TABLE `Category`
 -- Constraints for table `BookCategory`
 --
 ALTER TABLE `BookCategory`
-  ADD CONSTRAINT `bookcategory_ibfk_1` FOREIGN KEY (`book_id`) REFERENCES `Book` (`id`),
+  ADD CONSTRAINT `bookcategory_ibfk_1` FOREIGN KEY (`book_id`) REFERENCES `Books` (`id`),
   ADD CONSTRAINT `bookcategory_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `Category` (`id`);
 
 --
 -- Constraints for table `Borrow`
 --
 ALTER TABLE `Borrow`
-  ADD CONSTRAINT `borrow_ibfk_1` FOREIGN KEY (`book_id`) REFERENCES `Book` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `borrow_ibfk_1` FOREIGN KEY (`book_id`) REFERENCES `Books` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
