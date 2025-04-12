@@ -3,6 +3,7 @@ namespace App\Router;
 
 use App\Controllers\PageController;
 use App\Includes\ResponseHandler;
+use App\Services\CasService;
 
 require_once(__DIR__ . '/../../vendor/autoload.php'); 
 // use Firebase\JWT\JWT;
@@ -12,6 +13,7 @@ use Dotenv\Dotenv;
 class PageRouter { 
     private $routes = [];
     private $secretKey;
+    private $casService;
 
     public function __construct() {
         // Load environment variables
@@ -23,6 +25,7 @@ class PageRouter {
 
         $this->defineRoutes();
         $this->setSecurityHeaders();
+        $this->casService = new CasService();
     }
 
     private function defineRoutes() { 
@@ -41,6 +44,18 @@ class PageRouter {
     }
 
     public function handleRequest($path) {
+        if ($path === '/login') {
+            $ticket = $_GET['ticket'] ?? null;
+            $serviceUrl = 'http://localhost:8000/login'; // Replace with your service URL
+
+            if ($ticket && $this->casService->authenticate($ticket, $serviceUrl)) {
+                echo 'Login successful!';
+            } else {
+                echo 'Login failed!';
+            }
+            return;
+        }
+
         foreach ($this->routes as $route) {
             if (preg_match('#^' . $route['path'] . '$#', $path, $matches)) {
                 call_user_func_array($route['handler'], $matches);
