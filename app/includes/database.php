@@ -25,7 +25,7 @@ class Database {
             // Create a MongoDB client
             $this->connection = new Client("mongodb://$host:$port");
             $this->db = $this->connection->selectDatabase($dbname);
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             echo 'Error connecting to MongoDB: ' . $e->getMessage();
             exit;
         }
