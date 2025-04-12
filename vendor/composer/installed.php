@@ -3,7 +3,7 @@
         'name' => 'epictetus/e-lib',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => 'ac02bc1b4ec480ebec9c7aaff321ccdc46e8da99',
+        'reference' => '3bfc58026b88d6c70677d04f6f745ccda0f3cd4b',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -22,7 +22,7 @@
         'epictetus/e-lib' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => 'ac02bc1b4ec480ebec9c7aaff321ccdc46e8da99',
+            'reference' => '3bfc58026b88d6c70677d04f6f745ccda0f3cd4b',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
