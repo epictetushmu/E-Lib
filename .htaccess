@@ -1,10 +1,7 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    
-    # If the requested file/directory doesn't exist
+    # If the requested resource doesn't exist, pass to index.php
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    
-    # Rewrite all requests to index.php
     RewriteRule ^ index.php [L]
 </IfModule>
