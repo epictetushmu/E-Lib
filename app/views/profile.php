@@ -12,7 +12,7 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/E-Lib/">
+            <a class="navbar-brand fw-bold" href="/">
                 <i class="fas fa-book-open me-2"></i>Epictetus Library
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -20,9 +20,9 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/E-Lib/">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/E-Lib/add-book">Add Book</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/E-Lib/search">Search</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/add-book">Add Book</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/search">Search</a></li>
                 </ul>
             </div>
         </div>
@@ -74,10 +74,10 @@
                         <?php foreach($userBooks['borrowed'] as $book): ?>
                             <div class="col-md-4 col-lg-3">
                                 <div class="card book-card h-100">
-                                    <img src="<?= htmlspecialchars($book['cover'] ?? '/E-Lib/assets/images/placeholder-book.jpg') ?>" 
+                                    <img src="<?= htmlspecialchars($book['cover'] ?? '/assets/images/placeholder-book.jpg') ?>" 
                                          class="card-img-top book-cover" 
                                          alt="<?= htmlspecialchars($book['title']) ?>"
-                                         onerror="this.src='/E-Lib/assets/images/placeholder-book.jpg'">
+                                         onerror="this.src='/assets/images/placeholder-book.jpg'">
                                     <div class="card-body">
                                         <h5 class="card-title"><?= htmlspecialchars($book['title']) ?></h5>
                                         <p class="card-text text-muted"><?= htmlspecialchars($book['author']) ?></p>
@@ -85,7 +85,7 @@
                                             <small class="text-danger">
                                                 <i class="fas fa-calendar-check me-1"></i>Due: <?= date('M j, Y', strtotime($book['due_date'])) ?>
                                             </small>
-                                            <a href="/E-Lib/book/<?= $book['id'] ?>" class="btn btn-sm btn-outline-primary">Details</a>
+                                            <a href="/book/<?= $book['id'] ?>" class="btn btn-sm btn-outline-primary">Details</a>
                                         </div>
                                     </div>
                                 </div>
@@ -97,7 +97,7 @@
                         <i class="fas fa-book fa-3x text-muted mb-3"></i>
                         <h4>No books borrowed</h4>
                         <p class="text-muted">You haven't borrowed any books yet.</p>
-                        <a href="/E-Lib/search" class="btn btn-primary">Browse Books</a>
+                        <a href="/search" class="btn btn-primary">Browse Books</a>
                     </div>
                 <?php endif; ?>
             </div>
@@ -109,10 +109,10 @@
                         <?php foreach($userBooks['saved'] as $book): ?>
                             <div class="col-md-4 col-lg-3">
                                 <div class="card book-card h-100">
-                                    <img src="<?= htmlspecialchars($book['cover'] ?? '/E-Lib/assets/images/placeholder-book.jpg') ?>" 
+                                    <img src="<?= htmlspecialchars($book['cover'] ?? '/assets/images/placeholder-book.jpg') ?>" 
                                          class="card-img-top book-cover" 
                                          alt="<?= htmlspecialchars($book['title']) ?>"
-                                         onerror="this.src='/E-Lib/assets/images/placeholder-book.jpg'">
+                                         onerror="this.src='/assets/images/placeholder-book.jpg'">
                                     <div class="card-body">
                                         <h5 class="card-title"><?= htmlspecialchars($book['title']) ?></h5>
                                         <p class="card-text text-muted"><?= htmlspecialchars($book['author']) ?></p>
@@ -122,7 +122,7 @@
                                             <?php else: ?>
                                                 <span class="badge bg-danger">Unavailable</span>
                                             <?php endif; ?>
-                                            <a href="/E-Lib/book/<?= $book['id'] ?>" class="btn btn-sm btn-outline-primary">Details</a>
+                                            <a href="/book/<?= $book['id'] ?>" class="btn btn-sm btn-outline-primary">Details</a>
                                         </div>
                                     </div>
                                 </div>
@@ -134,7 +134,7 @@
                         <i class="fas fa-bookmark fa-3x text-muted mb-3"></i>
                         <h4>No saved books</h4>
                         <p class="text-muted">You haven't saved any books to your list yet.</p>
-                        <a href="/E-Lib/search" class="btn btn-primary">Browse Books</a>
+                        <a href="/search" class="btn btn-primary">Browse Books</a>
                     </div>
                 <?php endif; ?>
             </div>

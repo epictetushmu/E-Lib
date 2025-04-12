@@ -12,7 +12,7 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/E-Lib/">
+            <a class="navbar-brand fw-bold" href="/">
                 <i class="fas fa-book-open me-2"></i>Epictetus Library
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -20,9 +20,9 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/E-Lib/">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/E-Lib/add-book">Add Book</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/E-Lib/search">Search</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/add-book">Add Book</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/search">Search</a></li>
                 </ul>
             </div>
         </div>
@@ -32,10 +32,10 @@
         <?php if (!empty($book)): ?>
             <div class="row">
                 <div class="col-md-4">
-                    <img src="<?= htmlspecialchars($book['cover'] ?? '/E-Lib/assets/images/placeholder-book.jpg') ?>" 
+                    <img src="<?= htmlspecialchars($book['cover'] ?? '/assets/images/placeholder-book.jpg') ?>" 
                          alt="<?= htmlspecialchars($book['title']) ?> cover" 
                          class="img-fluid book-cover"
-                         onerror="this.src='/E-Lib/assets/images/placeholder-book.jpg'">
+                         onerror="this.src='/assets/images/placeholder-book.jpg'">
                     
                     <?php if (isset($_SESSION['user_id'])): ?>
                         <div class="mt-3">
@@ -89,7 +89,7 @@
                         </div>
                     </div>
                     
-                    <a href="/E-Lib/" class="btn btn-secondary mt-3">
+                    <a href="/" class="btn btn-secondary mt-3">
                         <i class="fas fa-arrow-left me-2"></i>Back to Home
                     </a>
                 </div>
@@ -156,7 +156,7 @@
                 <i class="fas fa-book fa-5x mb-3 text-muted"></i>
                 <h3>Book not found</h3>
                 <p class="text-muted">The book you are looking for does not exist or has been removed.</p>
-                <a href="/E-Lib/" class="btn btn-primary mt-3">Return to Home</a>
+                <a href="/" class="btn btn-primary mt-3">Return to Home</a>
             </div>
         <?php endif; ?>
     </div>
@@ -225,7 +225,7 @@
                     }
                     
                     try {
-                        const response = await axios.post('/E-Lib/api/review', {
+                        const response = await axios.post('/api/review', {
                             book_id: bookId,
                             rating: rating,
                             comment: comment
@@ -251,7 +251,7 @@
                     const bookId = document.getElementById('bookId').value;
                     
                     try {
-                        const response = await axios.post('/E-Lib/api/borrow', {
+                        const response = await axios.post('/api/borrow', {
                             book_id: bookId
                         });
                         
@@ -276,7 +276,7 @@
                     const bookId = document.getElementById('bookId').value;
                     
                     try {
-                        const response = await axios.post('/E-Lib/api/save-book', {
+                        const response = await axios.post('/api/save-book', {
                             book_id: bookId
                         });
                         

@@ -6,13 +6,13 @@
     <title>Epictetus Library - Home of Knowledge</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="styles/home.css"> 
+    <link rel="stylesheet" href="./styles/home.css"> 
 </head>
 <body class="d-flex flex-column min-vh-100">
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/E-Lib/">
+            <a class="navbar-brand fw-bold" href="/">
                 <i class="fas fa-book-open me-2"></i>Epictetus Library
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -21,16 +21,16 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" href="/E-Lib/">Home</a>
+                        <a class="nav-link active" href="/">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/E-Lib/book">Books</a>
+                        <a class="nav-link" href="/view-books">Books</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/E-Lib/add-book">Add Book</a>
+                        <a class="nav-link" href="/add-book">Add Book</a>
                     </li>
                 </ul>
-                <form class="d-flex me-3" id="searchForm" action="/E-Lib/search_results" method="GET">
+                <form class="d-flex me-3" id="searchForm" action="/search_results" method="GET">
                     <div class="input-group">
                         <input type="search" name="q" id="bookToSearch" class="form-control" 
                                placeholder="Search titles..." aria-label="Search">
@@ -48,17 +48,17 @@
                         <span class="d-none d-md-inline"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                        <li><a class="dropdown-item" href="/E-Lib/profile"><i class="fas fa-user me-2"></i>Profile</a></li>
-                        <li><a class="dropdown-item" href="/E-Lib/book"><i class="fas fa-bookmark me-2"></i>My Books</a></li>
+                        <li><a class="dropdown-item" href="/profile"><i class="fas fa-user me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" href="/book"><i class="fas fa-bookmark me-2"></i>My Books</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="/E-Lib/api/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        <li><a class="dropdown-item" href="/api/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                     </ul>
                 </div>
                 <?php else: ?>
                 <!-- User is not logged in -->
                 <div class="d-flex">
-                    <a href="/E-Lib/login" class="btn btn-outline-light me-2">Login</a>
-                    <a href="/E-Lib/signup" class="btn btn-primary">Sign Up</a>
+                    <a href="/login" class="btn btn-outline-light me-2">Login</a>
+                    <a href="/signup" class="btn btn-primary">Sign Up</a>
                 </div>
                 <?php endif; ?>
             </div>
@@ -100,9 +100,9 @@
                 <div class="col-md-4 mb-3">
                     <h5 class="text-warning">Quick Links</h5>
                     <ul class="list-unstyled">
-                        <li><a href="/E-Lib/" class="text-light text-decoration-none">Home</a></li>
-                        <li><a href="/E-Lib/book" class="text-light text-decoration-none">Books</a></li>
-                        <li><a href="/E-Lib/login" class="text-light text-decoration-none">Login</a></li>
+                        <li><a href="/" class="text-light text-decoration-none">Home</a></li>
+                        <li><a href="/book" class="text-light text-decoration-none">Books</a></li>
+                        <li><a href="/login" class="text-light text-decoration-none">Login</a></li>
                     </ul>
                 </div>
                 <div class="col-md-4 mb-3">
@@ -138,7 +138,7 @@
             async function loadFeaturedBooks() {
                 try {
                     loader.style.display = 'block';
-                    const response = await axios.get('/E-Lib/api/featured-books');
+                    const response = await axios.get('/api/featured-books');
                     
                     if (response.data.status === 'success' && response.data.books) {
                         displayBooks(response.data.books);
@@ -162,16 +162,16 @@
                 booksGrid.innerHTML = books.map(book => `
                     <div class="col-md-4 col-lg-3">
                         <div class="card book-card h-100">
-                            <img src="${book.cover || '/E-Lib/assets/images/placeholder-book.jpg'}" 
+                            <img src="${book.cover || '/assets/images/placeholder-book.jpg'}" 
                                  class="book-cover card-img-top" 
                                  alt="${book.title} cover"
-                                 onerror="this.src='/E-Lib/assets/images/placeholder-book.jpg'">
+                                 onerror="this.src='/assets/images/placeholder-book.jpg'">
                             <div class="card-body">
                                 <h5 class="card-title">${book.title}</h5>
                                 <p class="card-text text-muted">${book.author}</p>
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="badge bg-info">${book.genre || 'General'}</span>
-                                    <a href="/E-Lib/book/${book.id}" class="btn btn-sm btn-primary">
+                                    <a href="/book/${book.id}" class="btn btn-sm btn-primary">
                                         Details <i class="fas fa-arrow-right ms-1"></i>
                                     </a>
                                 </div>
@@ -195,7 +195,7 @@
                 e.preventDefault();
                 const query = document.getElementById('bookToSearch').value.trim();
                 if (query) {
-                    window.location.href = `/E-Lib/search_results?q=${encodeURIComponent(query)}`;
+                    window.location.href = `/search_results?q=${encodeURIComponent(query)}`;
                 }
             });
 

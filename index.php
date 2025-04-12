@@ -6,6 +6,6 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL & ~E_DEPRECATED);
 
 use App\Router\Router;
-$baseUrl = '/E-Lib';
+$baseUrl = '/localhost:5500'; // Set your base URL here
 $router = new Router($baseUrl); 
 $router->handleRequest();

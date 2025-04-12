@@ -23,7 +23,7 @@
             </div>
             <button type="submit" class="btn btn-primary w-100">Login</button>
             <div class="mt-3 text-center">
-                <p>Don't have an account? <a href="/E-Lib/signup">Sign up</a></p>
+                <p>Don't have an account? <a href="/signup">Sign up</a></p>
             </div>
         </form>
         <div class="container mt-5 text-center">
@@ -45,13 +45,13 @@
             // Reset error message
             errorMessage.classList.add('d-none');
 
-            axios.post('/E-Lib/api/login', {
+            axios.post('/api/login', {
                 email: email,
                 password: password
             })
             .then(response => {
                 if (response.data.status === 'success') {
-                    window.location.href = '/E-Lib/';
+                    window.location.href = '/';
                 } else {
                     errorMessage.textContent = response.data.message || 'Login failed. Please check your credentials.';
                     errorMessage.classList.remove('d-none');

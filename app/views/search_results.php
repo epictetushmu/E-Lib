@@ -12,7 +12,7 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/E-Lib/">
+            <a class="navbar-brand fw-bold" href="/">
                 <i class="fas fa-book-open me-2"></i>Epictetus Library
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -20,9 +20,9 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/E-Lib/">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/E-Lib/add-book">Add Book</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="/E-Lib/search">Search</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/add-book">Add Book</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/search">Search</a></li>
                 </ul>
                 <form class="d-flex" id="searchForm">
                     <div class="input-group">
@@ -85,7 +85,7 @@
                 <?php foreach ($books as $book): ?>
                     <div class="col-md-4 col-lg-3 mb-4">
                         <div class="card h-100 shadow-sm">
-                            <img src="<?= htmlspecialchars($book['cover'] ?: '/E-Lib/assets/images/placeholder-book.jpg') ?>" 
+                            <img src="<?= htmlspecialchars($book['cover'] ?: '/assets/images/placeholder-book.jpg') ?>" 
                                 class="card-img-top book-cover" 
                                 alt="<?= htmlspecialchars($book['title']) ?>">
                             <div class="card-body">
@@ -101,7 +101,7 @@
                                 <?php endif; ?>
                             </div>
                             <div class="card-footer bg-white pt-0 border-0 text-end">
-                                <a href="/E-Lib/book/<?= htmlspecialchars($book['id']) ?>" class="btn btn-sm btn-primary">Details</a>
+                                <a href="/book/<?= htmlspecialchars($book['id']) ?>" class="btn btn-sm btn-primary">Details</a>
                             </div>
                         </div>
                     </div>
@@ -152,7 +152,7 @@
             e.preventDefault();
             const query = document.getElementById('quickSearch').value.trim();
             if (query) {
-                window.location.href = `/E-Lib/search?q=${encodeURIComponent(query)}`;
+                window.location.href = `/search?q=${encodeURIComponent(query)}`;
             }
         });
 
@@ -163,7 +163,7 @@
             const author = document.getElementById('author').value.trim();
             const category = document.getElementById('category').value;
             
-            let url = '/E-Lib/search?';
+            let url = '/search?';
             let params = [];
             
             if (title) params.push(`title=${encodeURIComponent(title)}`);

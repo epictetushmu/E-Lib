@@ -32,7 +32,7 @@
             </div>
             <button type="submit" class="btn btn-primary w-100">Sign Up</button>
             <div class="mt-3 text-center">
-                <p>Already have an account? <a href="/E-Lib/login">Login</a></p>
+                <p>Already have an account? <a href="/login">Login</a></p>
             </div>
         </form>
     </div>
@@ -63,7 +63,7 @@
                 return;
             }
 
-            axios.post('/E-Lib/api/signup', {
+            axios.post('/api/signup', {
                 username: username,
                 email: email,
                 password: password
@@ -71,7 +71,7 @@
             .then(response => {
                 if (response.data.status === 'success') {
                     alert('Signup successful! You can now log in.');
-                    window.location.href = '/E-Lib/login';
+                    window.location.href = '/login';
                 } else {
                     errorMessage.textContent = response.data.message || 'Signup failed!';
                     errorMessage.classList.remove('d-none');

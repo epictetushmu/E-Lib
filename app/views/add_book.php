@@ -13,7 +13,7 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/E-Lib/">
+            <a class="navbar-brand fw-bold" href="/">
                 <i class="fas fa-book-open me-2"></i>Epictetus Library
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -21,9 +21,9 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="/E-Lib/">Home</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="/E-Lib/add-book">Add Book</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/E-Lib/search_results">Search</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/add-book">Add Book</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/search_results">Search</a></li>
                 </ul>
                 <form class="d-flex" id="searchForm">
                     <div class="input-group">
@@ -147,7 +147,7 @@
                 formData.append("description", description);
                 formData.append("cover", cover);
 
-                axios.post("/E-Lib/api/add_book", formData)
+                axios.post("/api/add_book", formData)
                     .then(response => {
                         alert("Book added successfully!");
                         submitForm.reset();
