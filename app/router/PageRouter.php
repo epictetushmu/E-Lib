@@ -5,8 +5,8 @@ use App\Controllers\PageController;
 use App\Includes\ResponseHandler;
 
 require_once(__DIR__ . '/../../vendor/autoload.php'); 
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
+// use Firebase\JWT\JWT;
+// use Firebase\JWT\Key;
 use Dotenv\Dotenv;
 
 class PageRouter { 
