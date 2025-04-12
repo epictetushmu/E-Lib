@@ -19,12 +19,14 @@ class Router {
 
     public function handleRequest() {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-
-        if (strpos($path, $this->baseUrl) === 0) {
+        $uri = $_SERVER['REQUEST_URI'] ?? '/';
+        
+        $path = parse_url($uri, PHP_URL_PATH);
+        
+        if (!empty($this->baseUrl) && strpos($path, $this->baseUrl) === 0) {
             $path = substr($path, strlen($this->baseUrl));
         }
-
+        
         if (strpos($path, '/api') === 0) {
             $this->apiRouter->handleRequest($method, $path);
         } else {
