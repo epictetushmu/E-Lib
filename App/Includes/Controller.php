@@ -3,9 +3,24 @@
 namespace App\Includes;
 
 class Controller {
-    protected function render($view, $data = []) {
-        extract($data);
-        require_once("../views/{$view}.php");
+    protected $viewData = [];
+    
+    public function render($view = 'home', $data = []) {
+        $this->viewData = $data;
+        
+        // Use absolute path with __DIR__ to locate the views directory
+        $viewPath = __DIR__ . '/../../views/' . $view . '.php';
+        
+        // Check if the view file exists
+        if (!file_exists($viewPath)) {
+            die("View not found: $viewPath");
+        }
+        
+        // Extract view data to make variables available in the view
+        extract($this->viewData);
+        
+        // Include the view file
+        require_once $viewPath;
     }
 
     protected function redirect($url) {
