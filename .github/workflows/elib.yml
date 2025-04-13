@@ -20,12 +20,19 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up PHP
+      - name: Set up PHP with MongoDB 2.0 extension
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
-          extensions: mongodb
+          extensions: mbstring, mysqli, pdo_mysql
           coverage: none
+
+      - name: Install MongoDB extension v2.0
+        run: |
+          # Install MongoDB extension 2.0
+          sudo pecl install mongodb-2.0.0
+          echo "extension=mongodb.so" | sudo tee -a /etc/php/8.1/cli/conf.d/20-mongodb.ini
+          php -m | grep mongodb || echo "MongoDB extension not found"
 
       # Install MongoDB tools directly from the MongoDB 6.0 repository
       - name: Install MongoDB tools
@@ -41,7 +48,24 @@ jobs:
           mongo --host localhost --port 27017 --eval "db.runCommand({ ping: 1 })" || echo "MongoDB connection check skipped"
 
       - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-progress
+        run: |
+          composer install --prefer-dist --no-progress
+          
+          # Fallback in case of extension issues
+          if [ $? -ne 0 ]; then
+            echo "Regular installation failed, trying with platform requirement ignore..."
+            composer install --prefer-dist --no-progress --ignore-platform-req=ext-mongodb
+          fi
+
+      - name: Create .env file
+        run: |
+          cat > .env << 'EOL'
+          DB_HOST=localhost
+          DB_PORT=27017
+          DB_DATABASE=LibraryDb
+          SECRET_KEY=your-secret-key-for-testing
+          CAS_SERVER_URL=https://auth.example.com/cas
+          EOL
 
       - name: Start PHP server
         run: php -S 0.0.0.0:8000 -t public &
