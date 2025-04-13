@@ -1,9 +1,9 @@
-name: Laravel CI
+name: E-Lib CI
 
 on: [push, pull_request]
 
 jobs:
-  laravel-test:
+  e-lib-test:
     runs-on: ubuntu-latest
 
     services:
@@ -11,7 +11,7 @@ jobs:
         image: mysql:5.7
         env:
           MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: testdb
+          MYSQL_DATABASE: LibraryDb
         ports:
           - 3306:3306
         options: >-
@@ -39,20 +39,12 @@ jobs:
         if: steps.normal-install.outcome == 'failure'
         run: composer install --prefer-dist --no-progress --ignore-platform-req=ext-mongodb
 
-      - name: Copy .env
-        run: cp .env.example .env
+      - name: Import database schema
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u root -ppassword LibraryDb < lib.sql
 
-      - name: Generate app key
-        run: php artisan key:generate
-
-      - name: Run migrations
-        run: php artisan migrate --force
-
-      - name: Run tests (if you have any)
-        run: php artisan test
-
-      - name: Start Laravel server
-        run: php artisan serve --host=0.0.0.0 --port=8000 &
+      - name: Start PHP server
+        run: php -S 0.0.0.0:8000 -t public &
       
       - name: Set up ngrok
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
