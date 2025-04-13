@@ -22,7 +22,7 @@ if (file_exists($baseRouterPath)) {
 
 require_once __DIR__ . '/../App/Router/PageRouter.php';
 require_once __DIR__ . '/../App/Router/ApiRouter.php';
-require_once __DIR__ . '/../App/includes/MongoDb.php';
+require_once __DIR__ . '/../App/Includes/MongoDb.php';
 
 // Verify the class exists
 if (!class_exists('App\Router\BaseRouter')) {
