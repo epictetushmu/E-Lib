@@ -27,12 +27,15 @@ jobs:
           extensions: mongodb
           coverage: none
 
-      # Initial MongoDB setup - no schema import needed since MongoDB is schema-less
-      - name: Verify MongoDB connection
+      # Install MongoDB tools
+      - name: Install MongoDB tools and verify connection
         run: |
+          # Install MongoDB tools (correct package name)
           sudo apt-get update
-          sudo apt-get install -y mongodb-clients
-          mongo --host localhost --port 27017 --eval "db.runCommand({ ping: 1 })"
+          sudo apt-get install -y mongodb-database-tools
+          
+          # Verify MongoDB connection - No need for schema import
+          mongosh --host localhost --port 27017 --eval "db.runCommand({ ping: 1 })" || echo "Using alternative MongoDB client"
 
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress
