@@ -27,9 +27,17 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
+          extensions: mongodb:2.0.0
 
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress
+        # Fallback in case of extension installation issues
+        continue-on-error: true
+        id: normal-install
+
+      - name: Install Composer dependencies (ignoring platform requirements)
+        if: steps.normal-install.outcome == 'failure'
+        run: composer install --prefer-dist --no-progress --ignore-platform-req=ext-mongodb
 
       - name: Copy .env
         run: cp .env.example .env
@@ -43,14 +51,19 @@ jobs:
       - name: Run tests (if you have any)
         run: php artisan test
 
-      - name: Install ngrok
+      - name: Start Laravel server
+        run: php artisan serve --host=0.0.0.0 --port=8000 &
+      
+      - name: Set up ngrok
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
           echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
           sudo apt update && sudo apt install ngrok
 
-      - name: Start Laravel server
-        run: php artisan serve --host=0.0.0.0 --port=8000 &
-
       - name: Expose app via ngrok
-        run: ngrok http 8000
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          ngrok http 8000 &
+          sleep 5
+          echo "App available at: $(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')"
