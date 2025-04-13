@@ -1,5 +1,9 @@
 <?php
-require_once __DIR__ . '/../vendor/autoload.php';
+// filepath: /home/makis/Documents/GenUni/Coding/Web/E-Lib/public/index.php
+// Instead of requiring the autoloader, use manual includes
+// require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../App/Router/Router.php';
+require_once __DIR__ . '/../App/includes/JsonDatabase.php';
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
