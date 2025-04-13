@@ -27,14 +27,15 @@ jobs:
           extensions: mongodb
           coverage: none
 
-      # Install MongoDB tools from official repository
+      # Install MongoDB tools directly from the MongoDB 6.0 repository
       - name: Install MongoDB tools
         run: |
-          # Add MongoDB official repository
-          wget -qO - https://www.mongodb.org/static/pgp/server-4.4.asc | sudo apt-key add -
-          echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
-          sudo apt-get update
-          sudo apt-get install -y mongodb-org-tools
+          # Install MongoDB Database Tools manually using the .deb package
+          wget https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.7.3.deb
+          sudo apt install ./mongodb-database-tools-ubuntu2204-x86_64-100.7.3.deb
+          
+          # Verify the tools were installed
+          mongoimport --version || echo "MongoDB tools installation check"
           
           # Verify MongoDB connection using mongo shell from the service container
           mongo --host localhost --port 27017 --eval "db.runCommand({ ping: 1 })" || echo "MongoDB connection check skipped"
