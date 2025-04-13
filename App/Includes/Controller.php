@@ -9,7 +9,7 @@ class Controller {
         $this->viewData = $data;
         
         // Use absolute path with __DIR__ to locate the views directory
-        $viewPath = __DIR__ . '/../../views/' . $view . '.php';
+        $viewPath = __DIR__ . '/../views/' . $view . '.php';
         
         // Check if the view file exists
         if (!file_exists($viewPath)) {
