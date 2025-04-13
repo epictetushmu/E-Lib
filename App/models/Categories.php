@@ -1,14 +1,14 @@
 <?php
 namespace App\Models;
 
-use App\Includes\Database;
+use App\Includes\MongoDb;
 
 class Categories {
     private $db;
     private $collection = 'categories';
 
     public function __construct() {
-        $this->db = Database::getInstance();
+        $this->db = MongoDb::getInstance();
     }
 
     public function getCategory($id) {

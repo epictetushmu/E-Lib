@@ -1,8 +1,8 @@
 <?php
-// filepath: /home/makis/Documents/GenUni/Coding/Web/E-Lib/app/includes/JsonDatabase.php
+// filepath: /home/makis/Documents/GenUni/Coding/Web/E-Lib/app/includes/MongoDb.php
 namespace App\Includes;
 
-class JsonDatabase {
+class MongoDb {
     private static $instance = null;
     private $dataPath;
 
