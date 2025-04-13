@@ -1,12 +1,12 @@
 <IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
     RewriteEngine On
-    
-    # Send all requests to the public folder
-    RewriteCond %{REQUEST_URI} !^/public/
-    RewriteRule ^(.*)$ public/$1 [L]
-    
-    # If the requested resource in public doesn't exist, pass to public/index.php
-    RewriteCond %{REQUEST_FILENAME} !-f
+
+    # Redirect to public/index.php
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^public/(.*)$ public/index.php [L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
 </IfModule>
