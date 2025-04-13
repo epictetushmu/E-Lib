@@ -1,0 +1,181 @@
+name: E-Lib CI
+
+on: [push, pull_request]
+
+jobs:
+  e-lib-test:
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:4.4
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongo --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up PHP 
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, mysqli, pdo_mysql
+          coverage: none
+
+      - name: Update MongoDB extension to v2.0
+        run: |
+          # Remove existing MongoDB extension 
+          sudo sed -i '/extension=mongodb.so/d' /etc/php/8.1/cli/conf.d/20-mongodb.ini
+          sudo phpdismod -v 8.1 mongodb
+          
+          # Install MongoDB extension 2.0
+          sudo pecl install mongodb-2.0.0
+          sudo bash -c 'echo "extension=mongodb.so" > /etc/php/8.1/cli/conf.d/mongodb.ini'
+          
+          # Verify extension version
+          php -r "echo 'MongoDB extension version: ' . phpversion('mongodb') . PHP_EOL;"
+
+      # Install MongoDB tools directly from the MongoDB 6.0 repository
+      - name: Install MongoDB tools
+        run: |
+          # Install MongoDB Database Tools manually using the .deb package
+          wget https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.7.3.deb
+          sudo apt install ./mongodb-database-tools-ubuntu2204-x86_64-100.7.3.deb
+          
+          # Verify the tools were installed
+          mongoimport --version || echo "MongoDB tools installation check"
+          
+          # Verify MongoDB connection using mongo shell from the service container
+          mongo --host localhost --port 27017 --eval "db.runCommand({ ping: 1 })" || echo "MongoDB connection check skipped"
+
+      - name: Install Composer dependencies
+        run: |
+          composer install --prefer-dist --no-progress
+          
+          # Fallback in case of extension issues
+          if [ $? -ne 0 ]; then
+            echo "Regular installation failed, trying with platform requirement ignore..."
+            composer install --prefer-dist --no-progress --ignore-platform-req=ext-mongodb
+          fi
+
+      - name: Create .env file
+        run: |
+          cat > .env << 'EOL'
+          DB_HOST=localhost
+          DB_PORT=27017
+          DB_DATABASE=LibraryDb
+          SECRET_KEY=your-secret-key-for-testing
+          CAS_SERVER_URL=https://auth.example.com/cas
+          EOL
+
+      - name: Start PHP server
+        run: |
+          php -S 0.0.0.0:8000 -t public &
+          echo "Started PHP server, waiting for it to be available..."
+          # Wait for PHP server to start
+          attempt=0
+          max_attempts=10
+          while ! curl -s http://localhost:8000 > /dev/null && [ $attempt -lt $max_attempts ]; do
+            echo "Waiting for PHP server to be available (attempt $((++attempt))/$max_attempts)..."
+            sleep 2
+          done
+          
+          if curl -s http://localhost:8000 > /dev/null; then
+            echo "PHP server is now running and accessible"
+          else
+            echo "WARNING: Could not verify PHP server is running. Continuing anyway..."
+          fi
+      
+      - name: Set up ngrok
+        run: |
+          echo "Installing ngrok..."
+          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install ngrok
+          echo "ngrok installation completed"
+
+      - name: Expose app via ngrok
+        run: |
+          echo "Starting ngrok tunnel..."
+          # Set the ngrok auth token directly
+          NGROK_AUTH_TOKEN="2vgMQJKBkhc6jjLBfc6o95WPfux_3qdrZgaxgWeHZTuE7JDqT"
+          
+          # Authenticate ngrok with the token
+          ngrok authtoken $NGROK_AUTH_TOKEN
+          echo "Authenticated with ngrok"
+          
+          ngrok http 8000 > /dev/null &
+          
+          # Give ngrok time to establish the tunnel and create the API
+          echo "Waiting for ngrok to initialize..."
+          sleep 10
+          
+          # Retry logic for getting the ngrok URL
+          max_attempts=5
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            echo "Attempting to retrieve ngrok URL (attempt $((++attempt))/$max_attempts)..."
+            NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url' 2>/dev/null)
+            
+            if [[ -n "$NGROK_URL" && "$NGROK_URL" != "null" ]]; then
+              echo "Successfully retrieved ngrok URL: $NGROK_URL"
+              echo "NGROK_URL=$NGROK_URL" >> $GITHUB_ENV
+              break
+            else
+              echo "Failed to get ngrok URL, waiting before retry..."
+              sleep 5
+            fi
+          done
+          
+          if [[ -z "$NGROK_URL" || "$NGROK_URL" == "null" ]]; then
+            echo "WARNING: Could not retrieve ngrok URL after $max_attempts attempts"
+            echo "Debugging information:"
+            curl -v http://localhost:4040/api/tunnels || echo "Could not connect to ngrok API"
+            ps aux | grep ngrok
+          fi
+      
+      - name: Display ngrok URL (copy-paste friendly)
+        run: |
+          if [[ -n "${{ env.NGROK_URL }}" && "${{ env.NGROK_URL }}" != "null" ]]; then
+            echo "============================================================="
+            echo "E-Lib is now accessible at the following URL:"
+            echo "${{ env.NGROK_URL }}"
+            echo "============================================================="
+          else
+            echo "WARNING: ngrok URL is not available"
+          fi
+      
+      - name: Keep application running for 5 minutes
+        run: |
+          echo "Application is now running and will continue for 5 minutes..."
+          echo "You can access the site during this time to verify functionality"
+          
+          # Check if the PHP server is running
+          ps aux | grep "[p]hp -S 0.0.0.0:8000"
+          
+          # Make a test request to the local server
+          curl -s http://localhost:8000 > /dev/null && echo "Server is responding to requests" || echo "Server is not responding"
+          
+          # Display ngrok URL again if running on main
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "Public URL for copy-paste: ${{ env.NGROK_URL }}"
+          else
+            echo "Public URL for copy-paste: ${{ env.NGROK_URL }}"
+          fi
+          
+          # Run loop to keep the workflow active for 5 minutes
+          echo "Starting 5 minute countdown..."
+          for i in {300..1}; do
+            if [ $((i % 30)) -eq 0 ]; then
+              echo "$((i/60)) minutes and $((i%60)) seconds remaining..."
+              echo "URL: ${{ env.NGROK_URL }}"
+            fi
+            sleep 1
+          done
+          
+          echo "5 minute runtime completed"

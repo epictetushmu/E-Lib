@@ -1,0 +1,32 @@
+<?php
+namespace App\Models;
+
+use App\Includes\MongoDb;
+
+class Users {
+    private $db;
+
+    public function __construct() {
+        $this->db = MongoDb::getInstance();
+    }
+
+    public function getUserByEmail($email) {
+        return $this->db->findOne('users', ['email' => $email]);
+    }
+
+    public function registerUser($email, $password) {
+        $user = [
+            'email' => $email,
+            'password' => password_hash($password, PASSWORD_BCRYPT)
+        ];
+        return $this->db->insert('users', $user);
+    }
+
+    public function login($email, $password) {
+        $user = $this->getUserByEmail($email);
+        if ($user && password_verify($password, $user['password'])) {
+            return $user;
+        }
+        return false;
+    }
+}
