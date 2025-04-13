@@ -88,4 +88,44 @@ jobs:
         run: |
           ngrok http 8000 &
           sleep 5
-          echo "App available at: $(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')"
+          NGROK_URL=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url')
+          echo "App available at: $NGROK_URL"
+          echo "NGROK_URL=$NGROK_URL" >> $GITHUB_ENV
+      
+      - name: Display ngrok URL (copy-paste friendly)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "============================================================="
+          echo "E-Lib is now accessible at the following URL:"
+          echo "${{ env.NGROK_URL }}"
+          echo "============================================================="
+      
+      - name: Keep application running for 3 minutes
+        run: |
+          echo "Application is now running and will continue for 3 minutes..."
+          echo "You can access the site during this time to verify functionality"
+          
+          # Check if the PHP server is running
+          ps aux | grep "[p]hp -S 0.0.0.0:8000"
+          
+          # Make a test request to the local server
+          curl -s http://localhost:8000 > /dev/null && echo "Server is responding to requests" || echo "Server is not responding"
+          
+          # Display ngrok URL again if running on main
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "Public URL for copy-paste: ${{ env.NGROK_URL }}"
+          fi
+          
+          # Run loop to keep the workflow active for 3 minutes
+          echo "Starting 3 minute countdown..."
+          for i in {180..1}; do
+            if [ $((i % 30)) -eq 0 ]; then
+              echo "$((i/60)) minutes and $((i%60)) seconds remaining..."
+              if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+                echo "URL: ${{ env.NGROK_URL }}"
+              fi
+            fi
+            sleep 1
+          done
+          
+          echo "3 minute runtime completed"
