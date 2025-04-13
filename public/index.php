@@ -4,9 +4,17 @@
 //with composer dump-autoload 
 // require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../App/Router/PageRouter.php';
-require_once __DIR__ . '/../App/Router/ApiRouter.php';
-require_once __DIR__ . '/../App/Router/Router.php';
-require_once __DIR__ . '/../App/includes/MongoDb.php';
+
+$autoloadPath = __DIR__ . '/../vendor/autoload.php';
+if (file_exists($autoloadPath)) {
+    require_once $autoloadPath;
+} else {
+    // Fallback to manual includes
+    require_once __DIR__ . '/../App/Router/PageRouter.php';
+    require_once __DIR__ . '/../App/Router/ApiRouter.php';
+    require_once __DIR__ . '/../App/Router/Router.php';
+    require_once __DIR__ . '/../App/includes/MongoDb.php';
+}
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
