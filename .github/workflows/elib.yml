@@ -92,7 +92,6 @@ jobs:
           fi
       
       - name: Set up ngrok
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           echo "Installing ngrok..."
           curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
@@ -101,7 +100,6 @@ jobs:
           echo "ngrok installation completed"
 
       - name: Expose app via ngrok
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
         run: |
@@ -145,7 +143,6 @@ jobs:
           fi
       
       - name: Display ngrok URL (copy-paste friendly)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           if [[ -n "${{ env.NGROK_URL }}" && "${{ env.NGROK_URL }}" != "null" ]]; then
             echo "============================================================="
