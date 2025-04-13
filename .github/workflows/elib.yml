@@ -27,18 +27,15 @@ jobs:
           extensions: mongodb
           coverage: none
 
+      # Initial MongoDB setup - no schema import needed since MongoDB is schema-less
+      - name: Verify MongoDB connection
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mongodb-clients
+          mongo --host localhost --port 27017 --eval "db.runCommand({ ping: 1 })"
+
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-progress
-        continue-on-error: true
-        id: normal-install
-
-      - name: Install Composer dependencies (ignoring platform requirements)
-        if: steps.normal-install.outcome == 'failure'
-        run: composer install --prefer-dist --no-progress --ignore-platform-req=ext-mongodb
-
-      - name: Import MongoDB schematics
-        run: |
-          mongoimport --host localhost --port 27017 --db LibraryDb --file MongoSchematics.png --type json
 
       - name: Start PHP server
         run: php -S 0.0.0.0:8000 -t public &
