@@ -1,7 +1,10 @@
 <?php
 // filepath: /home/makis/Documents/GenUni/Coding/Web/E-Lib/public/index.php
 // Instead of requiring the autoloader, use manual includes
+//with composer dump-autoload 
 // require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../App/Router/PageRouter.php';
+require_once __DIR__ . '/../App/Router/ApiRouter.php';
 require_once __DIR__ . '/../App/Router/Router.php';
 require_once __DIR__ . '/../App/includes/JsonDatabase.php';
 
