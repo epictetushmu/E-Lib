@@ -1,20 +1,24 @@
 version: '3.8'
 
 services:
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  app:
+    build: .
     ports:
-      - "80:80"
+      - "8080:80"
     volumes:
-      - ./public:/var/www/html/public
-      - ./App:/var/www/html/App
+      - .:/var/www/html
+    depends_on:
+      - mongo
     environment:
-      - APACHE_DOCUMENT_ROOT=/var/www/html/public
-    networks:
-      - app-network
+      MONGO_URI: mongodb://mongo:27017/myappdb
 
-networks:
-  app-network:
-    driver: bridge
+  mongo:
+    image: mongo:6
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
