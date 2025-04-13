@@ -29,27 +29,27 @@ class BookController extends Controller {
     public function listBooks() {
         $books = $this->bookService->getAllBooks();
         if ($books) { 
-            $this->respond->respond(200, $books);
+            return $this->respond->respond(200, $books);
         } else {
-            $this->respond->respond(404, 'No books found');
+            return $this->respond->respond(404, 'No books found');
         }
     }
 
     public function viewBook($id) {
         $book = $this->bookService->getBookDetails($id);
         if ($book) {
-            $this->respond->respond(200, $book);
+            return $this->respond->respond(200, $book);
         } else {
-            $this->respond->respond(404, 'Book not found');
+            return $this->respond->respond(404, 'Book not found');
         }
     }
 
     public function searchBooks($search) {
         $books = $this->bookService->searchBooks($search);
         if ($books) {
-            $this->respond->respond(200, $books);
+            return $this->respond->respond(200, $books);
         } else {
-            $this->respond->respond(404, 'No books found');
+            return $this->respond->respond(404, 'No books found');
         }
     }
     
@@ -79,7 +79,13 @@ class BookController extends Controller {
             }
         }
 
-        $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description, $categories);
-        $this->respond->respond(200, $response);
+        
+            $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description, $categories);
+           if ($response) {
+            return $this->respond->respond(200, $response);
+        } else {
+            return $this->respond->respond(400, 'Error adding book');
+    
+        }
     }
 }

@@ -5,6 +5,7 @@ use App\Includes\MongoDb;
 use App\Models\Categories;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\BSON\ObjectId;
+use MongoDB\BSON\Regex;
 
 class Books {
     private $db;
@@ -23,7 +24,7 @@ class Books {
     }
 
     public function getFeaturedBooks() {
-        return $this->db->find($this->collection, [], ['sort' => ['_id' => -1], 'limit' => 20]);
+        return $this->db->find($this->collection,  ['sort' => ['_id' => -1], 'limit' => 20]);
     }
 
     public function addBook($title, $author, $year, $condition, $copies, $description, $categories) {
@@ -46,12 +47,12 @@ class Books {
             'created_at' => new UTCDateTime()
         ];
 
-        $insertResult = $this->db->insert($this->collection, $book);
-        return $insertResult->getInsertedId();
+        return  $this->db->insert($this->collection, $book);
+        
     }
 
     public function searchBooks($search) {
-        $regex = new \MongoDB\BSON\Regex($search, 'i'); // case-insensitive
+        $regex = new Regex($search, 'i'); // case-insensitive
         return $this->db->find($this->collection, [
             '$or' => [
                 ['title' => $regex],
