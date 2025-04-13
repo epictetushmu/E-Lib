@@ -150,9 +150,9 @@ jobs:
             echo "WARNING: ngrok URL is not available"
           fi
       
-      - name: Keep application running for 3 minutes
+      - name: Keep application running for 5 minutes
         run: |
-          echo "Application is now running and will continue for 3 minutes..."
+          echo "Application is now running and will continue for 5 minutes..."
           echo "You can access the site during this time to verify functionality"
           
           # Check if the PHP server is running
@@ -164,18 +164,18 @@ jobs:
           # Display ngrok URL again if running on main
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "Public URL for copy-paste: ${{ env.NGROK_URL }}"
+          else
+            echo "Public URL for copy-paste: ${{ env.NGROK_URL }}"
           fi
           
-          # Run loop to keep the workflow active for 3 minutes
-          echo "Starting 3 minute countdown..."
-          for i in {180..1}; do
+          # Run loop to keep the workflow active for 5 minutes
+          echo "Starting 5 minute countdown..."
+          for i in {300..1}; do
             if [ $((i % 30)) -eq 0 ]; then
               echo "$((i/60)) minutes and $((i%60)) seconds remaining..."
-              if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
-                echo "URL: ${{ env.NGROK_URL }}"
-              fi
+              echo "URL: ${{ env.NGROK_URL }}"
             fi
             sleep 1
           done
           
-          echo "3 minute runtime completed"
+          echo "5 minute runtime completed"
