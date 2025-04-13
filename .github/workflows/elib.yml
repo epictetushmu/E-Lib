@@ -20,19 +20,25 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up PHP with MongoDB 2.0 extension
+      - name: Set up PHP 
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
           extensions: mbstring, mysqli, pdo_mysql
           coverage: none
 
-      - name: Install MongoDB extension v2.0
+      - name: Update MongoDB extension to v2.0
         run: |
+          # Remove existing MongoDB extension 
+          sudo sed -i '/extension=mongodb.so/d' /etc/php/8.1/cli/conf.d/20-mongodb.ini
+          sudo phpdismod -v 8.1 mongodb
+          
           # Install MongoDB extension 2.0
           sudo pecl install mongodb-2.0.0
-          echo "extension=mongodb.so" | sudo tee -a /etc/php/8.1/cli/conf.d/20-mongodb.ini
-          php -m | grep mongodb || echo "MongoDB extension not found"
+          sudo bash -c 'echo "extension=mongodb.so" > /etc/php/8.1/cli/conf.d/mongodb.ini'
+          
+          # Verify extension version
+          php -r "echo 'MongoDB extension version: ' . phpversion('mongodb') . PHP_EOL;"
 
       # Install MongoDB tools directly from the MongoDB 6.0 repository
       - name: Install MongoDB tools
