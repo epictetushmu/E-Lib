@@ -1,7 +1,7 @@
 <?php
-namespace App\Services;
+namespace E-Lib\Services;
 
-use App\Models\Books;
+use E-Lib\Models\Books;
 class BookService {
     private $book;
 

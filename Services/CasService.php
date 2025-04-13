@@ -1,6 +1,6 @@
 <?php
 // filepath: /Users/hub/Documents/Personal/GenCode/app/Services/CasService.php
-namespace App\Services;
+namespace E-Lib\Services;
 
 use GuzzleHttp\Client;
 

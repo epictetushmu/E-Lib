@@ -13,23 +13,23 @@ if (file_exists($autoloadPath)) {
 }
 
 // Always load these files directly regardless of autoloader
-$baseRouterPath = __DIR__ . '/../App/Router/BaseRouter.php';
+$baseRouterPath = __DIR__ . '/../E-Lib/Router/BaseRouter.php';
 if (file_exists($baseRouterPath)) {
     require_once $baseRouterPath;
 } else {
     die("Critical error: BaseRouter.php not found at: $baseRouterPath");
 }
 
-require_once __DIR__ . '/../App/Router/PageRouter.php';
-require_once __DIR__ . '/../App/Router/ApiRouter.php';
-require_once __DIR__ . '/../App/Includes/MongoDb.php';
+require_once __DIR__ . '/../E-Lib/Router/PageRouter.php';
+require_once __DIR__ . '/../E-Lib/Router/ApiRouter.php';
+require_once __DIR__ . '/../E-Lib/Includes/MongoDb.php';
 
 // Verify the class exists
-if (!class_exists('App\Router\BaseRouter')) {
-    die("Critical error: App\\Router\\BaseRouter class not found despite loading file");
+if (!class_exists('E-Lib\Router\BaseRouter')) {
+    die("Critical error: E-Lib\\Router\\BaseRouter class not found despite loading file");
 }
 
-use App\Router\BaseRouter;
+use E-Lib\Router\BaseRouter;
 $baseUrl = ''; // Set your base URL here
 $router = new BaseRouter($baseUrl); 
 $router->handleRequest();

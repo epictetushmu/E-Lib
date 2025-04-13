@@ -1,5 +1,5 @@
 <?php
-namespace App\Includes;
+namespace E-Lib\Includes;
 
 class ResponseHandler {
     public static function respond($status, $data) {

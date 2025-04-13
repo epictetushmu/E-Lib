@@ -1,8 +1,8 @@
 <?php
-namespace App\Controllers;
+namespace E-Lib\Controllers;
 
-use App\Services\UserService; 
-use App\Includes\ResponseHandler;
+use E-Lib\Services\UserService; 
+use E-Lib\Includes\ResponseHandler;
 
 class UserController {
     private $userService;

@@ -1,9 +1,9 @@
 <?php 
-namespace App\Router;
+namespace E-Lib\Router;
 
-use App\Controllers\PageController;
-use App\Includes\ResponseHandler;
-use App\Services\CasService;
+use E-Lib\Controllers\PageController;
+use E-Lib\Includes\ResponseHandler;
+use E-Lib\Services\CasService;
 
 // require_once(__DIR__ . '/../../vendor/autoload.php'); 
 // use Firebase\JWT\JWT;
