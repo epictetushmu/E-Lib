@@ -100,17 +100,14 @@ jobs:
           echo "ngrok installation completed"
 
       - name: Expose app via ngrok
-        env:
-          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
         run: |
           echo "Starting ngrok tunnel..."
-          # Authenticate ngrok if token is available
-          if [ -n "$NGROK_AUTH_TOKEN" ]; then
-            ngrok authtoken $NGROK_AUTH_TOKEN
-            echo "Authenticated with ngrok"
-          else
-            echo "WARNING: NGROK_AUTH_TOKEN not found. Running in limited mode."
-          fi
+          # Set the ngrok auth token directly
+          NGROK_AUTH_TOKEN="2vgMQJKBkhc6jjLBfc6o95WPfux_3qdrZgaxgWeHZTuE7JDqT"
+          
+          # Authenticate ngrok with the token
+          ngrok authtoken $NGROK_AUTH_TOKEN
+          echo "Authenticated with ngrok"
           
           ngrok http 8000 > /dev/null &
           
