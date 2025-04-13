@@ -17,16 +17,13 @@ class PageController extends Controller{
         $this->render('signup');
     }
 
-    public function listBooks() {
-        $this->render('view_books');
-    }
 
     public function viewBook() {
         $id = $_GET['q'] ?? '';      
         $bookService = new BookService();
         $book = $bookService->getBookDetails($id);
         if ($book) {
-            $this->render('view_book', ['book' => $book]);
+            $this->render('book_detail', ['book' => $book]);
         } else {
             $this->error();
         }
@@ -41,8 +38,12 @@ class PageController extends Controller{
         $query = $_GET['q'] ?? '';
         $bookService = new BookService();
         $books = $bookService->searchBooks($query);
-        $this->render('view_book', ['books' => $books]);
+        $this->render('search_results', ['books' => $books]);
 
+    }
+
+    public function profile(){
+        $this->render('profile');
     }
 
     public function error() {
