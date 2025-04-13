@@ -1,6 +1,6 @@
 <?php
-// filepath: /home/makis/Documents/GenUni/Coding/Web/E-Lib/app/includes/MongoDb.php
-namespace E-Lib\Includes;
+// filepath: /home/makis/Documents/GenUni/Coding/Web/E_Lib/app/includes/MongoDb.php
+namespace E_Lib\Includes;
 
 class MongoDb {
     private static $instance = null;

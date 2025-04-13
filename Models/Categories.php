@@ -1,7 +1,7 @@
 <?php
-namespace E-Lib\Models;
+namespace E_Lib\Models;
 
-use E-Lib\Includes\MongoDb;
+use E_Lib\Includes\MongoDb;
 
 class Categories {
     private $db;

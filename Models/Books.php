@@ -1,8 +1,8 @@
 <?php
-namespace E-Lib\Models;
+namespace E_Lib\Models;
 
-use E-Lib\Includes\MongoDb;
-use E-Lib\Models\Categories;
+use E_Lib\Includes\MongoDb;
+use E_Lib\Models\Categories;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\Regex;

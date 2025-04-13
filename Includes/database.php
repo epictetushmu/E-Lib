@@ -1,5 +1,5 @@
 <?php
-namespace E-Lib\Includes;
+namespace E_Lib\Includes;
 
 use Dotenv\Dotenv;
 use MongoDB\Client;

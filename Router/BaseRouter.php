@@ -1,8 +1,8 @@
 <?php
-namespace E-Lib\Router;
+namespace E_Lib\Router;
 
-use E-Lib\Router\ApiRouter;
-use E-Lib\Router\PageRouter;
+use E_Lib\Router\ApiRouter;
+use E_Lib\Router\PageRouter;
 
 
 class BaseRouter {

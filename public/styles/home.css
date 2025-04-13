@@ -1,6 +1,6 @@
 .hero-section {
     background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
-                url('/E-Lib/assets/images/library-bg.jpg') center/cover;
+                url('/E_Lib/assets/images/library-bg.jpg') center/cover;
     color: white;
     min-height: 60vh;
     display: flex;

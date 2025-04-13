@@ -1,10 +1,10 @@
 <?php
-namespace E-Lib\Controllers;
+namespace E_Lib\Controllers;
 
-use E-Lib\Services\BookService; 
-use E-Lib\Services\CategoriesService;
-use E-Lib\Includes\ResponseHandler;
-use E-Lib\Includes\Controller;
+use E_Lib\Services\BookService; 
+use E_Lib\Services\CategoriesService;
+use E_Lib\Includes\ResponseHandler;
+use E_Lib\Includes\Controller;
 
 class BookController extends Controller {
     private $bookService;
