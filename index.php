@@ -5,7 +5,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-use App\Router\Router;
+use App\Router\BaseRouter;
 $baseUrl = '/E-Lib';
-$router = new Router($baseUrl); 
+$router = new BaseRouter($baseUrl); 
 $router->handleRequest();

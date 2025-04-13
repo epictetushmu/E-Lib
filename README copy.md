@@ -10,7 +10,7 @@ The project is organized into several directories and files, each serving a spec
   - **Router/**: Houses routing classes.
     - `ApiRouter.php`: Manages API routing.
     - `PageRouter.php`: Handles web page routing.
-    - `Router.php`: Base class for routing functionality.
+    - `BaseRouter.php`: Base class for routing functionality.
   - **includes/**: Contains additional functionality.
     - `MongoDb.php`: Connects to and interacts with a MongoDB database.
 

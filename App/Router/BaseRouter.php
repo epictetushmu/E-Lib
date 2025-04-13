@@ -5,7 +5,7 @@ use App\Router\ApiRouter;
 use App\Router\PageRouter;
 
 
-class Router {
+class BaseRouter {
     private $apiRouter;
     private $pageRouter;
     private $baseUrl;
