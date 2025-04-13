@@ -7,15 +7,12 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      mysql:
-        image: mysql:5.7
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: LibraryDb
+      mongodb:
+        image: mongo:4.4
         ports:
-          - 3306:3306
+          - 27017:27017
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-cmd="mongo --eval 'db.runCommand({ ping: 1 })'"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
@@ -39,9 +36,9 @@ jobs:
         if: steps.normal-install.outcome == 'failure'
         run: composer install --prefer-dist --no-progress --ignore-platform-req=ext-mongodb
 
-      - name: Import database schema
+      - name: Import MongoDB schematics
         run: |
-          mysql -h 127.0.0.1 -P 3306 -u root -ppassword LibraryDb < lib.sql
+          mongoimport --host localhost --port 27017 --db LibraryDb --file MongoSchematics.png --type json
 
       - name: Start PHP server
         run: php -S 0.0.0.0:8000 -t public &
