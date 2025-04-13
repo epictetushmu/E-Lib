@@ -1,45 +1,51 @@
 <?php
 namespace App\Controllers;
 
+use App\Includes\Controller;
 use App\Services\BookService; 
 
-class PageController {
+class PageController extends Controller{
     public function home() {
-        include __DIR__ . '/../views/home.php';
+       $this->render('home');
     }
 
     public function loginForm() {
-        include __DIR__ . '/../views/login.php';
+        $this->render('login');
     }
 
     public function signupForm() {
-        include __DIR__ . '/../views/signup.php';
+        $this->render('signup');
     }
 
     public function listBooks() {
-        include __DIR__ . '/../views/list_books.php';
+        $this->render('view_books');
     }
 
-    public function viewBook($id) {
-        include __DIR__ . '/../views/view_book.php';
+    public function viewBook() {
+        $id = $_GET['q'] ?? '';      
+        $bookService = new BookService();
+        $book = $bookService->getBookDetails($id);
+        if ($book) {
+            $this->render('view_book', ['book' => $book]);
+        } else {
+            $this->error();
+        }
     }
 
     public function addBookForm() {
-        include __DIR__ . '/../views/add_book.php';
+        $this->render('add_book');
     }
 
-    public function updateBook($id) {
-        include __DIR__ . '/../views/update_book.php';
-    }
 
     public function searchBooks() {
         $query = $_GET['q'] ?? '';
         $bookService = new BookService();
         $books = $bookService->searchBooks($query);
-        include(__DIR__ . '/../views/search_results.php');
+        $this->render('view_book', ['books' => $books]);
+
     }
 
-    public static function error() {
-        include __DIR__ . '/../views/404.php';
+    public function error() {
+        $this->render('error'); 
     }
 }

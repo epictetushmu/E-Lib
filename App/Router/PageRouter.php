@@ -5,7 +5,7 @@ use App\Controllers\PageController;
 use App\Includes\ResponseHandler;
 use App\Services\CasService;
 
-require_once(__DIR__ . '/../../vendor/autoload.php'); 
+// require_once(__DIR__ . '/../../vendor/autoload.php'); 
 // use Firebase\JWT\JWT;
 // use Firebase\JWT\Key;
 use Dotenv\Dotenv;
@@ -64,7 +64,8 @@ class PageRouter {
         }
     
         ResponseHandler::respond(404, "Page not found");
-        include __DIR__ . '/../views/404.php'; // Load custom 404 page
+        $pageController = new PageController();
+        $pageController->error();    
     }    
 
     private function setSecurityHeaders() {
