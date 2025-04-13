@@ -1,4 +1,6 @@
 #Ignore .env file 
 .env
+#Ignore .DS_Store file
+.DS_Store
 #Ignore vendor folder   
 /vendor/
