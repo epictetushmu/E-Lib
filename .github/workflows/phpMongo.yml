@@ -27,10 +27,16 @@ jobs:
       run: |
         docker build -t my-php-app .
 
+    - name: Create Docker network
+      run: docker network create app-network
+
+    - name: Connect MongoDB to network
+      run: docker network connect app-network $(docker ps -qf ancestor=mongo:6)
+
     - name: Run container for test
       run: |
         docker run -d --name my-php-app-test \
-          --link $(docker ps -qf ancestor=mongo:6):mongo \
+          --network app-network \
           -e MONGO_URI=mongodb://mongo:27017/myappdb \
           -p 8080:80 my-php-app
 
