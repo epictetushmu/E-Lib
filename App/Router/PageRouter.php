@@ -37,7 +37,7 @@ class PageRouter {
             ['path' => '/profile', 'handler' => [new PageController(), 'profile']],
             ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'viewBook']],
             ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
-            ['path' => '/search_results', 'handler' => [new PageController(), 'searchBooks']],
+            ['path' => '/search/(d+)', 'handler' => [new PageController(), 'searchBooks']],
             ['path' => '/error', 'handler' => [new PageController(), 'error']]
         ];            
     }
