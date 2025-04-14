@@ -48,9 +48,13 @@ class PageRouter {
             $serviceUrl = 'http://localhost:8000/login'; // Replace with your service URL
 
             if ($ticket && $this->casService->authenticate($ticket, $serviceUrl)) {
-                echo 'Login successful!';
+                ResponseHandler::renderView(__DIR__ . '/../views/login_successful.php', [
+                    'message' => 'Login successful!'
+                ]);
             } else {
-                echo 'Login failed!';
+                ResponseHandler::renderView(__DIR__ . '/../views/login.php', [
+                    'error' => 'Login failed or no ticket provided.'
+                ]);
             }
             return;
         }
@@ -62,7 +66,7 @@ class PageRouter {
             }
         }
     
-        ResponseHandler::respond(404, "Page not found");
+        
         $pageController = new PageController();
         $pageController->error();    
     }    

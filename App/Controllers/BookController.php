@@ -4,52 +4,52 @@ namespace App\Controllers;
 use App\Services\BookService; 
 use App\Services\CategoriesService;
 use App\Includes\ResponseHandler;
-use App\Includes\Controller;
 
-class BookController extends Controller {
+class BookController {
     private $bookService;
     private $categoriesService;
-    private $respond; 
+
+    private $response; 
 
     public function __construct() {
         $this->bookService = new BookService();
-        $this->respond = new ResponseHandler();
         $this->categoriesService = new CategoriesService();
+        $this->response = new ResponseHandler();
     }   
 
     public function featuredBooks() {
         $books = $this->bookService->getFeaturedBooks();
         if ($books) {
-            $this->respond->respond(200, $books);
+            $this->response->respond(true, $books);
         } else {
-            $this->respond->respond(404, 'No books found');
+            $this->response->respond(false, 'No books found', 404);
         }
     }   
 
     public function listBooks() {
         $books = $this->bookService->getAllBooks();
         if ($books) { 
-            return $this->respond->respond(200, $books);
+            return $this->response->respond(true, $books);
         } else {
-            return $this->respond->respond(404, 'No books found');
+            return $this->response->respond(false, 'No books found', 404);
         }
     }
 
     public function viewBook($id) {
         $book = $this->bookService->getBookDetails($id);
         if ($book) {
-            return $this->respond->respond(200, $book);
+            return $this->response->respond(true, $book);
         } else {
-            return $this->respond->respond(404, 'Book not found');
+            return $this->response->respond(false, 'Book not found', 404);
         }
     }
 
     public function searchBooks($search) {
         $books = $this->bookService->searchBooks($search);
         if ($books) {
-            return $this->respond->respond(200, $books);
+            return $this->response->respond(true, $books);
         } else {
-            return $this->respond->respond(404, 'No books found');
+            return $this->response->respond(false, 'No books found', 404);
         }
     }
     
@@ -82,9 +82,9 @@ class BookController extends Controller {
         
             $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description, $categories);
            if ($response) {
-            return $this->respond->respond(200, $response);
+            return $this->response->respond(true, $response);
         } else {
-            return $this->respond->respond(400, 'Error adding book');
+            return $this->response->respond(false, 'Error adding book', 400);
     
         }
     }
