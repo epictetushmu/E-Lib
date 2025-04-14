@@ -1,7 +1,7 @@
 <?php
 namespace App\Models;
 
-use App\Includes\MongoDb;
+use App\Controllers\DbController;
 use App\Models\Categories;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\BSON\ObjectId;
@@ -12,7 +12,7 @@ class Books {
     private $collection = 'books';
 
     public function __construct() {
-        $this->db = MongoDb::getInstance();
+        $this->db = DbController::getInstance();
     }
 
     public function getAllBooks() {

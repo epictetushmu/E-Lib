@@ -1,25 +1,18 @@
 <?php
-// filepath: /home/makis/Documents/GenUni/Coding/Web/E-Lib/app/includes/MongoDb.php
 namespace App\Includes;
 
-class MongoDb {
-    private static $instance = null;
+class JsonDatabase implements DatabaseInterface {
     private $dataPath;
-
-    private function __construct() {
+    
+    public function __construct() {
         $this->dataPath = __DIR__ . '/../../data/';
-        if (!is_dir($this->dataPath)) {
+        
+        // Create data directory if it doesn't exist
+        if (!file_exists($this->dataPath)) {
             mkdir($this->dataPath, 0755, true);
         }
     }
-
-    public static function getInstance() {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
-
+    
     private function getFilePath(string $collection): string {
         return $this->dataPath . $collection . '.json';
     }
@@ -42,7 +35,7 @@ class MongoDb {
 
     public function insert(string $collection, array $data): array {
         $documents = $this->readCollection($collection);
-        $data['_id'] = uniqid();
+        $data['_id'] = (string)new \MongoDB\BSON\ObjectId();
         $documents[] = $data;
         if ($this->writeCollection($collection, $documents)) {
             return ['insertedId' => $data['_id']];

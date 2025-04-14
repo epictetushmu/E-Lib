@@ -1,13 +1,13 @@
 <?php
 namespace App\Models;
 
-use App\Includes\MongoDb;
+use App\Controllers\DbController;
 
 class Users {
     private $db;
 
     public function __construct() {
-        $this->db = MongoDb::getInstance();
+        $this->db = DbController::getInstance();
     }
 
     public function getUserByEmail($email) {
