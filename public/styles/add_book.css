@@ -1,62 +1,125 @@
+body {
+    background-color: #f5f5f5;
+}
+
+.card {
+    border-radius: 10px;
+    border: none;
+}
+
+.form-label {
+    font-weight: 500;
+}
+
 .custom-select-wrapper {
     position: relative;
     display: inline-block;
     width: 100%;
+    user-select: none;
 }
 
 .custom-select-display {
     border: 1px solid #ccc;
-    padding: 10px;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    background-color: #fff;
     cursor: pointer;
-    background: #fff;
-    border-radius: 5px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+}
+
+.custom-select-display:after {
+    content: '▼';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8em;
 }
 
 .custom-dropdown {
     position: absolute;
     width: 100%;
     background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    border: 1px solid #ced4da;
+    border-top: none;
+    border-radius: 0 0 0.25rem 0.25rem;
     list-style: none;
     padding: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
     margin: 0;
-    display: none;
-    z-index: 10;
 }
 
 .custom-dropdown li {
-    padding: 10px;
+    padding: 0.5rem 0.75rem;
     cursor: pointer;
 }
 
 .custom-dropdown li:hover {
-    background: #f0f0f0;
+    background-color: #f8f9fa;
+}
+
+.custom-dropdown li.selected {
+    background-color: #e9ecef;
+    font-weight: bold;
+}
+
+.custom-dropdown li.dull {
+    color: #adb5bd;
+    cursor: not-allowed;
 }
 
 .hidden {
     display: none;
 }
 
-.selected {
-    font-weight: bold;
-    background: #d1e7dd;
-}
-
-.dull {
-    opacity: 0.5;
-}
-
 .tooltip {
     position: absolute;
-    background: #333;
+    background-color: rgba(0, 0, 0, 0.8);
     color: #fff;
     padding: 5px 10px;
-    border-radius: 5px;
-    font-size: 12px;
-    display: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 1000;
 }
 
 .tooltip.visible {
-    display: block;
+    opacity: 1;
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+.btn-secondary {
+    margin-left: 10px;
+}
+
+input[type="file"]::file-selector-button {
+    border: none;
+    background: #e9ecef;
+    padding: 0.5em 1em;
+    margin-right: 1em;
+    border-radius: 0.2em;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
 }
