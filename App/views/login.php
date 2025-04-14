@@ -45,7 +45,7 @@
             // Reset error message
             errorMessage.classList.add('d-none');
 
-            axios.post('/api/login', {
+            axios.post('/api/v1/login', {
                 email: email,
                 password: password
             })

@@ -51,7 +51,7 @@
                         <li><a class="dropdown-item" href="/profile"><i class="fas fa-user me-2"></i>Profile</a></li>
                         <li><a class="dropdown-item" href="/book"><i class="fas fa-bookmark me-2"></i>My Books</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="/api/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        <li><a class="dropdown-item" href="/api/v1/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                     </ul>
                 </div>
                 <?php else: ?>
@@ -138,7 +138,7 @@
             async function loadFeaturedBooks() {
                 try {
                     loader.style.display = 'block';
-                    const response = await axios.get('/api/featured-books');
+                    const response = await axios.get('/api/v1/featured-books'); 
                     
                     if (response.data.status === 'success' && response.data.books) {
                         displayBooks(response.data.books);

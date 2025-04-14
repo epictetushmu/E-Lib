@@ -147,7 +147,7 @@
                 formData.append("description", description);
                 formData.append("cover", cover);
 
-                axios.post("/api/add_book", formData)
+                axios.post("/api/v1/books", formData)
                     .then(response => {
                         alert("Book added successfully!");
                         submitForm.reset();

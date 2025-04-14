@@ -63,7 +63,7 @@
                 return;
             }
 
-            axios.post('/api/signup', {
+            axios.post('/api/v1/signup', {
                 username: username,
                 email: email,
                 password: password

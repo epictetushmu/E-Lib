@@ -225,7 +225,7 @@
                     }
                     
                     try {
-                        const response = await axios.post('/api/review', {
+                        const response = await axios.post('/api/v1/review', {
                             book_id: bookId,
                             rating: rating,
                             comment: comment
@@ -251,7 +251,7 @@
                     const bookId = document.getElementById('bookId').value;
                     
                     try {
-                        const response = await axios.post('/api/borrow', {
+                        const response = await axios.post('/api/v1/borrow', {
                             book_id: bookId
                         });
                         
@@ -276,7 +276,7 @@
                     const bookId = document.getElementById('bookId').value;
                     
                     try {
-                        const response = await axios.post('/api/save-book', {
+                        const response = await axios.post('/api/v1/save-book', {
                             book_id: bookId
                         });
                         
