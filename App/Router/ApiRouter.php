@@ -37,6 +37,6 @@ class ApiRouter {
                 return;
             }
         }
-        ResponseHandler::respond(404, 'Not Found');
+        ResponseHandler::respond(false, 'Not Found', 404);
     }
 }

@@ -6,11 +6,9 @@ use App\Includes\ResponseHandler;
 
 class UserController {
     private $userService;
-    private $respond;
 
     public function __construct() {
         $this->userService = new UserService();
-        $this->respond = new ResponseHandler();
     }
 
     public function handleLogin() {
@@ -21,14 +19,14 @@ class UserController {
         if ($user && $user['password'] === $password) {
             session_start();
             $_SESSION['user'] = $user;
-            $this->respond->redirect('301', '');    
+            ResponseHandler::redirect('/');    
         } else {
-            $this->respond->respond(401, 'Invalid credentials');
+            ResponseHandler::respond(false, 'Invalid credentials', 401);
         }
     }
 
     public function handleLogout() {
         // Logout logic here...
-        $this->respond->respond(200, 'Logout successful');
+        ResponseHandler::respond(true, 'Logout successful');
     }
 }
