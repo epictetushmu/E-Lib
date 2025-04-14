@@ -1,8 +1,8 @@
 <?php
-namespace E_Lib\Controllers;
+namespace  Controllers;
 
-use E_Lib\Includes\Controller;
-use E_Lib\Services\BookService; 
+use  Includes\Controller;
+use  Services\BookService; 
 
 class PageController extends Controller{
     public function home() {

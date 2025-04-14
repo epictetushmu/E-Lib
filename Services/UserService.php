@@ -1,6 +1,6 @@
 <?php
-namespace E_Lib\Services;
-use E_Lib\Models\Users;
+namespace  Services;
+use  Models\Users;
 
 class UserService {
     private $user;

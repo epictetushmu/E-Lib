@@ -1,9 +1,9 @@
 <?php
-namespace E_Lib\Router;
+namespace  Router;
 // Include all necessary controllers
-use E_Lib\Controllers\BookController;
-use E_Lib\Controllers\UserController;
-use E_Lib\Includes\ResponseHandler;
+use  Controllers\BookController;
+use  Controllers\UserController;
+use  Includes\ResponseHandler;
 
 class ApiRouter {
     private $routes = [];

@@ -1,5 +1,5 @@
 <?php
-namespace E_Lib\Includes;
+namespace  Includes;
 
 class ResponseHandler {
     public static function respond($status, $data) {

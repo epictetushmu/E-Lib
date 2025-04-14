@@ -1,6 +1,6 @@
 <?php
 
-namespace E_Lib\Includes;
+namespace  Includes;
 
 class Controller {
     protected $viewData = [];

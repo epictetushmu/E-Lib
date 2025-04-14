@@ -1,6 +1,6 @@
 <?php 
-namespace E_Lib\Services;
-use E_Lib\Models\Categories;
+namespace  Services;
+use  Models\Categories;
 class CategoriesService{ 
     private $categories; 
 
