@@ -1,6 +1,7 @@
 <?php
 namespace App\Includes;
 
+use Dotenv\Dotenv;
 use MongoDB\Client;
 use MongoDB\Driver\ServerApi;
 use Exception;
@@ -11,8 +12,11 @@ class MongoDatabase implements DatabaseInterface {
     
     public function __construct(string $databaseName) {
         // Configure the connection string
-        $uri = 'mongodb://127.0.0.1:27017';
-        
+        $uri = Dotenv::createImmutable(__DIR__ . '/../..');
+        $uri->load();
+        $uri = $_ENV['MONGODB_URI'];
+        $uri = str_replace('<db_password>', $_ENV['MONGO_PASSWORD'], $uri);
+       
         // Create server API options
         $serverApi = new ServerApi(ServerApi::V1);
         $options = [
