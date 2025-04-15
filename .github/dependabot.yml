@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # PHP dependencies via Composer
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "php"
+    # Run Dependabot before PRs are merged
+    pull-request-branch-name:
+      separator: "-"
+    # Group updates when possible
+    groups:
+      symfony:
+        patterns:
+          - "symfony/*"
+      psr:
+        patterns:
+          - "psr/*"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"

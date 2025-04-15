@@ -1,0 +1,70 @@
+name: Pre-Merge Dependency Check
+
+on:
+  pull_request:
+    types: [labeled]
+
+jobs:
+  dependency-check:
+    if: contains(github.event.pull_request.labels.*.name, 'ready-to-merge')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer:v2
+          
+      - name: Install dependencies
+        run: composer install --no-progress
+        
+      - name: Check for outdated dependencies
+        id: check-dependencies
+        run: |
+          echo "Checking for outdated Composer dependencies..."
+          composer outdated --direct --format=json > outdated.json
+          
+          if [ -s outdated.json ]; then
+            echo "Outdated dependencies found!"
+            echo "DEPENDENCIES_OUTDATED=true" >> $GITHUB_ENV
+          else
+            echo "All dependencies up to date!"
+            echo "DEPENDENCIES_OUTDATED=false" >> $GITHUB_ENV
+          fi
+          
+      - name: Create comment if outdated dependencies found
+        if: env.DEPENDENCIES_OUTDATED == 'true'
+        run: |
+          echo "::warning ::Outdated dependencies detected! A Dependabot PR should be created."
+          
+          # Extract outdated dependencies for the comment
+          OUTDATED_LIST=$(cat outdated.json | jq -r '.[] | "- \(.name): \(.version) → \(.latest)"' | sort)
+          
+          # Create comment on PR
+          gh pr comment ${{ github.event.pull_request.number }} --body "## ⚠️ Outdated Dependencies Detected
+          
+          The following dependencies are outdated:
+          
+          $OUTDATED_LIST
+          
+          Consider updating these dependencies before merging this PR.
+          You can trigger Dependabot by adding the \`run-dependabot\` label to this PR."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Trigger Dependabot
+        if: contains(github.event.pull_request.labels.*.name, 'run-dependabot')
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: trigger dependabot update"
+          title: "chore: trigger dependabot update"
+          body: "This is an automated PR to trigger Dependabot updates before merging PR #${{ github.event.pull_request.number }}."
+          branch: "dependabot/trigger-update"
+          delete-branch: true
