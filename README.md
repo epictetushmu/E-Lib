@@ -1,36 +1,97 @@
 # E-Lib
-Simple library managment webApp for HMU
+Simple library management web application for HMU
 
+## Overview
+E-Lib is a PHP-based web application designed for managing and accessing a library collection. The application features a modular architecture with separate routes for web pages and API endpoints, allowing for a clean separation of concerns and easy extensibility.
 
-## How to get: 
-  1. Click code  then copy the url (https)
-  2. Open Vs code 
-  3. in empty workspace run terminal command git clone <url>
+## Project Structure
+The project is organized into several directories and files:
 
+- **App/**: Contains the core application logic.
+  - **Router/**: Houses routing classes.
+    - `ApiRouter.php`: Manages API routing.
+    - `PageRouter.php`: Handles web page routing.
+    - `BaseRouter.php`: Base class for routing functionality.
+  - **includes/**: Contains additional functionality.
+    - `MongoDb.php`: Connects to and interacts with a MongoDB database.
+  - **views/**: Contains the application's view templates.
+    - `add_book.php`: Form for adding new books to the library.
+    - Other view files for different pages.
 
-## Requirements: 
-  1. Git
-  2. Text Editor to write code (Visual Studio Code )
+- **public/**: Contains publicly accessible files.
+  - **styles/**: CSS files for styling the application.
+    - `add_book.css`: Styles for the add book form.
+  - `index.php`: The entry point of the application.
 
+- **Dockerfile**: Defines the Docker environment for the application.
 
-## Git setup: 
-  1. [Git Downloads] (https://git-scm.com/downloads) 
-  2. Find suitable release
-  3. Type ```git version``` to verify Git was installed 
-  4. Setup your identity:
-     
-         $ git config --global user.name  "Username"
-         $ git config --global user.email "usernameEmail@example.com" 
+- **docker-compose.yml**: Configures multi-container Docker applications (if present).
 
+## Features
+- Add new books to the library collection
+- Search functionality for finding books by title
+- Categorize books by genre
+- Manage book inventory with condition tracking and copy counts
 
-## General use: 
-  1. ``` $ git pull ``` To get changes
-  2. Code Code Code ...
-  3. Stage your changes ```  $ git add <filesToTrack> ```
-     Hint use . to track all changed files
-  4. Commit your changes ``` $ git commit -m "Commit message" ```
-  5. Push your changes ``` $ git push ```  
+## Getting Started
+To get started with the E-Lib project:
 
+### Local Development with Docker
+1. **Clone the Repository**:
+   ```
+   git clone <repository-url>
+   cd E-Lib
+   ```
 
-## Code:
-  . Html script weith bootstrap
+2. **Build the Docker Image**:
+   ```
+   docker build -t e-lib .
+   ```
+
+3. **Run the Container**:
+   ```
+   docker run -d -p 8080:80 --name e-lib-app e-lib
+   ```
+
+   For development with live code updates:
+   ```
+   docker run -d -p 8080:80 -v /path/to/project/E-Lib:/var/www/html --name e-lib-app e-lib
+   ```
+
+4. **Access the Application**:
+   Open your web browser and navigate to `http://localhost:8080`.
+
+### Managing Your Docker Container
+- **View logs**:
+  ```
+  docker logs e-lib-app
+  ```
+
+- **Stop the container**:
+  ```
+  docker stop e-lib-app
+  ```
+
+- **Restart the container**:
+  ```
+  docker start e-lib-app
+  ```
+
+## Dependencies
+- Docker
+- PHP 8.2
+- MongoDB
+- Apache
+
+## Database Setup
+The application uses MongoDB for data storage. The database connection is handled by the `MongoDb.php` class in the `App/includes` directory.
+
+## Contributing
+To contribute to this project, please follow these steps:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+This project is licensed under the MIT License.
