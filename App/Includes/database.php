@@ -1,7 +1,6 @@
 <?php
 namespace App\Includes;
 
-use Dotenv\Dotenv;
 use MongoDB\Client;
 use MongoDB\Collection;
 use MongoDB\Exception\Exception;
@@ -12,18 +11,26 @@ class Database {
     private $db;
 
     private function __construct() {
-        // Load environment variables
-        $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
-        $dotenv->load();
-
+        // Use Environment class to get configuration
+        // Make sure Environment is loaded before this class is instantiated
+        
         // Use environment variables to configure the MongoDB connection
-        $host = $_ENV['DB_HOST'];
-        $port = $_ENV['DB_PORT'];
-        $dbname = $_ENV['DB_DATABASE'];
+        $host = Environment::get('MONGODB_HOST');
+        $port = Environment::get('MONGODB_PORT');
+        $username = Environment::get('MONGODB_USERNAME');
+        $password = Environment::get('MONGODB_PASSWORD');
+        $dbname = Environment::get('MONGODB_DATABASE');
+        $authSource = Environment::get('MONGODB_AUTH_SOURCE', 'admin');
 
         try {
-            // Create a MongoDB client
-            $this->connection = new Client("mongodb://$host:$port");
+            // Create a MongoDB client with authentication if credentials are provided
+            $connectionString = "mongodb://";
+            if ($username && $password) {
+                $connectionString .= "$username:$password@";
+            }
+            $connectionString .= "$host:$port/?authSource=$authSource";
+            
+            $this->connection = new Client($connectionString);
             $this->db = $this->connection->selectDatabase($dbname);
         } catch (\Exception $e) {
             echo 'Error connecting to MongoDB: ' . $e->getMessage();
