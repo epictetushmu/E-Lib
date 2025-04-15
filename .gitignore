@@ -1,6 +1,17 @@
-#Ignore .env file 
+# Environment file with sensitive information
 .env
-#Ignore .DS_Store file
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
 #Ignore vendor folder   
 /vendor/
