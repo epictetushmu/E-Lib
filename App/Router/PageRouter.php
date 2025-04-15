@@ -2,13 +2,13 @@
 namespace App\Router;
 
 use App\Controllers\PageController;
+use App\Includes\Environment;
 use App\Includes\ResponseHandler;
 use App\Services\CasService;
 
 // require_once(__DIR__ . '/../../vendor/autoload.php'); 
 // use Firebase\JWT\JWT;
 // use Firebase\JWT\Key;
-use Dotenv\Dotenv;
 
 class PageRouter { 
     private $routes = [];
@@ -16,12 +16,11 @@ class PageRouter {
     private $casService;
 
     public function __construct() {
-        // Load environment variables
-        $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
-        $dotenv->load();
-
+        // Use Environment class instead of direct Dotenv
+        // Make sure Environment is loaded before this class is instantiated
+        
         // Set the secret key from the environment variable
-        $this->secretKey = $_ENV['SECRET_KEY'];
+        $this->secretKey = Environment::get('SECRET_KEY');
 
         $this->defineRoutes();
         $this->setSecurityHeaders();
@@ -45,7 +44,8 @@ class PageRouter {
     public function handleRequest($path) {
         if ($path === '/login') {
             $ticket = $_GET['ticket'] ?? null;
-            $serviceUrl = 'http://localhost:8000/login'; // Replace with your service URL
+            // Use Environment to get the application URL
+            $serviceUrl = Environment::get('APP_URL', 'http://localhost:8080') . '/login';
 
             if ($ticket && $this->casService->authenticate($ticket, $serviceUrl)) {
                 ResponseHandler::renderView(__DIR__ . '/../views/login_successful.php', [
