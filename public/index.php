@@ -31,7 +31,7 @@ require_once __DIR__ . '/../App/Includes/Environment.php';
 App\Includes\Environment::load();
 
 // Add the new integration folder to the manual includes
-require_once __DIR__ . '/../App/Integration/Database/DatabaseConnectionFactory.php';
+require_once __DIR__ . '/../App/Integration/Database/MongoConnectionFactory.php';
 
 // Verify the class exists
 if (!class_exists('App\Router\BaseRouter')) {
@@ -39,13 +39,13 @@ if (!class_exists('App\Router\BaseRouter')) {
 }
 
 use App\Router\BaseRouter;
-use App\Integration\Database\DatabaseConnectionFactory;
+use App\Integration\Database\MongoConnectionFactory;
 
 $baseUrl = ''; // Set your base URL here
 
 // Create database connection with built-in fallback
 try {
-    $db = DatabaseConnectionFactory::create('mongo', [
+    $db = MongoConnectionFactory::create('mongo', [
         'fallback' => true,  // Enable automatic fallback to JsonDatabase
     ]);
 } catch (\Exception $e) {

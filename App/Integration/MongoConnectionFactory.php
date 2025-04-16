@@ -7,8 +7,9 @@ use App\Database\JsonDatabase;
 use App\Database\MongoDatabase;
 use MongoDB\Client;
 
-class DatabaseConnectionFactory
+class MongoConnectionFactory
 {
+    
     private static $mongoClient = null;
 
     /**

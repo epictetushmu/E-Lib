@@ -2,7 +2,7 @@
 namespace App\Database;
 
 use MongoDB\Database;
-use App\Integration\Database\DatabaseConnectionFactory;
+use App\Integration\Database\MongoConnectionFactory;
 use Exception;
 
 class MongoDatabase implements DatabaseInterface {
@@ -23,7 +23,7 @@ class MongoDatabase implements DatabaseInterface {
 
     public function ping(){
         try {
-            $respo = DatabaseConnectionFactory::getClient()->selectDatabase('admin')->command(['ping' => 1]);
+            $respo = MongoConnectionFactory::getClient()->selectDatabase('admin')->command(['ping' => 1]);
             return $respo->getServer()->getHost();
         } catch (Exception $e) {
             error_log("MongoDB Ping Error: " . $e->getMessage());
