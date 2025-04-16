@@ -30,13 +30,29 @@ require_once __DIR__ . '/../App/Includes/Environment.php';
 // Load environment variables before any other code runs
 App\Includes\Environment::load();
 
+// Add the new integration folder to the manual includes
+require_once __DIR__ . '/../App/Integration/Database/DatabaseConnectionFactory.php';
+
 // Verify the class exists
 if (!class_exists('App\Router\BaseRouter')) {
     die("Critical error: App\\Router\\BaseRouter class not found despite loading file");
 }
 
 use App\Router\BaseRouter;
+use App\Integration\Database\DatabaseConnectionFactory;
+
 $baseUrl = ''; // Set your base URL here
-$router = new BaseRouter($baseUrl); 
-$db = new App\Includes\MongoDatabase('LibraryDb'); 
+
+// Create database connection with built-in fallback
+try {
+    $db = DatabaseConnectionFactory::create('mongo', [
+        'fallback' => true,  // Enable automatic fallback to JsonDatabase
+    ]);
+} catch (\Exception $e) {
+    die("Critical error: Unable to establish any database connection: " . $e->getMessage());
+}
+
+// Create router with database
+$router = new BaseRouter($baseUrl, $db);
+
 $router->handleRequest();

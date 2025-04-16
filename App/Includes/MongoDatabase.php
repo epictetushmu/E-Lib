@@ -6,35 +6,34 @@ use MongoDB\Driver\ServerApi;
 use Exception;
 
 class MongoDatabase implements DatabaseInterface {
-    private $client;
-    private $database;
+    protected $client;
+    protected $db;
     
-    public function __construct(string $databaseName) {
-        try {
-            // Get connection string using Environment class
-            $uri = Environment::get('MONGODB_URI', 'mongodb://localhost:27017');
-            
-            // Replace password placeholder if needed
-            $password = Environment::get('MONGO_PASSWORD');
-            if ($password) {
-                $uri = str_replace('<db_password>', $password, $uri);
-            }
-            
-            // Create server API options
-            $serverApi = new ServerApi(ServerApi::V1);
-            $options = [
-                'serverApi' => $serverApi,
-            ];
-            
-            $this->client = new Client($uri, $options);
-            
-            $this->database = $this->client->selectDatabase($databaseName);
-            
-            $this->client->selectDatabase('admin')->command(['ping' => 1]);
-        } catch (Exception $e) {
-            error_log("MongoDB Connection Error: " . $e->getMessage());
-            throw $e;
-        }
+    /**
+     * Constructor 
+     *
+     * @param string $dbName Database name
+     * @param array $options Connection options
+     */
+    public function __construct($dbName, $options = [])
+    {
+        // Set default options if not provided
+        $defaultOptions = [
+            'serverSelectionTimeoutMS' => 30000, // 30 seconds default
+            'connectTimeoutMS' => 30000
+        ];
+        
+        // Merge with user-provided options
+        $options = array_merge($defaultOptions, $options);
+        
+        // Get MongoDB connection string from environment variables or use default
+        $connectionString = getenv('MONGODB_URI') ?: 'mongodb://localhost:27017';
+        
+        $this->client = new \MongoDB\Client($connectionString, $options);
+        $this->db = $this->client->selectDatabase($dbName);
+        
+        // Test the connection by executing a simple command - this will throw an exception if it fails
+        $this->db->command(['ping' => 1]);
     }
 
     public function ping(){
@@ -49,7 +48,7 @@ class MongoDatabase implements DatabaseInterface {
     
     public function insert(string $collection, array $data): array {
         try {
-            $result = $this->database->selectCollection($collection)->insertOne($data);
+            $result = $this->db->selectCollection($collection)->insertOne($data);
             return ['insertedId' => (string)$result->getInsertedId()];
         } catch (Exception $e) {
             error_log("MongoDB Insert Error: " . $e->getMessage());
@@ -59,7 +58,7 @@ class MongoDatabase implements DatabaseInterface {
 
     public function find(string $collection, array $filter = []): array {
         try {
-            $cursor = $this->database->selectCollection($collection)->find($filter);
+            $cursor = $this->db->selectCollection($collection)->find($filter);
             return $cursor->toArray();
         } catch (Exception $e) {
             error_log("MongoDB Find Error: " . $e->getMessage());
@@ -69,7 +68,7 @@ class MongoDatabase implements DatabaseInterface {
 
     public function findOne(string $collection, array $filter = []) {
         try {
-            $document = $this->database->selectCollection($collection)->findOne($filter);
+            $document = $this->db->selectCollection($collection)->findOne($filter);
             return $document ? (array)$document : null;
         } catch (Exception $e) {
             error_log("MongoDB FindOne Error: " . $e->getMessage());
@@ -79,7 +78,7 @@ class MongoDatabase implements DatabaseInterface {
 
     public function update(string $collection, array $filter, array $update): array {
         try {
-            $result = $this->database->selectCollection($collection)->updateMany(
+            $result = $this->db->selectCollection($collection)->updateMany(
                 $filter,
                 ['$set' => $update]
             );
@@ -92,7 +91,7 @@ class MongoDatabase implements DatabaseInterface {
 
     public function delete(string $collection, array $filter): array {
         try {
-            $result = $this->database->selectCollection($collection)->deleteMany($filter);
+            $result = $this->db->selectCollection($collection)->deleteMany($filter);
             return ['deletedCount' => $result->getDeletedCount()];
         } catch (Exception $e) {
             error_log("MongoDB Delete Error: " . $e->getMessage());
