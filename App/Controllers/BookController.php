@@ -62,7 +62,7 @@ class BookController {
         $copies = $data['copies'];
         $description = $data['description'];
         // $cover = $_FILES['cover']['name'];
-        $categories = json_decode($data['category'], true); 
+        $categories = json_decode($data['categories'], true); 
 
         //file upload
         // move_uploaded_file($_FILES['cover']['tmp_name'], '../uploads/' . $cover);

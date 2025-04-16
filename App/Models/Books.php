@@ -1,7 +1,7 @@
 <?php
 namespace App\Models;
 
-use App\Includes\MongoDb;
+use App\Controllers\DbController;
 use App\Models\Categories;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\BSON\ObjectId;
@@ -9,10 +9,10 @@ use MongoDB\BSON\Regex;
 
 class Books {
     private $db;
-    private $collection = 'books';
+    private $collection = 'Books';
 
     public function __construct() {
-        $this->db = MongoDb::getInstance();
+        $this->db = DbController::getInstance();
     }
 
     public function getAllBooks() {
@@ -23,6 +23,7 @@ class Books {
         return $this->db->findOne($this->collection, ['_id' => new ObjectId($id)]);
     }
 
+    // TODO: Return  max 20 random books 
     public function getFeaturedBooks() {
         return $this->db->find($this->collection,  ['sort' => ['_id' => -1], 'limit' => 20]);
     }

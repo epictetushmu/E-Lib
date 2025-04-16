@@ -22,7 +22,13 @@ if (file_exists($baseRouterPath)) {
 
 require_once __DIR__ . '/../App/Router/PageRouter.php';
 require_once __DIR__ . '/../App/Router/ApiRouter.php';
-require_once __DIR__ . '/../App/Includes/MongoDb.php';
+require_once __DIR__ . '/../App/Includes/DatabaseInterface.php';
+require_once __DIR__ . '/../App/Includes/JsonDatabase.php';
+require_once __DIR__ . '/../App/Includes/MongoDatabase.php';
+require_once __DIR__ . '/../App/Includes/Environment.php';
+
+// Load environment variables before any other code runs
+App\Includes\Environment::load();
 
 // Verify the class exists
 if (!class_exists('App\Router\BaseRouter')) {
@@ -32,4 +38,5 @@ if (!class_exists('App\Router\BaseRouter')) {
 use App\Router\BaseRouter;
 $baseUrl = ''; // Set your base URL here
 $router = new BaseRouter($baseUrl); 
+$db = new App\Includes\MongoDatabase('LibraryDb'); 
 $router->handleRequest();
