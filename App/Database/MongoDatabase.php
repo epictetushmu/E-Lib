@@ -18,17 +18,7 @@ class MongoDatabase implements DatabaseInterface {
      */
     public function __construct($database)
     {
-        $this->db = $database;
-    }
-
-    public function ping(){
-        try {
-            $respo = MongoConnectionFactory::getClient()->selectDatabase('admin')->command(['ping' => 1]);
-            return $respo->getServer()->getHost();
-        } catch (Exception $e) {
-            error_log("MongoDB Ping Error: " . $e->getMessage());
-            return false;
-        }
+        $this->db = $database; 
     }
     
     public function insert(string $collection, array $data): array {
