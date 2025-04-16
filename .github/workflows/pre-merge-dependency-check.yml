@@ -60,7 +60,7 @@ jobs:
           
       - name: Trigger Dependabot
         if: contains(github.event.pull_request.labels.*.name, 'run-dependabot')
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: trigger dependabot update"
