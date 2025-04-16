@@ -1,22 +1,25 @@
 <?php
+// filepath: /home/makis/Documents/GenUni/Coding/Web/E-Lib/app/includes/MongoDb.php
 namespace App\Includes;
 
-use MongoDB\Client;
-use MongoDB\Collection;
-use MongoDB\Exception\Exception;
-
-class JsonDatabase implements DatabaseInterface {
+class Database {
+    private static $instance = null;
     private $dataPath;
-    
-    public function __construct() {
+
+    private function __construct() {
         $this->dataPath = __DIR__ . '/../../data/';
-        
-        // Create data directory if it doesn't exist
-        if (!file_exists($this->dataPath)) {
+        if (!is_dir($this->dataPath)) {
             mkdir($this->dataPath, 0755, true);
         }
     }
-    
+
+    public static function getInstance() {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
+
     private function getFilePath(string $collection): string {
         return $this->dataPath . $collection . '.json';
     }
@@ -39,7 +42,7 @@ class JsonDatabase implements DatabaseInterface {
 
     public function insert(string $collection, array $data): array {
         $documents = $this->readCollection($collection);
-        $data['_id'] = (string)new \MongoDB\BSON\ObjectId();
+        $data['_id'] = uniqid();
         $documents[] = $data;
         if ($this->writeCollection($collection, $documents)) {
             return ['insertedId' => $data['_id']];
@@ -49,7 +52,11 @@ class JsonDatabase implements DatabaseInterface {
 
     public function find(string $collection, array $filter = []): array {
         $documents = $this->readCollection($collection);
-        return array_filter($documents, function ($document) use ($filter) {
+        if (empty($filter)) {
+            return $documents;
+        }
+        
+        return array_filter($documents, function($document) use ($filter) {
             foreach ($filter as $key => $value) {
                 if (!isset($document[$key]) || $document[$key] !== $value) {
                     return false;
@@ -59,55 +66,54 @@ class JsonDatabase implements DatabaseInterface {
         });
     }
 
-    public function findOne(string $collection, array $filter = [], array $options = []) {
-        return $this->getCollection($collection)->findOne($filter, $options);
+    public function findOne(string $collection, array $filter = []) {
+        $results = $this->find($collection, $filter);
+        return !empty($results) ? reset($results) : null;
     }
 
     public function update(string $collection, array $filter, array $update): array {
         $documents = $this->readCollection($collection);
-        $updatedCount = 0;
-
+        $updated = 0;
+        
         foreach ($documents as &$document) {
-            $match = true;
+            $matches = true;
             foreach ($filter as $key => $value) {
                 if (!isset($document[$key]) || $document[$key] !== $value) {
-                    $match = false;
+                    $matches = false;
                     break;
                 }
             }
-            if ($match) {
-                $document = array_merge($document, $update);
-                $updatedCount++;
+            
+            if ($matches) {
+                foreach ($update as $key => $value) {
+                    $document[$key] = $value;
+                }
+                $updated++;
             }
         }
-
+        
         if ($this->writeCollection($collection, $documents)) {
-            return ['updatedCount' => $updatedCount];
+            return ['modifiedCount' => $updated];
         }
         return ['error' => 'Failed to update documents'];
     }
 
     public function delete(string $collection, array $filter): array {
         $documents = $this->readCollection($collection);
-        $remainingDocuments = [];
-        $deletedCount = 0;
-
-        foreach ($documents as $document) {
-            $match = true;
+        $originalCount = count($documents);
+        
+        $documents = array_filter($documents, function($document) use ($filter) {
             foreach ($filter as $key => $value) {
-                if (!isset($document[$key]) || $document[$key] !== $value) {
-                    $match = false;
-                    break;
+                if (isset($document[$key]) && $document[$key] === $value) {
+                    return false;
                 }
             }
-            if ($match) {
-                $deletedCount++;
-            } else {
-                $remainingDocuments[] = $document;
-            }
-        }
-
-        if ($this->writeCollection($collection, $remainingDocuments)) {
+            return true;
+        });
+        
+        $deletedCount = $originalCount - count($documents);
+        
+        if ($this->writeCollection($collection, array_values($documents))) {
             return ['deletedCount' => $deletedCount];
         }
         return ['error' => 'Failed to delete documents'];

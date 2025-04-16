@@ -1,6 +1,7 @@
 <?php
 namespace App\Controllers;
 
+use App\Includes\Environment;
 use Exception;
 use App\Includes\JsonDatabase;
 use App\Includes\MongoDatabase;
@@ -8,9 +9,10 @@ use App\Includes\MongoDatabase;
 class DbController {
     private static $instance = null;
     private $database;
-    private $databaseName = 'e_library';
+    private $databaseName;
 
     private function __construct() {
+        $this->databaseName = Environment::get('DB_NAME', 'default_db');   
         try {
             $this->database = new MongoDatabase($this->databaseName);
         } catch (Exception $e) {

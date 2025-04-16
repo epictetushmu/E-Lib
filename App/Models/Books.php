@@ -9,7 +9,7 @@ use MongoDB\BSON\Regex;
 
 class Books {
     private $db;
-    private $collection = 'books';
+    private $collection = 'Books';
 
     public function __construct() {
         $this->db = DbController::getInstance();
@@ -23,6 +23,7 @@ class Books {
         return $this->db->findOne($this->collection, ['_id' => new ObjectId($id)]);
     }
 
+    // TODO: Return  max 20 random books 
     public function getFeaturedBooks() {
         return $this->db->find($this->collection,  ['sort' => ['_id' => -1], 'limit' => 20]);
     }

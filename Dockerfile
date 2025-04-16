@@ -1,46 +1,38 @@
-FROM php:8.2-apache
+FROM php:8.1-apache
 
-# Set working directory
-WORKDIR /var/www/html
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    libzip-dev \
+    zip \
+    unzip \
+    git \
+    && docker-php-ext-install zip
 
-# Configure Apache document root to point to the public directory
-RUN sed -i 's/DocumentRoot \/var\/www\/html/DocumentRoot \/var\/www\/html\/public/' /etc/apache2/sites-available/000-default.conf
+# Install MongoDB extension
+RUN pecl install mongodb && docker-php-ext-enable mongodb
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    unzip \
-    curl \
-    libssl-dev \
-    pkg-config \
-    libzip-dev \
-    libpng-dev
-
-# Install PHP extensions
-RUN pecl install mongodb && docker-php-ext-enable mongodb
-RUN docker-php-ext-install zip
-
-# Configure Apache for .htaccess usage
-RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
-
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+# Set working directory
+WORKDIR /var/www/html
 
 # Copy application files
-COPY . .
+COPY . /var/www/html/
+
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www/html
+
+# Configure Apache document root
+RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
+
+# Install Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 # Install dependencies
-RUN composer install --no-interaction || \
-    (composer init --name=makis/e-lib --no-interaction && \
-     composer config autoload.psr-4.App\\\\ App/ && \
-     composer dump-autoload)
+RUN composer install --no-interaction --optimize-autoloader
 
-# Set permissions
-RUN chown -R www-data:www-data .
-
+# Expose port 80
 EXPOSE 80
 
 # Start Apache
