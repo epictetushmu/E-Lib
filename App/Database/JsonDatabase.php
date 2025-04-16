@@ -1,9 +1,5 @@
 <?php
-namespace App\Includes;
-
-use MongoDB\Client;
-use MongoDB\Collection;
-use MongoDB\Exception\Exception;
+namespace App\Database;
 
 class JsonDatabase implements DatabaseInterface {
     private $dataPath;
@@ -60,7 +56,20 @@ class JsonDatabase implements DatabaseInterface {
     }
 
     public function findOne(string $collection, array $filter = [], array $options = []) {
-        return $this->getCollection($collection)->findOne($filter, $options);
+        $documents = $this->readCollection($collection);
+        foreach ($documents as $document) {
+            $match = true;
+            foreach ($filter as $key => $value) {
+                if (!isset($document[$key]) || $document[$key] !== $value) {
+                    $match = false;
+                    break;
+                }
+            }
+            if ($match) {
+                return $document;
+            }
+        }
+        return null;
     }
 
     public function update(string $collection, array $filter, array $update): array {

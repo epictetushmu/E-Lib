@@ -1,5 +1,5 @@
 <?php
-namespace App\Includes;
+namespace App\Database;
 
 interface DatabaseInterface {
     public function insert(string $collection, array $data): array;

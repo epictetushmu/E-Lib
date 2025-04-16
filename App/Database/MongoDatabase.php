@@ -1,54 +1,29 @@
 <?php
-namespace App\Includes;
+namespace App\Database;
 
-use MongoDB\Client;
-use MongoDB\Driver\ServerApi;
+use MongoDB\Database;
 use App\Integration\Database\DatabaseConnectionFactory;
 use Exception;
 
 class MongoDatabase implements DatabaseInterface {
-    protected $client;
+    /**
+     * @var Database
+     */
     protected $db;
     
     /**
      * Constructor 
      *
-     * @param string $dbName Database name
-     * @param array $options Connection options
+     * @param Database $database A MongoDB Database instance
      */
-    public function __construct($dbName, $options = [])
+    public function __construct(Database $database)
     {
-        // Set default options if not provided
-        // $defaultOptions = [
-        //     'serverSelectionTimeoutMS' => 30000, // 30 seconds default
-        //     'connectTimeoutMS' => 30000
-        // ];
-        
-        // // Merge with user-provided options
-        // $options = array_merge($defaultOptions, $options);
-        
-        // // Get MongoDB connection string from environment variables or use default
-        // $connectionString = getenv('MONGODB_URI') ?: 'mongodb://localhost:27017';
-        
-        // $this->client = new \MongoDB\Client($connectionString, $options);
-        // $this->db = $this->client->selectDatabase($dbName);
-        
-        // // Test the connection by executing a simple command - this will throw an exception if it fails
-        // $this->db->command(['ping' => 1]);
-        try {
-            $this->db = DatabaseConnectionFactory::create('mongo', [
-                'fallback' => true,  // Enable automatic fallback to JsonDatabase
-            ]);
-        } catch (\Exception $e) {
-            error_log("Critical error: Unable to establish any database connection: " . $e->getMessage());
-            $this->db = new JsonDatabase();
-            // die("Critical error: Unable to establish any database connection: " . $e->getMessage());
-        }
+        $this->db = $database;
     }
 
     public function ping(){
         try {
-            $respo = $this->client->selectDatabase('admin')->command(['ping' => 1]);
+            $respo = DatabaseConnectionFactory::getClient()->selectDatabase('admin')->command(['ping' => 1]);
             return $respo->getServer()->getHost();
         } catch (Exception $e) {
             error_log("MongoDB Ping Error: " . $e->getMessage());
@@ -66,10 +41,25 @@ class MongoDatabase implements DatabaseInterface {
         }
     }
 
-    public function find(string $collection, array $filter = []): array {
+    public function find(string $collection, array $filter = [], array $options = []): array {
         try {
-            $cursor = $this->db->selectCollection($collection)->find($filter);
-            return $cursor->toArray();
+            // Default options for pagination
+            $defaultOptions = [
+                'limit' => 100  // Limit results to prevent memory issues
+            ];
+            
+            // Merge with user provided options
+            $options = array_merge($defaultOptions, $options);
+            
+            $cursor = $this->db->selectCollection($collection)->find($filter, $options);
+            
+            // Process results in batches to avoid memory issues
+            $results = [];
+            foreach ($cursor as $document) {
+                $results[] = (array)$document;
+            }
+            
+            return $results;
         } catch (Exception $e) {
             error_log("MongoDB Find Error: " . $e->getMessage());
             return [];
@@ -106,6 +96,23 @@ class MongoDatabase implements DatabaseInterface {
         } catch (Exception $e) {
             error_log("MongoDB Delete Error: " . $e->getMessage());
             return ['error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * New method to iterate through large result sets efficiently
+     * Returns a generator that yields documents one at a time
+     */
+    public function findIterate(string $collection, array $filter = [], array $options = []) {
+        try {
+            $cursor = $this->db->selectCollection($collection)->find($filter, $options);
+            
+            foreach ($cursor as $document) {
+                yield (array)$document;
+            }
+        } catch (Exception $e) {
+            error_log("MongoDB Find Error: " . $e->getMessage());
+            return;
         }
     }
 }
