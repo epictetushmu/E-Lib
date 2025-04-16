@@ -16,7 +16,7 @@ class MongoDatabase implements DatabaseInterface {
      *
      * @param Database $database A MongoDB Database instance
      */
-    public function __construct(Database $database)
+    public function __construct($database)
     {
         $this->db = $database;
     }
