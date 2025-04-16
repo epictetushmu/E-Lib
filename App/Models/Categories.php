@@ -5,7 +5,7 @@ use App\Controllers\DbController;
 
 class Categories {
     private $db;
-    private $collection = 'categories';
+    private $collection = 'Categories';
 
     public function __construct() {
         $this->db = DbController::getInstance();
