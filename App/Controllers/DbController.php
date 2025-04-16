@@ -3,8 +3,8 @@ namespace App\Controllers;
 
 use App\Includes\Environment;
 use Exception;
-use App\Includes\JsonDatabase;
-use App\Includes\MongoDatabase;
+use App\Database\JsonDatabase;
+use App\Database\MongoDatabase;
 
 class DbController {
     private static $instance = null;
