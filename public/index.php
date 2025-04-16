@@ -38,7 +38,7 @@ $requiredFiles = [
     '/App/Includes/Environment.php',
     '/App/Integration/JsonDbInteraction.php',
     '/App/Integration/DatabaseConnectionFactory.php',
-    '/App/Integration/Database/MongoConnectionFactory.php'
+    '/App/Integration/MongoConnectionFactory.php'
 ];
 
 // Try to include all required files
