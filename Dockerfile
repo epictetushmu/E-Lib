@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     git \
-    && docker-php-ext-install zip pdo pdo_mysql
+    && docker-php-ext-install zip
 
 # Install MongoDB extension
 RUN pecl install mongodb && docker-php-ext-enable mongodb

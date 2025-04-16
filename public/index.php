@@ -38,4 +38,6 @@ if (!class_exists('App\Router\BaseRouter')) {
 use App\Router\BaseRouter;
 $baseUrl = ''; // Set your base URL here
 $router = new BaseRouter($baseUrl); 
+$db = new App\Includes\MongoDatabase('LibraryDb'); 
+echo $db->ping();
 $router->handleRequest();

@@ -75,7 +75,7 @@ To get started with the E-Lib project:
    ```
    docker-compose up -d
    ```
-   This command builds and starts all containers defined in docker-compose.yml (PHP/Apache, MySQL, MongoDB).
+   This command builds and starts all containers defined in docker-compose.yml (PHP/Apache, MongoDB).
 
 5. **Install Dependencies**:
    ```

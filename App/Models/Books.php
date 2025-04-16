@@ -23,6 +23,7 @@ class Books {
         return $this->db->findOne($this->collection, ['_id' => new ObjectId($id)]);
     }
 
+    // TODO: Return  max 20 random books 
     public function getFeaturedBooks() {
         return $this->db->find($this->collection,  ['sort' => ['_id' => -1], 'limit' => 20]);
     }
