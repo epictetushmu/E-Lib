@@ -9,9 +9,10 @@ use App\Includes\MongoDatabase;
 class DbController {
     private static $instance = null;
     private $database;
-    private $databaseName = Environment::get('DB_NAME');
+    private $databaseName;
 
     private function __construct() {
+        $this->databaseName = Environment::get('DB_NAME', 'default_db');   
         try {
             $this->database = new MongoDatabase($this->databaseName);
         } catch (Exception $e) {
