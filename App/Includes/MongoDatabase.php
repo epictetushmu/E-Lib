@@ -3,6 +3,7 @@ namespace App\Includes;
 
 use MongoDB\Client;
 use MongoDB\Driver\ServerApi;
+use App\Integration\Database\DatabaseConnectionFactory;
 use Exception;
 
 class MongoDatabase implements DatabaseInterface {
@@ -18,22 +19,31 @@ class MongoDatabase implements DatabaseInterface {
     public function __construct($dbName, $options = [])
     {
         // Set default options if not provided
-        $defaultOptions = [
-            'serverSelectionTimeoutMS' => 30000, // 30 seconds default
-            'connectTimeoutMS' => 30000
-        ];
+        // $defaultOptions = [
+        //     'serverSelectionTimeoutMS' => 30000, // 30 seconds default
+        //     'connectTimeoutMS' => 30000
+        // ];
         
-        // Merge with user-provided options
-        $options = array_merge($defaultOptions, $options);
+        // // Merge with user-provided options
+        // $options = array_merge($defaultOptions, $options);
         
-        // Get MongoDB connection string from environment variables or use default
-        $connectionString = getenv('MONGODB_URI') ?: 'mongodb://localhost:27017';
+        // // Get MongoDB connection string from environment variables or use default
+        // $connectionString = getenv('MONGODB_URI') ?: 'mongodb://localhost:27017';
         
-        $this->client = new \MongoDB\Client($connectionString, $options);
-        $this->db = $this->client->selectDatabase($dbName);
+        // $this->client = new \MongoDB\Client($connectionString, $options);
+        // $this->db = $this->client->selectDatabase($dbName);
         
-        // Test the connection by executing a simple command - this will throw an exception if it fails
-        $this->db->command(['ping' => 1]);
+        // // Test the connection by executing a simple command - this will throw an exception if it fails
+        // $this->db->command(['ping' => 1]);
+        try {
+            $this->db = DatabaseConnectionFactory::create('mongo', [
+                'fallback' => true,  // Enable automatic fallback to JsonDatabase
+            ]);
+        } catch (\Exception $e) {
+            error_log("Critical error: Unable to establish any database connection: " . $e->getMessage());
+            $this->db = new JsonDatabase();
+            // die("Critical error: Unable to establish any database connection: " . $e->getMessage());
+        }
     }
 
     public function ping(){

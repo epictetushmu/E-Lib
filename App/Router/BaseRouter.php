@@ -9,7 +9,6 @@ class BaseRouter {
     private $apiRouter;
     private $pageRouter;
     private $baseUrl;
-    private $database;
 
     /**
      * Constructor
@@ -17,10 +16,9 @@ class BaseRouter {
      * @param string $baseUrl Base URL for the application
      * @param mixed $database Database instance
      */
-    public function __construct($baseUrl = '', $database = null)
+    public function __construct($baseUrl = '')
     {
         $this->baseUrl = $baseUrl;
-        $this->database = $database;
         $this->apiRouter = new ApiRouter();
         $this->pageRouter = new PageRouter();
     }
