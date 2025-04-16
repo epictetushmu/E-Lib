@@ -102,7 +102,8 @@ class MongoDb {
     }
 
     public function findOne(string $collection, array $filter = [], array $options = []) {
-        return $this->getCollection($collection)->findOne($filter, $options);
+        $documents = $this->find($collection, $filter);
+        return !empty($documents) ? reset($documents) : null;
     }
 
     public function update(string $collection, array $filter, array $update): array {

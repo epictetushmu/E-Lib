@@ -9,7 +9,7 @@ use MongoDB\BSON\Regex;
 
 class Books {
     private $db;
-    private $collection = 'books';
+    private $collection = 'Books';
 
     public function __construct() {
         $this->db = DbController::getInstance();

@@ -15,10 +15,6 @@ class PageRouter {
     private $casService;
 
     public function __construct() {
-        // Use Environment class instead of direct Dotenv
-        // Make sure Environment is loaded before this class is instantiated
-        
-        // Set the secret key from the environment variable
 
         $this->defineRoutes();
         $this->setSecurityHeaders();

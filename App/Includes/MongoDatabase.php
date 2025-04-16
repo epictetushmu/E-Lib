@@ -36,6 +36,16 @@ class MongoDatabase implements DatabaseInterface {
             throw $e;
         }
     }
+
+    public function ping(){
+        try {
+            $respo = $this->client->selectDatabase('admin')->command(['ping' => 1]);
+            return $respo->getServer()->getHost();
+        } catch (Exception $e) {
+            error_log("MongoDB Ping Error: " . $e->getMessage());
+            return false;
+        }
+    }
     
     public function insert(string $collection, array $data): array {
         try {
