@@ -14,36 +14,6 @@ class JsonDatabase implements DatabaseInterface {
         // Create data directory if it doesn't exist
         if (!file_exists($this->dataPath)) {
             mkdir($this->dataPath, 0755, true);
-class MongoDb {
-    private static $instance = null;
-    private $connection;
-    private $db;
-
-    private function __construct() {
-        // Use Environment class to get configuration
-        // Make sure Environment is loaded before this class is instantiated
-        
-        // Use environment variables to configure the MongoDB connection
-        $host = Environment::get('MONGODB_HOST');
-        $port = Environment::get('MONGODB_PORT');
-        $username = Environment::get('MONGODB_USERNAME');
-        $password = Environment::get('MONGODB_PASSWORD');
-        $dbname = Environment::get('MONGODB_DATABASE');
-        $authSource = Environment::get('MONGODB_AUTH_SOURCE', 'admin');
-
-        try {
-            // Create a MongoDB client with authentication if credentials are provided
-            $connectionString = "mongodb://";
-            if ($username && $password) {
-                $connectionString .= "$username:$password@";
-            }
-            $connectionString .= "$host:$port/?authSource=$authSource";
-            
-            $this->connection = new Client($connectionString);
-            $this->db = $this->connection->selectDatabase($dbname);
-        } catch (\Exception $e) {
-            echo 'Error connecting to MongoDB: ' . $e->getMessage();
-            exit;
         }
     }
     
@@ -65,16 +35,6 @@ class MongoDb {
         $filePath = $this->getFilePath($collection);
         $json = json_encode($data, JSON_PRETTY_PRINT);
         return file_put_contents($filePath, $json) !== false;
-
-    public static function getInstance() {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
-
-    public function getCollection(string $collectionName): Collection {
-        return $this->db->selectCollection($collectionName);
     }
 
     public function insert(string $collection, array $data): array {
@@ -85,8 +45,6 @@ class MongoDb {
             return ['insertedId' => $data['_id']];
         }
         return ['error' => 'Failed to insert document'];
-    public function insert(string $collection, array $data) {
-        return $this->getCollection($collection)->insertOne($data);
     }
 
     public function find(string $collection, array $filter = []): array {
@@ -102,8 +60,7 @@ class MongoDb {
     }
 
     public function findOne(string $collection, array $filter = [], array $options = []) {
-        $documents = $this->find($collection, $filter);
-        return !empty($documents) ? reset($documents) : null;
+        return $this->getCollection($collection)->findOne($filter, $options);
     }
 
     public function update(string $collection, array $filter, array $update): array {
@@ -127,7 +84,6 @@ class MongoDb {
         if ($this->writeCollection($collection, $documents)) {
             return ['updatedCount' => $updatedCount];
         }
-
         return ['error' => 'Failed to update documents'];
     }
 
@@ -154,7 +110,6 @@ class MongoDb {
         if ($this->writeCollection($collection, $remainingDocuments)) {
             return ['deletedCount' => $deletedCount];
         }
-
         return ['error' => 'Failed to delete documents'];
     }
 }
