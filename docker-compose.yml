@@ -1,24 +1,58 @@
-version: '3.8'
+version: '3'
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: elib-app
     ports:
       - "8080:80"
     volumes:
       - .:/var/www/html
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
     depends_on:
+      - mysql
       - mongo
     environment:
-      MONGO_URI: mongodb://mongo:27017/myappdb
+      - APP_ENV=development
+      - APP_DEBUG=true
+    networks:
+      - elib-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: elib-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-LibraryDb}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-mysql}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - elib-network
 
   mongo:
-    image: mongo:6
-    restart: always
+    image: mongo:latest
+    container_name: elib-mongo
+    restart: unless-stopped
     ports:
       - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-example}
+      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE:-e_lib}
     volumes:
-      - mongo_data:/data/db
+      - mongo-data:/data/db
+    networks:
+      - elib-network
+
+networks:
+  elib-network:
+    driver: bridge
 
 volumes:
-  mongo_data:
+  mysql-data:
+  mongo-data:
