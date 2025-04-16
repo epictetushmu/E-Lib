@@ -89,19 +89,71 @@ class MongoDb {
         return $this->getCollection($collection)->insertOne($data);
     }
 
-    public function find(string $collection, array $filter = [], array $options = []) {
-        return $this->getCollection($collection)->find($filter, $options)->toArray();
+    public function find(string $collection, array $filter = []): array {
+        $documents = $this->readCollection($collection);
+        return array_filter($documents, function ($document) use ($filter) {
+            foreach ($filter as $key => $value) {
+                if (!isset($document[$key]) || $document[$key] !== $value) {
+                    return false;
+                }
+            }
+            return true;
+        });
     }
 
     public function findOne(string $collection, array $filter = [], array $options = []) {
         return $this->getCollection($collection)->findOne($filter, $options);
     }
 
-    public function update(string $collection, array $filter, array $update, array $options = []) {
-        return $this->getCollection($collection)->updateMany($filter, ['$set' => $update], $options);
+    public function update(string $collection, array $filter, array $update): array {
+        $documents = $this->readCollection($collection);
+        $updatedCount = 0;
+
+        foreach ($documents as &$document) {
+            $match = true;
+            foreach ($filter as $key => $value) {
+                if (!isset($document[$key]) || $document[$key] !== $value) {
+                    $match = false;
+                    break;
+                }
+            }
+            if ($match) {
+                $document = array_merge($document, $update);
+                $updatedCount++;
+            }
+        }
+
+        if ($this->writeCollection($collection, $documents)) {
+            return ['updatedCount' => $updatedCount];
+        }
+
+        return ['error' => 'Failed to update documents'];
     }
 
-    public function delete(string $collection, array $filter, array $options = []) {
-        return $this->getCollection($collection)->deleteMany($filter, $options);
+    public function delete(string $collection, array $filter): array {
+        $documents = $this->readCollection($collection);
+        $remainingDocuments = [];
+        $deletedCount = 0;
+
+        foreach ($documents as $document) {
+            $match = true;
+            foreach ($filter as $key => $value) {
+                if (!isset($document[$key]) || $document[$key] !== $value) {
+                    $match = false;
+                    break;
+                }
+            }
+            if ($match) {
+                $deletedCount++;
+            } else {
+                $remainingDocuments[] = $document;
+            }
+        }
+
+        if ($this->writeCollection($collection, $remainingDocuments)) {
+            return ['deletedCount' => $deletedCount];
+        }
+
+        return ['error' => 'Failed to delete documents'];
     }
 }

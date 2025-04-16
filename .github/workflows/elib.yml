@@ -1,6 +1,6 @@
 name: E-Lib CI
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   e-lib-test:
