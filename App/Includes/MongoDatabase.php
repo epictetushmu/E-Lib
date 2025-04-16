@@ -1,7 +1,6 @@
 <?php
 namespace App\Includes;
 
-use Dotenv\Dotenv;
 use MongoDB\Client;
 use MongoDB\Driver\ServerApi;
 use Exception;
@@ -11,26 +10,31 @@ class MongoDatabase implements DatabaseInterface {
     private $database;
     
     public function __construct(string $databaseName) {
-        // Configure the connection string
-        $uri = Dotenv::createImmutable(__DIR__ . '/../..');
-        $uri->load();
-        $uri = $_ENV['MONGODB_URI'];
-        $uri = str_replace('<db_password>', $_ENV['MONGO_PASSWORD'], $uri);
-       
-        // Create server API options
-        $serverApi = new ServerApi(ServerApi::V1);
-        $options = [
-            'serverApi' => $serverApi,
-        ];
-        
-        // Create the client
-        $this->client = new Client($uri, $options);
-        
-        // Select the database
-        $this->database = $this->client->selectDatabase($databaseName);
-        
-        // Test connection
-        $this->client->selectDatabase('admin')->command(['ping' => 1]);
+        try {
+            // Get connection string using Environment class
+            $uri = Environment::get('MONGODB_URI', 'mongodb://localhost:27017');
+            
+            // Replace password placeholder if needed
+            $password = Environment::get('MONGO_PASSWORD');
+            if ($password) {
+                $uri = str_replace('<db_password>', $password, $uri);
+            }
+            
+            // Create server API options
+            $serverApi = new ServerApi(ServerApi::V1);
+            $options = [
+                'serverApi' => $serverApi,
+            ];
+            
+            $this->client = new Client($uri, $options);
+            
+            $this->database = $this->client->selectDatabase($databaseName);
+            
+            $this->client->selectDatabase('admin')->command(['ping' => 1]);
+        } catch (Exception $e) {
+            error_log("MongoDB Connection Error: " . $e->getMessage());
+            throw $e;
+        }
     }
     
     public function insert(string $collection, array $data): array {
