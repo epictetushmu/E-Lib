@@ -1,6 +1,6 @@
 <?php
 
-namespace App\includes;
+namespace App\Includes;
 
 class Environment {
     /**

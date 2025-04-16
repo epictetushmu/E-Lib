@@ -12,7 +12,6 @@ use App\Services\CasService;
 
 class PageRouter { 
     private $routes = [];
-    private $secretKey;
     private $casService;
 
     public function __construct() {
@@ -20,7 +19,6 @@ class PageRouter {
         // Make sure Environment is loaded before this class is instantiated
         
         // Set the secret key from the environment variable
-        $this->secretKey = Environment::get('SECRET_KEY');
 
         $this->defineRoutes();
         $this->setSecurityHeaders();
