@@ -3,35 +3,84 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL & ~E_DEPRECATED);
 
-// filepath: /home/makis/Documents/GenUni/Coding/Web/E-Lib/public/index.php
-// Instead of requiring the autoloader, use manual includes
-//with composer dump-autoload 
-// require_once __DIR__ . '/../vendor/autoload.php';
-$autoloadPath = __DIR__ . '/../vendor/autoload.php';
+// Determine the correct base directory for includes
+$projectRoot = realpath(__DIR__ . '/..');
+if (!$projectRoot) {
+    die("Critical error: Unable to determine project root directory");
+}
+
+// Function to safely include a file with proper error handling
+function safeRequire($path) {
+    if (file_exists($path)) {
+        require_once $path;
+        return true;
+    }
+    return false;
+}
+
+// Check if we're in GitHub Actions environment
+$isGithubActions = getenv('GITHUB_ACTIONS') === 'true';
+
+// Try to include the autoloader first
+$autoloadPath = $projectRoot . '/vendor/autoload.php';
 if (file_exists($autoloadPath)) {
     require_once $autoloadPath;
 }
 
-// Always load these files directly regardless of autoloader
-$baseRouterPath = __DIR__ . '/../App/Router/BaseRouter.php';
-if (file_exists($baseRouterPath)) {
-    require_once $baseRouterPath;
-} else {
-    die("Critical error: BaseRouter.php not found at: $baseRouterPath");
+// Define all the required paths
+$requiredFiles = [
+    '/App/Router/BaseRouter.php',
+    '/App/Router/PageRouter.php',
+    '/App/Router/ApiRouter.php',
+    '/App/Database/DatabaseInterface.php',
+    '/App/Database/JsonDatabase.php',
+    '/App/Database/MongoDatabase.php',
+    '/App/Includes/Environment.php',
+    '/App/Integration/JsonDbInteraction.php',
+    '/App/Integration/DatabaseConnectionFactory.php',
+    '/App/Integration/MongoConnectionFactory.php'
+];
+
+// Try to include all required files
+$missingFiles = [];
+foreach ($requiredFiles as $file) {
+    $fullPath = $projectRoot . $file;
+    if (!safeRequire($fullPath)) {
+        $missingFiles[] = $fullPath;
+    }
 }
 
-require_once __DIR__ . '/../App/Router/PageRouter.php';
-require_once __DIR__ . '/../App/Router/ApiRouter.php';
-require_once __DIR__ . '/../App/Includes/DatabaseInterface.php';
-require_once __DIR__ . '/../App/Includes/JsonDatabase.php';
-require_once __DIR__ . '/../App/Includes/MongoDatabase.php';
-require_once __DIR__ . '/../App/Includes/Environment.php';
+// If there are missing files, display error and exit
+if (!empty($missingFiles)) {
+    echo "<h1>Critical Error: Missing Required Files</h1>";
+    echo "<p>The following files could not be found:</p><ul>";
+    foreach ($missingFiles as $file) {
+        echo "<li>$file</li>";
+    }
+    echo "</ul>";
+    
+    echo "<h2>Debug Information</h2>";
+    echo "<p>Project Root: $projectRoot</p>";
+    echo "<p>Current Directory: " . getcwd() . "</p>";
+    echo "<p>Is GitHub Actions: " . ($isGithubActions ? 'Yes' : 'No') . "</p>";
+    
+    if ($isGithubActions) {
+        echo "<h2>GitHub Actions Environment</h2>";
+        echo "<p>Directory Listing:</p><pre>";
+        // List directories to debug
+        echo shell_exec("ls -la $projectRoot");
+        echo shell_exec("ls -la $projectRoot/App");
+        echo "</pre>";
+    }
+    
+    die();
+}
 
 // Load environment variables before any other code runs
 App\Includes\Environment::load();
 
 // Add the new integration folder to the manual includes
-require_once __DIR__ . '/../App/Integration/Database/DatabaseConnectionFactory.php';
+safeRequire($projectRoot . '/App/Integration/Database/MongoConnectionFactory.php');
 
 // Verify the class exists
 if (!class_exists('App\Router\BaseRouter')) {
@@ -39,13 +88,13 @@ if (!class_exists('App\Router\BaseRouter')) {
 }
 
 use App\Router\BaseRouter;
-use App\Integration\Database\DatabaseConnectionFactory;
+use App\Integration\Database\MongoConnectionFactory;
 
 $baseUrl = ''; // Set your base URL here
 
 // Create database connection with built-in fallback
 try {
-    $db = DatabaseConnectionFactory::create('mongo', [
+    $db = MongoConnectionFactory::create('mongo', [
         'fallback' => true,  // Enable automatic fallback to JsonDatabase
     ]);
 } catch (\Exception $e) {
@@ -53,6 +102,6 @@ try {
 }
 
 // Create router with database
-$router = new BaseRouter($baseUrl, $db);
+$router = new BaseRouter($baseUrl);
 
 $router->handleRequest();

@@ -2,12 +2,16 @@
 
 namespace App\Integration\Database;
 
-use App\Includes\DatabaseInterface;
-use App\Includes\JsonDatabase;
-use App\Includes\MongoDatabase;
+use App\Database\DatabaseInterface;
+use App\Database\JsonDatabase;
+use App\Database\MongoDatabase;
+use MongoDB\Client;
 
-class DatabaseConnectionFactory
+class MongoConnectionFactory
 {
+    
+    private static $mongoClient = null;
+
     /**
      * Create a database connection with fallback options
      * 
@@ -30,7 +34,11 @@ class DatabaseConnectionFactory
         
         if ($type === 'mongo') {
             try {
-                $db = new MongoDatabase($config['dbName'], $config['mongoOptions']);
+                // Get MongoDB connection
+                $mongoDb = self::getMongoConnection($config['dbName'], $config['mongoOptions']);
+                
+                // Create and return the MongoDB wrapper
+                $db = new MongoDatabase($mongoDb);
                 error_log("Connected to MongoDB successfully");
                 return $db;
             } catch (\MongoDB\Driver\Exception\ConnectionTimeoutException $e) {
@@ -61,5 +69,42 @@ class DatabaseConnectionFactory
         }
         
         throw new \InvalidArgumentException("Unsupported database type: $type");
+    }
+
+    /**
+     * Get a MongoDB database connection
+     * 
+     * @param string $dbName Database name
+     * @param array $options Connection options
+     * @return \MongoDB\Database
+     */
+    private static function getMongoConnection($dbName, $options = [])
+    {
+        // Get MongoDB connection string from environment variables or use default
+        $connectionString = getenv('MONGODB_URI') ?: 'mongodb://localhost:27017';
+        
+        // Create client if it doesn't exist
+        if (self::$mongoClient === null) {
+            self::$mongoClient = new Client($connectionString, $options);
+        }
+        
+        // Get the database and verify connection by running a ping command
+        $db = self::$mongoClient->selectDatabase($dbName);
+        $db->command(['ping' => 1]);
+        
+        return $db;
+    }
+
+    /**
+     * Get the MongoDB client instance
+     * 
+     * @return \MongoDB\Client
+     */
+    public static function getClient()
+    {
+        if (self::$mongoClient === null) {
+            throw new \RuntimeException("MongoDB client not initialized");
+        }
+        return self::$mongoClient;
     }
 }
