@@ -37,7 +37,6 @@ $requiredFiles = [
     '/App/Database/MongoDatabase.php',
     '/App/Includes/Environment.php',
     '/App/Integration/JsonDbInteraction.php',
-    '/App/Integration/DatabaseConnectionFactory.php',
     '/App/Integration/MongoConnectionFactory.php'
 ];
 
