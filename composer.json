@@ -1,5 +1,5 @@
 {
-    "name": "elib/library-app",
+    "name": "epictetus/e-lib", 
     "description": "Epictetus Library Management System",
     "type": "project",
     "license": "MIT",
