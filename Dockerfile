@@ -1,6 +1,6 @@
 FROM php:8.1-apache
 
-# Install dependencies
+# Install dependencies and OpenSSL dev libraries
 RUN apt-get update && apt-get install -y \
     libzip-dev \
     zip \
@@ -9,11 +9,11 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && docker-php-ext-install zip
 
-# Install MongoDB extension with SSL support
+# Install MongoDB extension (with OpenSSL support automatically included)
 RUN pecl install mongodb && docker-php-ext-enable mongodb
 
-# Install OpenSSL extension
-RUN docker-php-ext-install openssl
+# Verify OpenSSL is enabled (it's usually built-in with PHP)
+RUN php -m | grep -q openssl || (echo "OpenSSL extension is not available!" && exit 1)
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
