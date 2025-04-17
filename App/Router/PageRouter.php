@@ -42,11 +42,11 @@ class PageRouter {
             $serviceUrl = Environment::get('APP_URL', 'http://localhost:8080') . '/login';
 
             if ($ticket && $this->casService->authenticate($ticket, $serviceUrl)) {
-                ResponseHandler::renderView(__DIR__ . '/../views/login_successful.php', [
+                ResponseHandler::renderView(__DIR__ . '/../Views/login_successful.php', [
                     'message' => 'Login successful!'
                 ]);
             } else {
-                ResponseHandler::renderView(__DIR__ . '/../views/login.php', [
+                ResponseHandler::renderView(__DIR__ . '/../Views/login.php', [
                     'error' => 'Login failed or no ticket provided.'
                 ]);
             }

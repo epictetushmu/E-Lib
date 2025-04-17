@@ -12,10 +12,10 @@ The project is organized into several directories and files:
     - `ApiRouter.php`: Manages API routing.
     - `PageRouter.php`: Handles web page routing.
     - `BaseRouter.php`: Base class for routing functionality.
-  - **includes/**: Contains additional functionality.
+  - **Includes/**: Contains additional functionality.
     - `MongoDb.php`: Connects to and interacts with a MongoDB database.
     - `Environment.php`: Manages environment variables.
-  - **views/**: Contains the application's view templates.
+  - **Views/**: Contains the application's view templates.
     - `add_book.php`: Form for adding new books to the library.
     - Other view files for different pages.
 
