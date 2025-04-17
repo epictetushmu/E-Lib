@@ -10,8 +10,7 @@ use Exception;
  * 
  * Controls input/output and connections to JSON data files (secondary database)
  */
-class JsonDbInteraction
-{
+class JsonDbInteraction{
     /** @var JsonDatabase */
     private static $jsonDb = null;
     

@@ -2,13 +2,11 @@
 
 namespace App\Integration\Database;
 
-use App\Database\DatabaseInterface;
 use App\Database\JsonDatabase;
 use App\Database\MongoDatabase;
 use MongoDB\Client;
 
-class MongoConnectionFactory
-{
+class MongoConnectionFactory{
     
     private static $mongoClient = null;
 
@@ -17,7 +15,7 @@ class MongoConnectionFactory
      * 
      * @param string $type The type of database to connect to (mongo, json)
      * @param array $options Connection options
-     * @return DatabaseInterface
+     * @return mixed connection with mongo object or json object
      */
     public static function create($type = 'mongo', $options = [])
     {

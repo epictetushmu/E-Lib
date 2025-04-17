@@ -4,7 +4,7 @@ namespace App\Database;
 use App\Integration\Database\JsonDbInteraction;
 use Exception;
 
-class JsonDatabase implements DatabaseInterface {
+class JsonDatabase extends JsonDbInteraction implements DatabaseInterface {
     /**
      * @var string Storage directory path
      */
@@ -17,7 +17,7 @@ class JsonDatabase implements DatabaseInterface {
      */
     public function __construct($storageDir = null)
     {
-        $this->storageDir = $storageDir;
+        $this->storageDir = self::initialize($storageDir);    
     }
     
     /**
@@ -36,13 +36,13 @@ class JsonDatabase implements DatabaseInterface {
             }
             
             // Load existing collection data
-            $collectionData = JsonDbInteraction::loadCollection($collection);
+            $collectionData = self::loadCollection($collection);
             
             // Add the new document
             $collectionData[] = $data;
             
             // Save the updated collection
-            if (JsonDbInteraction::saveCollection($collection, $collectionData)) {
+            if (self::saveCollection($collection, $collectionData)) {
                 return ['insertedId' => $data['_id']];
             } else {
                 return ['error' => 'Failed to save collection data'];
@@ -64,7 +64,7 @@ class JsonDatabase implements DatabaseInterface {
     {
         try {
             // Load collection data
-            $collectionData = JsonDbInteraction::loadCollection($collection);
+            $collectionData = self::loadCollection($collection);
             
             // Filter documents
             if (empty($filter)) {
@@ -94,7 +94,7 @@ class JsonDatabase implements DatabaseInterface {
     {
         try {
             // Load collection data
-            $collectionData = JsonDbInteraction::loadCollection($collection);
+            $collectionData = self::loadCollection($collection);
             
             // Find first matching document
             foreach ($collectionData as $document) {
@@ -122,7 +122,7 @@ class JsonDatabase implements DatabaseInterface {
     {
         try {
             // Load collection data
-            $collectionData = JsonDbInteraction::loadCollection($collection);
+            $collectionData = self::loadCollection($collection);
             
             // Track modified count
             $modifiedCount = 0;
@@ -140,7 +140,7 @@ class JsonDatabase implements DatabaseInterface {
             
             // Save the updated collection if any documents were modified
             if ($modifiedCount > 0) {
-                JsonDbInteraction::saveCollection($collection, $collectionData);
+                self::saveCollection($collection, $collectionData);
             }
             
             return ['modifiedCount' => $modifiedCount];
@@ -161,7 +161,7 @@ class JsonDatabase implements DatabaseInterface {
     {
         try {
             // Load collection data
-            $collectionData = JsonDbInteraction::loadCollection($collection);
+            $collectionData = self::loadCollection($collection);
             
             // Keep track of original count to calculate deleted count
             $originalCount = count($collectionData);
@@ -179,7 +179,7 @@ class JsonDatabase implements DatabaseInterface {
             
             // Save the updated collection if any documents were deleted
             if ($deletedCount > 0) {
-                JsonDbInteraction::saveCollection($collection, $newCollectionData);
+                self::saveCollection($collection, $newCollectionData);
             }
             
             return ['deletedCount' => $deletedCount];
