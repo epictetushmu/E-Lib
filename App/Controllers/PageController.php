@@ -14,15 +14,15 @@ class PageController {
 
     public function home() {
         // Instead of using parent render, use ResponseHandler's renderView
-        $this->response->renderView(__DIR__ . '/../views/home.php');
+        $this->response->renderView(__DIR__ . '/../Views/home.php');
     }
 
     public function loginForm() {
-        $this->response->renderView(__DIR__ . '/../views/login.php');
+        $this->response->renderView(__DIR__ . '/../Views/login.php');
     }
 
     public function signupForm() {
-        $this->response->renderView(__DIR__ . '/../views/signup.php');
+        $this->response->renderView(__DIR__ . '/../Views/signup.php');
     }
 
     public function viewBook() {
@@ -30,28 +30,28 @@ class PageController {
         $bookService = new BookService();
         $book = $bookService->getBookDetails($id);
         if ($book) {
-            $this->response->renderView(__DIR__ . '/../views/book_detail.php', ['book' => $book]);
+            $this->response->renderView(__DIR__ . '/../Views/book_detail.php', ['book' => $book]);
         } else {
             $this->error();
         }
     }
 
     public function addBookForm() {
-        $this->response->renderView(__DIR__ . '/../views/add_book.php');
+        $this->response->renderView(__DIR__ . '/../Views/add_book.php');
     }
 
     public function searchBooks() {
         $query = $_GET['q'] ?? '';
         $bookService = new BookService();
         $books = $bookService->searchBooks($query);
-        $this->response->renderView(__DIR__ . '/../views/search_results.php', ['books' => $books]);
+        $this->response->renderView(__DIR__ . '/../Views/search_results.php', ['books' => $books]);
     }
 
     public function profile(){
-        $this->response->renderView(__DIR__ . '/../views/profile.php');
+        $this->response->renderView(__DIR__ . '/../Views/profile.php');
     }
 
     public function error() {
-        $this->response->renderView(__DIR__ . '/../views/error.php', [], 404);
+        $this->response->renderView(__DIR__ . '/../Views/error.php', [], 404);
     }
 }
