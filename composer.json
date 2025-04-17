@@ -4,7 +4,6 @@
     "type": "project",
     "license": "MIT",
     "require": {
-        "php": ">=8.0",
         "ext-openssl": "*",
         "mongodb/mongodb": "^2.0"
     },
