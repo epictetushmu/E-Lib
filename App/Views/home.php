@@ -13,7 +13,7 @@
     <?php 
         include 'Partials/Header.php';
         include 'Components/Hero.php';
-        include 'Components/FeaturedBooks.php';
+        include 'Components/Featured.php';
         include 'Partials/Footer.php';
     ?>
     
