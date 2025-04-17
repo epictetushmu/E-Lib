@@ -81,7 +81,7 @@ class MongoConnectionFactory
     private static function getMongoConnection($dbName, $options = [])
     {
         // Get MongoDB connection string from environment variables or use default
-        $connectionString = getenv('MONGODB_URI') ?: 'mongodb://localhost:27017';
+        $connectionString = getenv('MONGO_URI') ?: 'mongodb://localhost:27017';
         
         // Create client if it doesn't exist
         if (self::$mongoClient === null) {
