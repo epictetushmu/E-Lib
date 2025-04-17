@@ -5,7 +5,7 @@ use MongoDB\Database;
 use App\Integration\Database\MongoConnectionFactory;
 use Exception;
 
-class MongoDatabase implements DatabaseInterface {
+class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface {
     /**
      * @var Database
      */
@@ -18,7 +18,7 @@ class MongoDatabase implements DatabaseInterface {
      */
     public function __construct($database)
     {
-        $this->db = $database; 
+        $this->db = self::create()->selectDatabase($database); 
     }
     
     public function insert(string $collection, array $data): array {
