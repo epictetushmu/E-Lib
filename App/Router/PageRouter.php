@@ -27,6 +27,7 @@ class PageRouter {
             ['path' => '/', 'handler' => [new PageController(), 'home']],
             ['path' => '/login', 'handler' => [new PageController(), 'loginForm']],
             ['path' => '/signup', 'handler' => [new PageController(), 'signupForm']],
+            ['path' => '/view-books', 'handler' => [new PageController(), 'viewBooks']],
             ['path' => '/profile', 'handler' => [new PageController(), 'profile']],
             ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'viewBook']],
             ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
