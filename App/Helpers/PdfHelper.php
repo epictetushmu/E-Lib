@@ -15,11 +15,19 @@ class PdfHelper {
         $this->pdfPath = $pdfPath;
     }
 
-    public function extractFirstPageAsImage($outputPath, $format = 'jpg') {
+    /**
+     * Extracts the first page of a PDF and saves it as an image
+     * 
+     * @param string $pdfPath Path to the PDF file
+     * @param string $outputPath Path where to save the image
+     * @param string $format Image format (jpg, png)
+     * @return bool True if successful, false otherwise
+     */
+    public function extractFirstPageAsImage($pdfPath, $outputPath, $format = 'jpg') {
         // Check if Imagick is installed
         if (!extension_loaded('imagick')) {
-            error_log('Imagick extension not installed');
-            return false;
+            // Fallback if Imagick is not available
+            return $this->fallbackExtractFirstPage($pdfPath, $outputPath);
         }
 
         try {
@@ -30,7 +38,7 @@ class PdfHelper {
             $imagick->setResolution(300, 300);
             
             // Read only the first page of the PDF
-            $imagick->readImage($this->pdfPath . '[0]');
+            $imagick->readImage($pdfPath . '[0]');
             
             // Convert to the desired format
             $imagick->setImageFormat($format);
@@ -53,6 +61,18 @@ class PdfHelper {
     }
     
     /**
+     * Fallback method for extracting first page if Imagick is not available
+     */
+    private function fallbackExtractFirstPage($pdfPath, $outputPath) {
+        // If no Imagick, we can try to use a default placeholder image
+        if (file_exists('public/images/pdf-placeholder.jpg')) {
+            copy('public/images/pdf-placeholder.jpg', $outputPath);
+            return true;
+        }
+        return false;
+    }
+    
+    /**
      * Gets or creates a thumbnail for a PDF
      * 
      * @param string $thumbnailDir Directory to store thumbnails
@@ -70,7 +90,7 @@ class PdfHelper {
         // Check if thumbnail already exists
         if (!file_exists($thumbnailPath)) {
             // Extract the first page
-            if (!$this->extractFirstPageAsImage( $thumbnailPath)) {
+            if (!$this->extractFirstPageAsImage( $this->pdfPath, $thumbnailPath)) {
                 // Return a default image if extraction fails
                 return '/images/default-pdf-cover.jpg';
             }

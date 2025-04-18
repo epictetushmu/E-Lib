@@ -39,8 +39,6 @@
                 const author = document.getElementById("author").value;
                 const categories = Array.from(select.selectedOptions).map(option => option.value);
                 const year = document.getElementById("year").value;
-                const condition = document.getElementById("condition").value;
-                const copies = document.getElementById("copies").value;
                 const description = document.getElementById("description").value;
                 const bookPdf = document.getElementById("bookPdf").files[0];
 

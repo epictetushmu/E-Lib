@@ -57,57 +57,97 @@ class BookController {
     
     public function addBook() {
         $data = $_POST;
-        $title = $data['title'];
-        $author = $data['author'];
-        $year = $data['year'];
-        $condition = $data['condition'];
-        $copies = $data['copies'];
-        $description = $data['description'];
-        $bookPdf = $_FILES['bookPdf']; 
-        $categories = json_decode($data['categories'], true); 
-
+        $title = $data['title'] ?? '';
+        $author = $data['author'] ?? '';
+        $year = $data['year'] ?? '';
+        $condition = $data['condition'] ?? '';
+        $copies = $data['copies'] ?? '';
+        $description = $data['description'] ?? '';
+        $categories = isset($data['categories']) ? json_decode($data['categories'], true) : [];
+        
+        // Check if file was uploaded
+        if (!isset($_FILES['bookPdf']) || $_FILES['bookPdf']['error'] != 0) {
+            return $this->response->respond(false, 'PDF file is required', 400);
+        }
+        
+        $bookPdf = $_FILES['bookPdf'];
+        
         // Validate required fields
         if (empty($title) || empty($author) || empty($year) || empty($condition) || empty($copies) || empty($description)) {
             return $this->response->respond(false, 'All fields are required', 400);
         }
-        // Validate file upload
-        if (isset($bookPdf) && $bookPdf['error'] == 0) {
-            $pdfHelper = new PdfHelper($bookPdf['tmp_name']);
-            $thumbnailDir = 'thumbnails/';
-            $thumbnailPath = $thumbnailDir . basename($bookPdf['name'], '.pdf') . '.jpg';
-            if (!$pdfHelper->extractFirstPageAsImage($thumbnailPath)) {
-                return $this->response->respond(false, 'Error creating thumbnail', 500);
-            }
-        } else {
-            return $this->response->respond(false, 'Error uploading PDF', 400);
-        }
-
-        $pdfHelper = new PdfHelper($bookPdf['tmp_name']);
-        $pdfPath = $pdfHelper->storePdf($bookPdf);
-        if (!$pdfPath) {
-            return $this->response->respond(false, 'Error storing PDF', 500);
-        }
-
-
-        // Convert category names to category IDs
-        $categoryIds = [];
-        foreach ($categories as $categoryName) {
-            $category = $this->categoriesService->getCategoryId($categoryName);
-            if ($category) {
-                $categoryIds[] = $category['id'];
-            } else {
-                $newCategoryId = $this->categoriesService->addCategory($categoryName);
-                $categoryIds[] = $newCategoryId;
-            }
-        }
-
         
-            $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description, $categories);
-           if ($response) {
-            return $this->response->respond(true, $response);
-        } else {
-            return $this->response->respond(false, 'Error adding book', 400);
-    
+        // Check file type
+        $fileInfo = pathinfo($bookPdf['name']);
+        $extension = strtolower($fileInfo['extension'] ?? '');
+        if ($extension !== 'pdf') {
+            return $this->response->respond(false, 'Only PDF files are accepted', 400);
+        }
+        
+        try {
+            // Create uploads directory if it doesn't exist
+            $uploadsDir = 'uploads/books/';
+            if (!is_dir($uploadsDir)) {
+                mkdir($uploadsDir, 0755, true);
+            }
+            
+            // Create thumbnails directory if it doesn't exist
+            $thumbnailDir = 'uploads/thumbnails/';
+            if (!is_dir($thumbnailDir)) {
+                mkdir($thumbnailDir, 0755, true);
+            }
+            
+            // Generate unique filename for the PDF
+            $pdfFilename = uniqid() . '_' . basename($bookPdf['name']);
+            $pdfPath = $uploadsDir . $pdfFilename;
+            
+            // Move the uploaded file
+            if (!move_uploaded_file($bookPdf['tmp_name'], $pdfPath)) {
+                return $this->response->respond(false, 'Error storing PDF file', 500);
+            }
+            
+            // Generate thumbnail from first page
+            $thumbnailPath = $thumbnailDir . pathinfo($pdfFilename, PATHINFO_FILENAME) . '.jpg';
+            $pdfHelper = new PdfHelper();
+            if (!$pdfHelper->extractFirstPageAsImage($pdfPath, $thumbnailPath)) {
+                // Continue even if thumbnail creation fails
+                error_log("Failed to create thumbnail for PDF: $pdfPath");
+            }
+            
+            // Convert category names to category IDs
+            $categoryIds = [];
+            foreach ($categories as $categoryName) {
+                $category = $this->categoriesService->getCategoryId($categoryName);
+                if ($category) {
+                    $categoryIds[] = $category['id'];
+                } else {
+                    $newCategoryId = $this->categoriesService->addCategory($categoryName);
+                    $categoryIds[] = $newCategoryId;
+                }
+            }
+            
+            // Add book with PDF path and thumbnail path
+            $bookData = [
+                'title' => $title,
+                'author' => $author,
+                'year' => $year,
+                'condition' => $condition,
+                'copies' => $copies,
+                'description' => $description,
+                'categories' => $categories,
+                'pdf_path' => $pdfPath,
+                'thumbnail_path' => $thumbnailPath
+            ];
+            
+            $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description, $categories, $pdfPath, $thumbnailPath);
+            if ($response) {
+                return $this->response->respond(true, $response);
+            } else {
+                return $this->response->respond(false, 'Error adding book', 400);
+            }
+            
+        } catch (\Exception $e) {
+            return $this->response->respond(false, 'Error: ' . $e->getMessage(), 500);
         }
     }
 }
