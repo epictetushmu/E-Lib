@@ -60,7 +60,8 @@ $categories = $categories ?? [
 
             <div class="mb-3">
                 <label for="bookPdf" class="form-label">Book</label>
-                <input type="file" class="form-control" id="bookPdf" name="bookPdf">
+                <input type="file" class="form-control" id="bookPdf" name="bookPdf" accept="application/pdf" required>
+                <small class="form-text text-muted">Upload a PDF file.</small>
             </div>
 
             <div class="text-center">

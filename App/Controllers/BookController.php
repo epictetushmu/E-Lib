@@ -4,6 +4,8 @@ namespace App\Controllers;
 use App\Services\BookService; 
 use App\Services\CategoriesService;
 use App\Includes\ResponseHandler;
+use App\Helpers\PdfHelper;
+
 
 class BookController {
     private $bookService;
@@ -61,11 +63,31 @@ class BookController {
         $condition = $data['condition'];
         $copies = $data['copies'];
         $description = $data['description'];
-        // $bookPdf = $_FILES['bookPdf']['name'];
+        $bookPdf = $_FILES['bookPdf']; 
         $categories = json_decode($data['categories'], true); 
 
-        //file upload
-        // move_uploaded_file($_FILES['bookPdf']['tmp_name'], '../uploads/' . $bookPdf);
+        // Validate required fields
+        if (empty($title) || empty($author) || empty($year) || empty($condition) || empty($copies) || empty($description)) {
+            return $this->response->respond(false, 'All fields are required', 400);
+        }
+        // Validate file upload
+        if (isset($bookPdf) && $bookPdf['error'] == 0) {
+            $pdfHelper = new PdfHelper($bookPdf['tmp_name']);
+            $thumbnailDir = 'thumbnails/';
+            $thumbnailPath = $thumbnailDir . basename($bookPdf['name'], '.pdf') . '.jpg';
+            if (!$pdfHelper->extractFirstPageAsImage($thumbnailPath)) {
+                return $this->response->respond(false, 'Error creating thumbnail', 500);
+            }
+        } else {
+            return $this->response->respond(false, 'Error uploading PDF', 400);
+        }
+
+        $pdfHelper = new PdfHelper($bookPdf['tmp_name']);
+        $pdfPath = $pdfHelper->storePdf($bookPdf);
+        if (!$pdfPath) {
+            return $this->response->respond(false, 'Error storing PDF', 500);
+        }
+
 
         // Convert category names to category IDs
         $categoryIds = [];
