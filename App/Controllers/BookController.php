@@ -60,8 +60,6 @@ class BookController {
         $title = $data['title'] ?? '';
         $author = $data['author'] ?? '';
         $year = $data['year'] ?? '';
-        $condition = $data['condition'] ?? '';
-        $copies = $data['copies'] ?? '';
         $description = $data['description'] ?? '';
         $categories = isset($data['categories']) ? json_decode($data['categories'], true) : [];
         
@@ -73,8 +71,8 @@ class BookController {
         $bookPdf = $_FILES['bookPdf'];
         
         // Validate required fields
-        if (empty($title) || empty($author) || empty($year) || empty($condition) || empty($copies) || empty($description)) {
-            return $this->response->respond(false, 'All fields are required', 400);
+        if (empty($title)) {
+            return $this->response->respond(false, 'Title is required', 400);
         }
         
         // Check file type
@@ -108,38 +106,13 @@ class BookController {
             
             // Generate thumbnail from first page
             $thumbnailPath = $thumbnailDir . pathinfo($pdfFilename, PATHINFO_FILENAME) . '.jpg';
-            $pdfHelper = new PdfHelper();
+            $pdfHelper = new PdfHelper($pdfPath);
             if (!$pdfHelper->extractFirstPageAsImage($pdfPath, $thumbnailPath)) {
                 // Continue even if thumbnail creation fails
                 error_log("Failed to create thumbnail for PDF: $pdfPath");
             }
             
-            // Convert category names to category IDs
-            $categoryIds = [];
-            foreach ($categories as $categoryName) {
-                $category = $this->categoriesService->getCategoryId($categoryName);
-                if ($category) {
-                    $categoryIds[] = $category['id'];
-                } else {
-                    $newCategoryId = $this->categoriesService->addCategory($categoryName);
-                    $categoryIds[] = $newCategoryId;
-                }
-            }
-            
-            // Add book with PDF path and thumbnail path
-            $bookData = [
-                'title' => $title,
-                'author' => $author,
-                'year' => $year,
-                'condition' => $condition,
-                'copies' => $copies,
-                'description' => $description,
-                'categories' => $categories,
-                'pdf_path' => $pdfPath,
-                'thumbnail_path' => $thumbnailPath
-            ];
-            
-            $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description, $categories, $pdfPath, $thumbnailPath);
+            $response = $this->bookService->addBook($title, $author, $year,  $description, $categories, $pdfPath, $thumbnailPath);
             if ($response) {
                 return $this->response->respond(true, $response);
             } else {

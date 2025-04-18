@@ -28,28 +28,8 @@ class Books {
         return $this->db->find($this->collection,  ['sort' => ['_id' => -1], 'limit' => 20]);
     }
 
-    public function addBook($title, $author, $year, $condition, $copies, $description, $categories) {
-        $categoryModel = new Categories();
-        $categoryIds = [];
-
-        foreach ($categories as $category_id) {
-            $categoryId = $categoryModel->addCategory($category_id);
-            $categoryIds[] = $categoryId;
-        }
-
-        $book = [
-            'title' => $title,
-            'author' => $author,
-            'publication_year' => $year,
-            'condition' => $condition,
-            'number_of_copies' => $copies,
-            'description' => $description,
-            'categories' => $categoryIds,
-            'created_at' => new UTCDateTime()
-        ];
-
+    public function addBook($book) {
         return  $this->db->insert($this->collection, $book);
-        
     }
 
     public function searchBooks($search) {

@@ -21,17 +21,18 @@ class BookService {
         return $this->book->getBookDetails($id);
     }
 
-    public function addBook($title, $author, $year, $condition, $copies, $description, $categories, $pdfPath = null, $thumbnailPath = null) {
+    public function addBook(string $title, string $author,int $year, string $description, array $categories , $pdfPath = null, $thumbnailPath = null) {
         // Add validation here
         
         $book = [
             'title' => $title,
             'author' => $author,
             'year' => (int)$year,
-            'condition' => $condition,
-            'copies' => (int)$copies,
             'description' => $description,
             'categories' => $categories,
+            'pdf_path' => $pdfPath,
+            'thumbnail_path' => $thumbnailPath,
+            'featured' => random_int(0, 100)< 20 ? true : false, 
             'created_at' => new \MongoDB\BSON\UTCDateTime(),
             'updated_at' => new \MongoDB\BSON\UTCDateTime()
         ];
@@ -46,8 +47,7 @@ class BookService {
         }
         
         try {
-            $result = $this->booksCollection->insertOne($book);
-            return ['insertedId' => (string)$result->getInsertedId()];
+            return $this->book->addBook($book);
         } catch (\Exception $e) {
             error_log("Error adding book: " . $e->getMessage());
             return null;
