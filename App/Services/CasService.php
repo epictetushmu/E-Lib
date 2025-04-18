@@ -2,33 +2,52 @@
 // filepath: /Users/hub/Documents/Personal/GenCode/app/Services/CasService.php
 namespace App\Services;
 
-use GuzzleHttp\Client;
+use App\Includes\Environment;
 
 class CasService {
     private $casServerUrl;
-    private $client;
+    private $httpClient;
 
     public function __construct() {
-        $this->casServerUrl = $_ENV['CAS_SERVER_URL']; // Set this in your .env file
-        $this->client = new Client();
+        $this->casServerUrl = Environment::get('CAS_SERVER_URL', 'https://cas-server.example.org/cas');
+        
+        // Try to use Guzzle if available, otherwise use a simple fallback
+        if (class_exists('\GuzzleHttp\Client')) {
+            $this->httpClient = new \GuzzleHttp\Client();
+        }
     }
 
     public function authenticate($ticket, $serviceUrl) {
-        $validateUrl = $this->casServerUrl . '/serviceValidate';
-        $response = $this->client->get($validateUrl, [
-            'query' => [
-                'ticket' => $ticket,
-                'service' => $serviceUrl,
-            ],
-        ]);
-
-        if ($response->getStatusCode() === 200) {
-            $body = $response->getBody()->getContents();
-            if (strpos($body, '<cas:authenticationSuccess>') !== false) {
-                return true; // Authentication successful
+        try {
+            if ($this->httpClient) {
+                // Use Guzzle client
+                $response = $this->httpClient->get("{$this->casServerUrl}/validate", [
+                    'query' => [
+                        'ticket' => $ticket,
+                        'service' => $serviceUrl
+                    ]
+                ]);
+                $body = $response->getBody()->getContents();
+            } else {
+                // Fallback to native PHP if Guzzle is not available
+                $validationUrl = "{$this->casServerUrl}/validate?ticket=" . urlencode($ticket) . "&service=" . urlencode($serviceUrl);
+                $body = @file_get_contents($validationUrl);
+                if ($body === false) {
+                    error_log("CAS validation request failed: Unable to connect to CAS server");
+                    return false;
+                }
             }
+            
+            // Process the CAS server response
+            $lines = explode("\n", trim($body));
+            if (count($lines) >= 1 && strtolower(trim($lines[0])) === 'yes') {
+                return true; 
+            }
+            
+            return false;
+        } catch (\Exception $e) {
+            error_log("CAS authentication error: " . $e->getMessage());
+            return false;
         }
-
-        return false; // Authentication failed
     }
 }

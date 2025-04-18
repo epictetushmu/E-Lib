@@ -1,11 +1,13 @@
 {
-    "name": "epictetus/e-lib", 
+    "name": "elib/library-app",
     "description": "Epictetus Library Management System",
     "type": "project",
     "license": "MIT",
     "require": {
+        "php": ">=8.0",
         "ext-openssl": "*",
-        "mongodb/mongodb": "^2.0"
+        "mongodb/mongodb": "^2.0",
+        "guzzlehttp/guzzle": "^7.9"
     },
     "autoload": {
         "psr-4": {
