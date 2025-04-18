@@ -80,13 +80,42 @@ class MongoConnectionFactory{
     {
         // Get MongoDB connection string from environment variables or use default
         $connectionString = getenv('MONGO_URI') ?: 'mongodb://localhost:27017';
+       
+        $mongoPassword = getenv('MONGO_PASSWORD');
+        if ($mongoPassword && strpos($connectionString, '<db_password>') !== false) {
+            $connectionString = str_replace('<db_password>', $mongoPassword, $connectionString);
+        }
         
+        // Simplified certificate handling - using just one certificate file
+        if (extension_loaded('openssl')) {
+            $certFile = getenv('MONGO_CERT_FILE');
+            
+            if ($certFile && file_exists($certFile)) {
+                // Configure TLS with the single certificate file
+                $options['mongoOptions']['tls'] = true;
+                $options['mongoOptions']['tlsCAFile'] = $certFile;
+                error_log("MongoDB SSL/TLS configured with certificate: $certFile");
+            } else {
+                // No certificate file found, but we have SSL support
+                error_log("No MongoDB certificate file found at: " . ($certFile ?? 'Not set'));
+            }
+        } else {
+            error_log("Warning: OpenSSL extension not loaded. SSL/TLS connections will not work properly.");
+        }
+
         // Create client if it doesn't exist
         if (self::$mongoClient === null) {
-            $apiVersion = new ServerApi(ServerApi::V1);
+            try {
+                $apiVersion = new ServerApi(ServerApi::V1);
+                self::$mongoClient = new Client($connectionString, $options['mongoOptions'] ?? [], ['serverApi' => $apiVersion]);
+           
+                error_log("MongoDB client initialized with secure connection");
+           
+            } catch (\Exception $e) {
+                error_log("MongoDB connection error: " . $e->getMessage());
+                throw $e;
+            }
 
-
-            self::$mongoClient = new Client($connectionString, [] , ['serverApi' => $apiVersion]);
         }
         
         // Get the database and verify connection by running a ping command
