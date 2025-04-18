@@ -16,7 +16,7 @@
         if (!$isLoggedIn): ?>
             <div id="loginPopup" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                 background-color: rgba(0,0,0,0.5); z-index: 1050;">
-                <?php include 'Components/LoginPopup.php'; ?>
+                <?php include 'Components/LoginForm.php'; ?>
             </div>
         <?php endif; 
         include 'Components/Featured.php';
