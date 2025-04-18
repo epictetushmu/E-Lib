@@ -40,10 +40,8 @@ class JsonDbInteraction{
             }
             
             self::$storagePath = $storagePath;
-            self::$jsonDb = new JsonDatabase($storagePath);
         }
         
-        return self::$jsonDb;
     }
     
     /**
