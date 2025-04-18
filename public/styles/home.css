@@ -1,6 +1,6 @@
 .hero-section {
     background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), 
-                url('/E-Lib/assets/images/library-bg.jpg') center/cover;
+                url('/E-Lib/assets/images/library-bg.jpg') center/bookPdf;
     color: white;
     min-height: 60vh;
     display: flex;
@@ -16,9 +16,9 @@
     box-shadow: 0 10px 20px rgba(0,0,0,0.1);
 }
 
-.book-cover {
+.book-bookPdf {
     height: 300px;
-    object-fit: cover;
+    object-fit: bookPdf;
     object-position: top;
 }
 

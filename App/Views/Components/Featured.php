@@ -47,9 +47,9 @@
             booksGrid.innerHTML = books.map(book => `
                 <div class="col-md-6 col-lg-4 col-xl-3">
                     <div class="card h-100 shadow-sm border-0 book-card">
-                        <img src="${book.cover || '/assets/images/placeholder-book.jpg'}"
-                             alt="${book.title} cover"
-                             class="card-img-top book-cover"
+                        <img src="${book.bookPdf || '/assets/images/placeholder-book.jpg'}"
+                             alt="${book.title} bookPdf"
+                             class="card-img-top book-bookPdf"
                              onerror="this.src='/assets/images/placeholder-book.jpg'">
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title mb-1 text-truncate" title="${book.title}">${book.title}</h5>

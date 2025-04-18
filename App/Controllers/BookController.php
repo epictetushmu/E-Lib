@@ -61,11 +61,11 @@ class BookController {
         $condition = $data['condition'];
         $copies = $data['copies'];
         $description = $data['description'];
-        // $cover = $_FILES['cover']['name'];
+        // $bookPdf = $_FILES['bookPdf']['name'];
         $categories = json_decode($data['categories'], true); 
 
         //file upload
-        // move_uploaded_file($_FILES['cover']['tmp_name'], '../uploads/' . $cover);
+        // move_uploaded_file($_FILES['bookPdf']['tmp_name'], '../uploads/' . $bookPdf);
 
         // Convert category names to category IDs
         $categoryIds = [];

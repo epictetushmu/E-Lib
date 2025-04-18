@@ -42,7 +42,7 @@
                 const condition = document.getElementById("condition").value;
                 const copies = document.getElementById("copies").value;
                 const description = document.getElementById("description").value;
-                const cover = document.getElementById("cover").files[0];
+                const bookPdf = document.getElementById("bookPdf").files[0];
 
                 const formData = new FormData();
                 formData.append("title", title);
@@ -52,7 +52,7 @@
                 formData.append("condition", condition);
                 formData.append("copies", copies);
                 formData.append("description", description);
-                formData.append("cover", cover);
+                formData.append("bookPdf", bookPdf);
 
                 axios.post("/api/v1/books", formData)
                     .then(response => {

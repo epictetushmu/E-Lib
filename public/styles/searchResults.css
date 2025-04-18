@@ -1,6 +1,6 @@
-.book-cover {
+.book-bookPdf {
     height: 250px;
-    object-fit: cover;
+    object-fit: bookPdf;
     object-position: top;
 }
 .card-title {

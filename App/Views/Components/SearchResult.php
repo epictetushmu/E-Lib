@@ -3,8 +3,8 @@
                 <?php foreach ($books as $book): ?>
                     <div class="col-md-4 col-lg-3 mb-4">
                         <div class="card h-100 shadow-sm">
-                            <img src="<?= htmlspecialchars($book['cover'] ?: '/assets/images/placeholder-book.jpg') ?>" 
-                                class="card-img-top book-cover" 
+                            <img src="<?= htmlspecialchars($book['bookPdf'] ?: '/assets/images/placeholder-book.jpg') ?>" 
+                                class="card-img-top book-bookPdf" 
                                 alt="<?= htmlspecialchars($book['title']) ?>">
                             <div class="card-body">
                                 <h5 class="card-title"><?= htmlspecialchars($book['title']) ?></h5>

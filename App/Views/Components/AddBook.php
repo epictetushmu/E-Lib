@@ -8,10 +8,14 @@
 
 $formAction = $formAction ?? '/api/v1/books/add';
 $categories = $categories ?? [
-    'Literature',
-    'Science Fiction',
-    'Non-Fiction',
-    'Fantasy'
+    'Electronics',
+    'Mathematics',
+    'Programming',
+    'Robotics',
+    'Networking',
+    'telecommunications', 
+    'Physics',
+    'Computer Science', 
 ];
 ?>
 
@@ -50,29 +54,13 @@ $categories = $categories ?? [
             </div>
 
             <div class="mb-3">
-                <label for="condition" class="form-label">Condition</label>
-                <select class="form-select" id="condition" name="condition">
-                    <option value="New">New</option>
-                    <option value="Good">Good</option>
-                    <option value="Fair">Fair</option>
-                    <option value="Poor">Poor</option>
-                    <option value="undefined">Unknown</option>
-                </select>
-            </div>
-
-            <div class="mb-3">
-                <label for="copies" class="form-label">Number of Copies</label>
-                <input type="number" class="form-control" id="copies" name="copies" min="1" required>
-            </div>
-
-            <div class="mb-3">
                 <label for="description" class="form-label">Description</label>
                 <textarea class="form-control" id="description" name="description" rows="3"></textarea>
             </div>
 
             <div class="mb-3">
-                <label for="cover" class="form-label">Cover Image</label>
-                <input type="file" class="form-control" id="cover" name="cover">
+                <label for="bookPdf" class="form-label">Book</label>
+                <input type="file" class="form-control" id="bookPdf" name="bookPdf">
             </div>
 
             <div class="text-center">
