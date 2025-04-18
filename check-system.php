@@ -38,6 +38,40 @@ $results = [
     'failed' => []
 ];
 
+// Load environment variables if possible
+if (file_exists(__DIR__ . '/.env')) {
+    echo "Loading environment variables from .env file...\n";
+    if (file_exists('vendor/autoload.php')) {
+        require_once 'vendor/autoload.php';
+        if (class_exists('App\Includes\Environment')) {
+            try {
+                App\Includes\Environment::load();
+                $results['passed'][] = "Environment variables loaded from .env";
+                
+                // Check specific env variables
+                $envVars = ['MONGO_URI', 'MONGO_PASSWORD'];
+                foreach ($envVars as $var) {
+                    if (App\Includes\Environment::get($var)) {
+                        $maskedValue = $var === 'MONGO_PASSWORD' ? '***' : 
+                            preg_replace('/\/\/([^:]+):([^@]+)@/', '//\\1:***@', getenv($var));
+                        $results['passed'][] = "Environment variable {$var}: {$maskedValue}";
+                    } else {
+                        $results['warnings'][] = "Environment variable {$var} not set";
+                    }
+                }
+            } catch (Exception $e) {
+                $results['warnings'][] = "Error loading environment variables: " . $e->getMessage();
+            }
+        } else {
+            $results['warnings'][] = "Environment class not found, can't load .env file";
+        }
+    } else {
+        echo "Autoloader not available, can't load Environment class\n";
+    }
+} else {
+    $results['warnings'][] = ".env file not found";
+}
+
 // Check PHP version
 $phpVersion = phpversion();
 $requiredPhpVersion = '8.0.0';
