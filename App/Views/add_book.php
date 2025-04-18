@@ -39,20 +39,16 @@
                 const author = document.getElementById("author").value;
                 const categories = Array.from(select.selectedOptions).map(option => option.value);
                 const year = document.getElementById("year").value;
-                const condition = document.getElementById("condition").value;
-                const copies = document.getElementById("copies").value;
                 const description = document.getElementById("description").value;
-                const cover = document.getElementById("cover").files[0];
+                const bookPdf = document.getElementById("bookPdf").files[0];
 
                 const formData = new FormData();
                 formData.append("title", title);
                 formData.append("author", author);
                 formData.append("categories", JSON.stringify(categories));
                 formData.append("year", year);
-                formData.append("condition", condition);
-                formData.append("copies", copies);
                 formData.append("description", description);
-                formData.append("cover", cover);
+                formData.append("bookPdf", bookPdf);
 
                 axios.post("/api/v1/books", formData)
                     .then(response => {

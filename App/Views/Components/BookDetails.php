@@ -1,10 +1,10 @@
 <div class="container mt-5">
     <?php if (!empty($book)): ?>
         <div class="row">
-            <!-- Book Cover + Actions -->
+            <!-- Book bookPdf + Actions -->
             <div class="col-md-4">
-                <img src="<?= htmlspecialchars($book['cover'] ?? '/assets/images/placeholder-book.jpg') ?>"
-                     alt="<?= htmlspecialchars($book['title']) ?> cover"
+                <img src="<?= htmlspecialchars($book['bookPdf'] ?? '/assets/images/placeholder-book.jpg') ?>"
+                     alt="<?= htmlspecialchars($book['title']) ?> bookPdf"
                      class="img-fluid rounded shadow-sm"
                      onerror="this.src='/assets/images/placeholder-book.jpg'">
 

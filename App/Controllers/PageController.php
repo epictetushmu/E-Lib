@@ -54,4 +54,10 @@ class PageController {
     public function error() {
         $this->response->renderView(__DIR__ . '/../Views/error.php', [], 404);
     }
+
+    public function viewBooks() {
+        $bookService = new BookService();
+        $books = $bookService->getAllBooks();
+        $this->response->renderView(__DIR__ . '/../Views/view_books.php', ['books' => $books]);
+    }   
 }

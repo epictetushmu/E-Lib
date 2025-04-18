@@ -65,8 +65,8 @@ $firstLetter = substr($username, 0, 1);
                     <?php foreach($userBooks['borrowed'] as $book): ?>
                         <div class="col-md-4 col-lg-3">
                             <div class="card book-card h-100">
-                                <img src="<?= htmlspecialchars($book['cover'] ?? '/assets/images/placeholder-book.jpg') ?>" 
-                                     class="card-img-top book-cover" 
+                                <img src="<?= htmlspecialchars($book['bookPdf'] ?? '/assets/images/placeholder-book.jpg') ?>" 
+                                     class="card-img-top book-bookPdf" 
                                      alt="<?= htmlspecialchars($book['title']) ?>"
                                      onerror="this.src='/assets/images/placeholder-book.jpg'">
                                 <div class="card-body">
@@ -100,8 +100,8 @@ $firstLetter = substr($username, 0, 1);
                     <?php foreach($userBooks['saved'] as $book): ?>
                         <div class="col-md-4 col-lg-3">
                             <div class="card book-card h-100">
-                                <img src="<?= htmlspecialchars($book['cover'] ?? '/assets/images/placeholder-book.jpg') ?>" 
-                                     class="card-img-top book-cover" 
+                                <img src="<?= htmlspecialchars($book['bookPdf'] ?? '/assets/images/placeholder-book.jpg') ?>" 
+                                     class="card-img-top book-bookPdf" 
                                      alt="<?= htmlspecialchars($book['title']) ?>"
                                      onerror="this.src='/assets/images/placeholder-book.jpg'">
                                 <div class="card-body">

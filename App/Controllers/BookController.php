@@ -4,6 +4,8 @@ namespace App\Controllers;
 use App\Services\BookService; 
 use App\Services\CategoriesService;
 use App\Includes\ResponseHandler;
+use App\Helpers\PdfHelper;
+
 
 class BookController {
     private $bookService;
@@ -55,37 +57,70 @@ class BookController {
     
     public function addBook() {
         $data = $_POST;
-        $title = $data['title'];
-        $author = $data['author'];
-        $year = $data['year'];
-        $condition = $data['condition'];
-        $copies = $data['copies'];
-        $description = $data['description'];
-        // $cover = $_FILES['cover']['name'];
-        $categories = json_decode($data['categories'], true); 
-
-        //file upload
-        // move_uploaded_file($_FILES['cover']['tmp_name'], '../uploads/' . $cover);
-
-        // Convert category names to category IDs
-        $categoryIds = [];
-        foreach ($categories as $categoryName) {
-            $category = $this->categoriesService->getCategoryId($categoryName);
-            if ($category) {
-                $categoryIds[] = $category['id'];
-            } else {
-                $newCategoryId = $this->categoriesService->addCategory($categoryName);
-                $categoryIds[] = $newCategoryId;
-            }
-        }
-
+        $title = $data['title'] ?? '';
+        $author = $data['author'] ?? '';
+        $year = $data['year'] ?? '';
+        $description = $data['description'] ?? '';
+        $categories = isset($data['categories']) ? json_decode($data['categories'], true) : [];
         
-            $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description, $categories);
-           if ($response) {
-            return $this->response->respond(true, $response);
-        } else {
-            return $this->response->respond(false, 'Error adding book', 400);
-    
+        // Check if file was uploaded
+        if (!isset($_FILES['bookPdf']) || $_FILES['bookPdf']['error'] != 0) {
+            return $this->response->respond(false, 'PDF file is required', 400);
+        }
+        
+        $bookPdf = $_FILES['bookPdf'];
+        
+        // Validate required fields
+        if (empty($title)) {
+            return $this->response->respond(false, 'Title is required', 400);
+        }
+        
+        // Check file type
+        $fileInfo = pathinfo($bookPdf['name']);
+        $extension = strtolower($fileInfo['extension'] ?? '');
+        if ($extension !== 'pdf') {
+            return $this->response->respond(false, 'Only PDF files are accepted', 400);
+        }
+        
+        try {
+            // Create uploads directory if it doesn't exist
+            $uploadsDir = 'uploads/books/';
+            if (!is_dir($uploadsDir)) {
+                mkdir($uploadsDir, 0755, true);
+            }
+            
+            // Create thumbnails directory if it doesn't exist
+            $thumbnailDir = 'uploads/thumbnails/';
+            if (!is_dir($thumbnailDir)) {
+                mkdir($thumbnailDir, 0755, true);
+            }
+            
+            // Generate unique filename for the PDF
+            $pdfFilename = uniqid() . '_' . basename($bookPdf['name']);
+            $pdfPath = $uploadsDir . $pdfFilename;
+            
+            // Move the uploaded file
+            if (!move_uploaded_file($bookPdf['tmp_name'], $pdfPath)) {
+                return $this->response->respond(false, 'Error storing PDF file', 500);
+            }
+            
+            // Generate thumbnail from first page
+            $thumbnailPath = $thumbnailDir . pathinfo($pdfFilename, PATHINFO_FILENAME) . '.jpg';
+            $pdfHelper = new PdfHelper($pdfPath);
+            if (!$pdfHelper->extractFirstPageAsImage($pdfPath, $thumbnailPath)) {
+                // Continue even if thumbnail creation fails
+                error_log("Failed to create thumbnail for PDF: $pdfPath");
+            }
+            
+            $response = $this->bookService->addBook($title, $author, $year,  $description, $categories, $pdfPath, $thumbnailPath);
+            if ($response) {
+                return $this->response->respond(true, $response);
+            } else {
+                return $this->response->respond(false, 'Error adding book', 400);
+            }
+            
+        } catch (\Exception $e) {
+            return $this->response->respond(false, 'Error: ' . $e->getMessage(), 500);
         }
     }
 }
