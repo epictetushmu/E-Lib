@@ -47,8 +47,6 @@
                 formData.append("author", author);
                 formData.append("categories", JSON.stringify(categories));
                 formData.append("year", year);
-                formData.append("condition", condition);
-                formData.append("copies", copies);
                 formData.append("description", description);
                 formData.append("bookPdf", bookPdf);
 
