@@ -86,18 +86,33 @@ class MongoConnectionFactory{
             $connectionString = str_replace('<db_password>', $mongoPassword, $connectionString);
         }
         
-        // Simplified certificate handling - using just one certificate file
+        // TLS configuration for MongoDB Atlas
         if (extension_loaded('openssl')) {
-            $certFile = getenv('MONGO_CERT_FILE');
+            // Default directory for certificates
+            $certDir = __DIR__ . '/../../../certificates';
+            if (!is_dir($certDir)) {
+                mkdir($certDir, 0755, true);
+            }
             
-            if ($certFile && file_exists($certFile)) {
-                // Configure TLS with the single certificate file
+            $certFile = getenv('MONGO_CERT_FILE') ?: $certDir . '/mongodb-ca.pem';
+            
+            // If certificate doesn't exist, try to download it
+            if (!file_exists($certFile)) {
+                self::downloadMongoCertificate($certFile);
+            }
+            
+            // Configure TLS options for MongoDB Atlas
+            if (file_exists($certFile)) {
+                // MongoDB Atlas requires these specific TLS options
                 $options['mongoOptions']['tls'] = true;
                 $options['mongoOptions']['tlsCAFile'] = $certFile;
+                $options['mongoOptions']['tlsAllowInvalidHostnames'] = false;
+                $options['mongoOptions']['tlsAllowInvalidCertificates'] = false;
                 error_log("MongoDB SSL/TLS configured with certificate: $certFile");
             } else {
-                // No certificate file found, but we have SSL support
-                error_log("No MongoDB certificate file found at: " . ($certFile ?? 'Not set'));
+                // Try with system CA bundle if specific cert not found
+                $options['mongoOptions']['tls'] = true;
+                error_log("Using system CA bundle for MongoDB TLS connection");
             }
         } else {
             error_log("Warning: OpenSSL extension not loaded. SSL/TLS connections will not work properly.");
@@ -107,15 +122,18 @@ class MongoConnectionFactory{
         if (self::$mongoClient === null) {
             try {
                 $apiVersion = new ServerApi(ServerApi::V1);
+                
+                // For debugging: log connection string (remove sensitive info)
+                $redactedUri = preg_replace('/\/\/([^:]+):([^@]+)@/', '//\\1:***@', $connectionString);
+                error_log("Connecting to MongoDB with URI: {$redactedUri}");
+                error_log("TLS options: " . json_encode($options['mongoOptions'] ?? []));
+                
                 self::$mongoClient = new Client($connectionString, $options['mongoOptions'] ?? [], ['serverApi' => $apiVersion]);
-           
                 error_log("MongoDB client initialized with secure connection");
-           
             } catch (\Exception $e) {
                 error_log("MongoDB connection error: " . $e->getMessage());
                 throw $e;
             }
-
         }
         
         // Get the database and verify connection by running a ping command
@@ -123,6 +141,36 @@ class MongoConnectionFactory{
         $db->command(['ping' => 1]);
         
         return $db;
+    }
+    
+    /**
+     * Download MongoDB CA certificate
+     * 
+     * @param string $savePath Path where to save the certificate
+     * @return bool True if successful, false otherwise
+     */
+    private static function downloadMongoCertificate($savePath)
+    {
+        try {
+            $certUrl = 'https://truststore.pki.mongodb.com/atlas-root-ca.pem';
+            $certContent = @file_get_contents($certUrl);
+            
+            if ($certContent === false) {
+                error_log("Failed to download MongoDB certificate from {$certUrl}");
+                return false;
+            }
+            
+            if (file_put_contents($savePath, $certContent) === false) {
+                error_log("Failed to save MongoDB certificate to {$savePath}");
+                return false;
+            }
+            
+            error_log("Successfully downloaded MongoDB certificate to {$savePath}");
+            return true;
+        } catch (\Exception $e) {
+            error_log("Error downloading certificate: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
