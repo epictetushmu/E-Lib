@@ -18,7 +18,7 @@ class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface 
      */
     public function __construct($database)
     {
-        $this->db = self::create()->selectDatabase($database); 
+        $this->db = self::create()->; 
     }
     
     public function insert(string $collection, array $data): array {

@@ -3,7 +3,7 @@
 namespace App\Integration\Database;
 
 use App\Database\JsonDatabase;
-use App\Database\MongoDatabase;
+use MongoDB\Driver\ServerApi;
 use MongoDB\Client;
 
 class MongoConnectionFactory{
@@ -33,12 +33,12 @@ class MongoConnectionFactory{
         if ($type === 'mongo') {
             try {
                 // Get MongoDB connection
+
                 $mongoDb = self::getMongoConnection($config['dbName'], $config['mongoOptions']);
                 
                 // Create and return the MongoDB wrapper
-                $db = new MongoDatabase($mongoDb);
                 error_log("Connected to MongoDB successfully");
-                return $db;
+                return $mongoDb;
             } catch (\MongoDB\Driver\Exception\ConnectionTimeoutException $e) {
                 error_log("MongoDB connection failed: " . $e->getMessage());
                 
@@ -83,7 +83,10 @@ class MongoConnectionFactory{
         
         // Create client if it doesn't exist
         if (self::$mongoClient === null) {
-            self::$mongoClient = new Client($connectionString, $options);
+            $apiVersion = new ServerApi(ServerApi::V1);
+
+
+            self::$mongoClient = new Client($connectionString, [] , ['serverApi' => $apiVersion]);
         }
         
         // Get the database and verify connection by running a ping command
