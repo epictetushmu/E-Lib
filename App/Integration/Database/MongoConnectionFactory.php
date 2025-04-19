@@ -170,6 +170,11 @@ class MongoConnectionFactory{
             }
         }
         
+        $connectionString = preg_replace('#(mongodb(\+srv)?://)(/+)#', '$1', $connectionString);
+        
+        // Ensure there's no slash between auth info and hostname
+        $connectionString = preg_replace('#@/#', '@', $connectionString);
+        
         // Check if we need to allow insecure connections for development/testing
         $allowInsecureConnections = Environment::get('MONGO_ALLOW_INSECURE', false);
         

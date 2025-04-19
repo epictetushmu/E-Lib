@@ -11,10 +11,11 @@ class DbController {
     private $database;
     private $databaseName;
 
-    private function __construct() {
-        $this->databaseName = Environment::get('DB_NAME', 'default_db');   
+    private function __construct($dbName = null) { 
+    
+        $this->databaseName = $dbName ? $dbName : Environment::get('DB_NAME', 'LibraryDb');   
         try {
-            $this->database = new MongoDatabase($this->databaseName);
+            $this->database = new MongoDatabase();
         } catch (Exception $e) {
             error_log("MongoDB Connection Error: " . $e->getMessage());
             // Create a fallback to JSON files if MongoDB connection fails
