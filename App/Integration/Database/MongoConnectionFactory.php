@@ -27,6 +27,7 @@ class MongoConnectionFactory{
         $defaults = [
             'dbName' => 'LibraryDb',
             'mongoOptions' => [
+                'tls' => true,
                 'serverSelectionTimeoutMS' => 10000, // 10 seconds timeout (increased)
                 'connectTimeoutMS' => 10000,         // 10 seconds timeout (increased)
                 'socketTimeoutMS' => 45000,          // 45 seconds for operations
