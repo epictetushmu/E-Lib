@@ -1,62 +1,45 @@
 FROM php:8.1-apache
 
-# Install dependencies and OpenSSL dev libraries
+# Install dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
-    libzip-dev \
-    zip \
+    libcurl4-openssl-dev \
+    pkg-config \
+    libssl-dev \
     unzip \
     git \
-    libssl-dev \
-    && docker-php-ext-install zip
+    && pecl install mongodb \
+    && docker-php-ext-enable mongodb \
+    && docker-php-ext-install pdo pdo_mysql
 
-# Install MongoDB extension (with OpenSSL support automatically included)
-RUN pecl install mongodb && docker-php-ext-enable mongodb
-
-# Verify OpenSSL is enabled (it's usually built-in with PHP)
-RUN php -m | grep -q openssl || (echo "OpenSSL extension is not available!" && exit 1)
-
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
+# Configure Apache
+RUN a2enmod rewrite headers
+RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
 
 # Set working directory
 WORKDIR /var/www/html
 
+# Copy project files
+COPY . /var/www/html/
+
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN composer install --no-interaction --no-dev --optimize-autoloader
 
-# Configure Apache document root
-RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available/000-default.conf
+# Create required directories with proper permissions
+RUN mkdir -p /var/www/html/certificates uploads/books uploads/thumbnails \
+    && chmod -R 755 /var/www/html/certificates uploads
 
-# Copy composer files first for better caching
-COPY composer.json composer.lock* ./
+# Set environment variables at build time (can be overridden at run time)
+ENV MONGO_URI=mongodb://localhost:27017/LibraryDb
+ENV APP_ENV=production
 
-# Install dependencies
-RUN composer install --no-scripts --no-autoloader
+# Create script to check MongoDB connection on container start
+COPY ./docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Copy the MongoDB certificate setup script
-COPY setup-mongodb-cert.php docker-entrypoint.php ./
-
-# Run the certificate setup during build for basic setup
-RUN php setup-mongodb-cert.php
-
-# Copy the rest of the application
-COPY . .
-
-# Generate optimized autoloader
-RUN composer dump-autoload --optimize
-
-# Create directories for runtime files
-RUN mkdir -p certificates storage/logs public/uploads cache \
-    && chmod -R 777 certificates storage public/uploads cache
-
-# Environment variable indicating we're in Docker
-ENV DOCKER_ENV=true
-
-# Set proper permissions
-RUN chown -R www-data:www-data /var/www/html
-
-# Expose port 80
+# Expose port
 EXPOSE 80
 
-# Use our custom entrypoint
-CMD ["php", "docker-entrypoint.php"]
+# Use custom entrypoint
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["apache2-foreground"]

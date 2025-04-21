@@ -1,0 +1,84 @@
+name: Test PHP Mongo App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    # Add environment variables at the job level
+    env:
+      MONGO_URI: mongodb://mongo:27017/LibraryDb
+      MONGO_PASSWORD: test_password
+      DB_NAME: LibraryDb
+      APP_ENV: testing
+    
+    services:
+      mongo:
+        image: mongo:6
+        ports: [27017:27017]
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Create test env file
+    - name: Create .env file
+      run: |
+        echo "MONGO_URI=$MONGO_URI" > .env
+        echo "MONGO_PASSWORD=$MONGO_PASSWORD" >> .env
+        echo "DB_NAME=$DB_NAME" >> .env
+        echo "APP_ENV=$APP_ENV" >> .env
+        cat .env
+
+    # Setup PHP and Composer first (for directly running tests)
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring, xml, mongodb, curl, json, openssl
+    
+    - name: Install Composer dependencies
+      run: composer install --no-interaction --prefer-dist
+      
+    - name: Set up Docker
+      run: |
+        docker build -t my-php-app .
+
+    - name: Create Docker network
+      run: docker network create app-network
+
+    - name: Connect MongoDB to network
+      run: docker network connect app-network $(docker ps -qf ancestor=mongo:6)
+
+    - name: Run container for test
+      run: |
+        docker run -d --name my-php-app-test \
+          --network app-network \
+          -e MONGO_URI=$MONGO_URI \
+          -e MONGO_PASSWORD=$MONGO_PASSWORD \
+          -e DB_NAME=$DB_NAME \
+          -e APP_ENV=$APP_ENV \
+          -v $(pwd)/.env:/var/www/html/.env \
+          -p 8080:80 my-php-app
+
+    - name: Wait for services to start
+      run: |
+        echo "Waiting for services to start..."
+        sleep 15
+        docker logs my-php-app-test
+
+    - name: Run health check with debugging
+      run: |
+        echo "Testing connection to application..."
+        curl -v http://localhost:8080
+        echo "Running health check..."
+        curl --fail http://localhost:8080 || exit 1
