@@ -243,7 +243,7 @@ class MongoConnectionFactory{
                 error_log("Connecting to MongoDB with URI: {$redactedUri}");
                 error_log("TLS options: " . json_encode($options['mongoOptions'] ?? []));
                 
-                self::$mongoClient = new Client($connectionString, $options['mongoOptions'] ?? [], ['serverApi' => $apiVersion]);
+                self::$mongoClient = new Client($connectionString, [], ['serverApi' => $apiVersion]);
                 error_log("MongoDB client initialized with secure connection");
             } catch (\Exception $e) {
                 error_log("MongoDB connection error: " . $e->getMessage());
