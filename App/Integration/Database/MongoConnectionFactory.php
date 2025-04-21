@@ -120,25 +120,23 @@ class MongoConnectionFactory{
             try {
                 $apiVersion = new ServerApi(ServerApi::V1);
                 
-                // For debugging: log connection string (remove sensitive info)
-                $redactedUri = preg_replace('/\/\/([^:]+):([^@]+)@/', '//\\1:***@', $connectionString);
-                error_log("Connecting to MongoDB with URI: {$redactedUri}");
-                error_log("TLS options: " . json_encode($options['mongoOptions'] ?? []));
-                
-                self::$mongoClient = new Client($connectionString, [], ['serverApi' => $apiVersion]);
+           
+                self::$mongoClient = new Client($connectionString, ["authSource" => 'admin'], ['serverApi' => $apiVersion]);
                 error_log("MongoDB client initialized with secure connection");
+          
+                // Get the database and verify connection by running a ping command
+                $db = self::$mongoClient->selectDatabase($dbName);
+                $db->command(['ping' => 1]);
+                error_log("MongoDB connection verified with ping command");
+                return $db;
             } catch (\Exception $e) {
                 error_log("MongoDB connection error: " . $e->getMessage());
                 throw $e;
             }
         }
-        
-        // Get the database and verify connection by running a ping command
-        $db = self::$mongoClient->selectDatabase($dbName);
-        $db->command(['ping' => 1]);
-        
-        return $db;
-    }
+        // If client already exists, just return the database
+        return self::$mongoClient->selectDatabase($dbName);
+    }        
     
     /**
      * Download MongoDB CA certificate

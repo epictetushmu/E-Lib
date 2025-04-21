@@ -25,7 +25,7 @@ class Books {
 
     // TODO: Return  max 20 random books 
     public function getFeaturedBooks() {
-        return $this->db->find($this->collection,  ['sort' => ['_id' => -1], 'limit' => 20]);
+        return $this->db->find($this->collection,  ['sort' => ['featured' => true], 'limit' => 20]);
     }
 
     public function addBook($book) {

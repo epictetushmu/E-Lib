@@ -18,19 +18,10 @@ class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface 
      */
     public function __construct()
     {
-        try {
-            if ($database instanceof Database) {
-                $this->db = $database;
-            } else {
-                $this->db = self::create('mongo', [
-                    'dbName' => 'LibraryDb',
-                    'fallback' => true
-                ]);
-            }
-        } catch (Exception $e) {
-            error_log("Error connetcting to mongo: " . $e->getMessage());
-            // Will fall back to JsonDatabase via the fallback option
-        }
+        $this->db = self::create('mongo', [
+            'dbName' => 'LibraryDb',
+            'fallback' => true
+        ]);
     }
     
     public function insert(string $collection, array $data): array {
