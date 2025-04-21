@@ -55,7 +55,7 @@ class PdfHelper {
             
             return true;
         } catch (\Exception $e) {
-            error_log('PDF thumbnail extraction failed: ' . $e->getMessage());
+            echo('PDF thumbnail extraction failed: ' . $e->getMessage());
             return false;
         }
     }

@@ -49,7 +49,7 @@ class BookService {
         try {
             return $this->book->addBook($book);
         } catch (\Exception $e) {
-            error_log("Error adding book: " . $e->getMessage());
+            echo("Error adding book: " . $e->getMessage());
             return null;
         }
     }

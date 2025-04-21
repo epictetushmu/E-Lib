@@ -33,7 +33,7 @@ class CasService {
                 $validationUrl = "{$this->casServerUrl}/validate?ticket=" . urlencode($ticket) . "&service=" . urlencode($serviceUrl);
                 $body = @file_get_contents($validationUrl);
                 if ($body === false) {
-                    error_log("CAS validation request failed: Unable to connect to CAS server");
+                    echo("CAS validation request failed: Unable to connect to CAS server");
                     return false;
                 }
             }
@@ -46,7 +46,7 @@ class CasService {
             
             return false;
         } catch (\Exception $e) {
-            error_log("CAS authentication error: " . $e->getMessage());
+            echo("CAS authentication error: " . $e->getMessage());
             return false;
         }
     }

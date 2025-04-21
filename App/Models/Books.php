@@ -23,9 +23,13 @@ class Books {
         return $this->db->findOne($this->collection, ['_id' => new ObjectId($id)]);
     }
 
-    // TODO: Return  max 20 random books 
     public function getFeaturedBooks() {
-        return $this->db->find($this->collection,  ['sort' => ['featured' => true], 'limit' => 20]);
+        
+        $pipeline = [
+            ['$match' => ['featured' => true]],
+            ['$sample' => ['size' => 20]]
+        ];
+        return $this->db->getFeatured($this->collection, $pipeline);
     }
 
     public function addBook($book) {

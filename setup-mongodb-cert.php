@@ -11,7 +11,7 @@ function output($message) {
     if (php_sapi_name() === 'cli') {
         echo $message . PHP_EOL;
     } else {
-        error_log($message);
+        echo($message);
     }
 }
 

@@ -17,7 +17,7 @@ class DbController {
         try {
             $this->database = new MongoDatabase();
         } catch (Exception $e) {
-            error_log("MongoDB Connection Error: " . $e->getMessage());
+            echo("MongoDB Connection Error: " . $e->getMessage());
             // Create a fallback to JSON files if MongoDB connection fails
             $this->database = new JsonDatabase();
         }
@@ -48,5 +48,9 @@ class DbController {
 
     public function delete(string $collection, array $filter): array {
         return $this->database->delete($collection, $filter);
+    }
+
+    public function getFeatured(string $collection, $pipeline): array {
+        return $this->database->aggregate($collection, $pipeline);
     }
 }

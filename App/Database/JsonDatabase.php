@@ -48,7 +48,7 @@ class JsonDatabase extends JsonDbInteraction implements DatabaseInterface {
                 return ['error' => 'Failed to save collection data'];
             }
         } catch (Exception $e) {
-            error_log("JsonDatabase Insert Error: " . $e->getMessage());
+            echo("JsonDatabase Insert Error: " . $e->getMessage());
             return ['error' => $e->getMessage()];
         }
     }
@@ -78,7 +78,7 @@ class JsonDatabase extends JsonDbInteraction implements DatabaseInterface {
             
             return array_values($results); // Reset array keys
         } catch (Exception $e) {
-            error_log("JsonDatabase Find Error: " . $e->getMessage());
+            echo("JsonDatabase Find Error: " . $e->getMessage());
             return [];
         }
     }
@@ -105,7 +105,7 @@ class JsonDatabase extends JsonDbInteraction implements DatabaseInterface {
             
             return null;
         } catch (Exception $e) {
-            error_log("JsonDatabase FindOne Error: " . $e->getMessage());
+            echo("JsonDatabase FindOne Error: " . $e->getMessage());
             return null;
         }
     }
@@ -145,7 +145,7 @@ class JsonDatabase extends JsonDbInteraction implements DatabaseInterface {
             
             return ['modifiedCount' => $modifiedCount];
         } catch (Exception $e) {
-            error_log("JsonDatabase Update Error: " . $e->getMessage());
+            echo("JsonDatabase Update Error: " . $e->getMessage());
             return ['error' => $e->getMessage()];
         }
     }
@@ -184,7 +184,7 @@ class JsonDatabase extends JsonDbInteraction implements DatabaseInterface {
             
             return ['deletedCount' => $deletedCount];
         } catch (Exception $e) {
-            error_log("JsonDatabase Delete Error: " . $e->getMessage());
+            echo("JsonDatabase Delete Error: " . $e->getMessage());
             return ['error' => $e->getMessage()];
         }
     }
@@ -228,5 +228,12 @@ class JsonDatabase extends JsonDbInteraction implements DatabaseInterface {
         }
         
         return true;
+    }
+
+    
+    public function aggregate(string $collection, array $pipeline): array
+    {
+        // Not implemented for JSON database
+        return [];
     }
 }

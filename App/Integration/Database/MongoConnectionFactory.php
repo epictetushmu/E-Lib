@@ -34,25 +34,25 @@ class MongoConnectionFactory{
                 $mongoDb = self::getMongoConnection($config['dbName'], []);
                 
                 // Create and return the MongoDB wrapper
-                error_log("Connected to MongoDB successfully");
+                echo("Connected to MongoDB successfully");
                 return $mongoDb;
             } catch (\MongoDB\Driver\Exception\ConnectionTimeoutException $e) {
-                error_log("MongoDB connection failed: " . $e->getMessage());
+                echo("MongoDB connection failed: " . $e->getMessage());
                 
                 // Fall back to JsonDatabase if requested
                 if (!empty($options['fallback']) && $options['fallback'] === true) {
-                    error_log("Falling back to JsonDatabase");
+                    echo("Falling back to JsonDatabase");
                     return new JsonDatabase();
                 }
                 
                 // Re-throw if no fallback requested
                 throw $e;
             } catch (\Exception $e) {
-                error_log("Database error: " . $e->getMessage());
+                echo("Database error: " . $e->getMessage());
                 
                 // Fall back to JsonDatabase if requested
                 if (!empty($options['fallback']) && $options['fallback'] === true) {
-                    error_log("Falling back to JsonDatabase due to error");
+                    echo("Falling back to JsonDatabase due to error");
                     return new JsonDatabase();
                 }
                 
@@ -105,14 +105,14 @@ class MongoConnectionFactory{
                 $options['mongoOptions']['tlsCAFile'] = $certFile;
                 $options['mongoOptions']['tlsAllowInvalidHostnames'] = false;
                 $options['mongoOptions']['tlsAllowInvalidCertificates'] = false;
-                error_log("MongoDB SSL/TLS configured with certificate: $certFile");
+                echo("MongoDB SSL/TLS configured with certificate: $certFile");
             } else {
                 // Try with system CA bundle if specific cert not found
                 $options['mongoOptions']['tls'] = true;
-                error_log("Using system CA bundle for MongoDB TLS connection");
+                echo("Using system CA bundle for MongoDB TLS connection");
             }
         } else {
-            error_log("Warning: OpenSSL extension not loaded. SSL/TLS connections will not work properly.");
+            echo("Warning: OpenSSL extension not loaded. SSL/TLS connections will not work properly.");
         }
 
         // Create client if it doesn't exist
@@ -122,15 +122,15 @@ class MongoConnectionFactory{
                 
            
                 self::$mongoClient = new Client($connectionString, ["authSource" => 'admin'], ['serverApi' => $apiVersion]);
-                error_log("MongoDB client initialized with secure connection");
+                echo("MongoDB client initialized with secure connection");
           
                 // Get the database and verify connection by running a ping command
                 $db = self::$mongoClient->selectDatabase($dbName);
                 $db->command(['ping' => 1]);
-                error_log("MongoDB connection verified with ping command");
+                echo("MongoDB connection verified with ping command");
                 return $db;
             } catch (\Exception $e) {
-                error_log("MongoDB connection error: " . $e->getMessage());
+                echo("MongoDB connection error: " . $e->getMessage());
                 throw $e;
             }
         }
@@ -151,19 +151,19 @@ class MongoConnectionFactory{
             $certContent = @file_get_contents($certUrl);
             
             if ($certContent === false) {
-                error_log("Failed to download MongoDB certificate from {$certUrl}");
+                echo("Failed to download MongoDB certificate from {$certUrl}");
                 return false;
             }
             
             if (file_put_contents($savePath, $certContent) === false) {
-                error_log("Failed to save MongoDB certificate to {$savePath}");
+                echo("Failed to save MongoDB certificate to {$savePath}");
                 return false;
             }
             
-            error_log("Successfully downloaded MongoDB certificate to {$savePath}");
+            echo("Successfully downloaded MongoDB certificate to {$savePath}");
             return true;
         } catch (\Exception $e) {
-            error_log("Error downloading certificate: " . $e->getMessage());
+            echo("Error downloading certificate: " . $e->getMessage());
             return false;
         }
     }
