@@ -3,6 +3,7 @@
 namespace App\Integration\Database;
 
 use App\Database\JsonDatabase;
+use App\Includes\Environment;
 use MongoDB\Driver\ServerApi;
 use MongoDB\Client;
 
@@ -75,9 +76,9 @@ class MongoConnectionFactory{
     private static function getMongoConnection($dbName, $options = [])
     {
         // Get MongoDB connection string from environment variables or use default
-        $connectionString = getenv('MONGO_URI') ?: 'mongodb://localhost:27017';
+        $connectionString = Environment::get('MONGO_URI', getenv('MONGO_URI'));
        
-        $mongoPassword = getenv('MONGO_PASSWORD');
+        $mongoPassword = Environment::get('MONGO_PASSWORD', getenv('MONGO_PASSWORD'));
         if ($mongoPassword && strpos($connectionString, '<db_password>') !== false) {
             $connectionString = str_replace('<db_password>', $mongoPassword, $connectionString);
         }
