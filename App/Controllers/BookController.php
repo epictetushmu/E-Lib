@@ -2,20 +2,17 @@
 namespace App\Controllers;
 
 use App\Services\BookService; 
-use App\Services\CategoriesService;
 use App\Includes\ResponseHandler;
 use App\Helpers\PdfHelper;
 
 
 class BookController {
     private $bookService;
-    private $categoriesService;
 
     private $response; 
 
     public function __construct() {
         $this->bookService = new BookService();
-        $this->categoriesService = new CategoriesService();
         $this->response = new ResponseHandler();
     }   
 
@@ -61,7 +58,6 @@ class BookController {
         $author = $data['author'];
         $year = $data['year'];
         $condition = $data['condition'];
-        $copies = $data['copies'];
         $description = $data['description'];
         $bookPdf = $_FILES['bookPdf']; 
         $categories = json_decode($data['categories'], true); 
@@ -71,11 +67,12 @@ class BookController {
             return $this->response->respond(false, 'Title is required', 400);
         }
         // Validate file upload
+        $fileUploadPath = "public/assets/";
         if (isset($bookPdf) && $bookPdf['error'] == 0) {
             $pdfHelper = new PdfHelper($bookPdf['tmp_name']);
             $thumbnailDir = 'thumbnails/';
             $thumbnailPath = $thumbnailDir . basename($bookPdf['name'], '.pdf') . '.jpg';
-            if (!$pdfHelper->extractFirstPageAsImage($thumbnailPath)) {
+            if (!$pdfHelper->extractFirstPageAsImage($thumbnailPath, $fileUploadPath)) {
                 return $this->response->respond(false, 'Error creating thumbnail', 500);
             }
         } else {
@@ -87,23 +84,9 @@ class BookController {
         if (!$pdfPath) {
             return $this->response->respond(false, 'Error storing PDF', 500);
         }
-
-
-        // Convert category names to category IDs
-        $categoryIds = [];
-        foreach ($categories as $categoryName) {
-            $category = $this->categoriesService->getCategoryId($categoryName);
-            if ($category) {
-                $categoryIds[] = $category['id'];
-            } else {
-                $newCategoryId = $this->categoriesService->addCategory($categoryName);
-                $categoryIds[] = $newCategoryId;
-            }
-        }
-
-        
-            $response = $this->bookService->addBook($title, $author, $year, $condition, $copies, $description, $categories);
-           if ($response) {
+    
+        $response = $this->bookService->addBook($title, $author, $year,  $description, $categories, $pdfPath, $thumbnailPath);
+        if ($response) {
             return $this->response->respond(true, $response);
         } else {
             return $this->response->respond(false, 'Error adding book', 400);

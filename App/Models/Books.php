@@ -2,7 +2,6 @@
 namespace App\Models;
 
 use App\Controllers\DbController;
-use App\Models\Categories;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\BSON\ObjectId;
 use MongoDB\BSON\Regex;
