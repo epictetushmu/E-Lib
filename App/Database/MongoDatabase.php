@@ -111,10 +111,21 @@ class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface 
 
     public function aggregate(string $collection, array $pipeline): array {
         try {
-            $cursor = $this->db->selectCollection($collection)->aggregate($pipeline);
-            return iterator_to_array($cursor->toArray());
+            $cursor = $this->db->selectCollection($collection)->aggregate($pipeline, [
+                'typeMap' => ['root' => 'array', 'document' => 'array']
+            ]);
+            
+            // Immediately convert cursor to array before any other operations
+            $result = [];
+            foreach ($cursor as $document) {
+                $result[] = $document;
+            }
+            return $result;
+            
+            // Alternatively, if you're using mongodb/mongodb library:
+            // return $cursor->toArray();
         } catch (Exception $e) {
-            echo("MongoDB Aggregate Error: " . $e->getMessage());
+            error_log("MongoDB Aggregate Error: " . $e->getMessage());
             return [];
         }
     }
