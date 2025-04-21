@@ -38,98 +38,6 @@ $results = [
     'failed' => []
 ];
 
-//TODO: Review siplifications
-// Check Composer dependencies
-if (file_exists('vendor/autoload.php')) {
-    
-    try{
-        // Load autoloader
-        require_once 'vendor/autoload.php';
-            
-        // Check composer.json vs composer.lock
-        if (file_exists('composer.json') && file_exists('composer.lock')) {
-            $composerJson = json_decode(file_get_contents('composer.json'), true);
-            $composerLock = json_decode(file_get_contents('composer.lock'), true);
-            
-            if (isset($composerJson['require']['mongodb/mongodb'])) {
-                $requiredVersion = $composerJson['require']['mongodb/mongodb'];
-                
-                $installedVersion = null;
-                foreach ($composerLock['packages'] as $package) {
-                    if ($package['name'] === 'mongodb/mongodb') {
-                        $installedVersion = $package['version'];
-                        break;
-                    }
-                }
-                
-                if ($installedVersion) {
-                    $results['passed'][] = "MongoDB package: version $installedVersion";
-                } else {
-                    $results['warnings'][] = "MongoDB package: not found in composer.lock";
-                }
-            }
-        }
-        $results['passed'][] = "Composer dependencies installed";
-    }catch(Exception $e){
-        $results['failed'][] = "Composer autoloader: " . $e->getMessage();
-        $allPassed = false;
-        $results['failed'][] = "Composer dependencies not installed";
-        $allPassed = false;
-        
-        if ($fix) {
-            echo YELLOW . "Attempting to install dependencies...\n" . RESET;
-            echo "Run the following command to install dependencies:\n";
-            echo "composer install\n";
-        }
-    }   
-    
-} else {
-    $results['failed'][] = "Composer dependencies not installed";
-    $allPassed = false;
-    
-    if ($fix) {
-        echo YELLOW . "Attempting to install dependencies...\n" . RESET;
-        echo "Run the following command to install dependencies:\n";
-        echo "composer install\n";
-    }
-}
-
-// Load environment variables if possible
-if (file_exists(__DIR__ . '/.env')) {
-    echo "Loading environment variables from .env file...\n";
-    if (file_exists('vendor/autoload.php')) {
-        require_once 'vendor/autoload.php';
-        if (class_exists('App\Includes\Environment')) {
-            try {
-                App\Includes\Environment::load();
-                $results['passed'][] = "Environment variables loaded from .env";
-                
-                // Check specific env variables
-                $envVars = ['MONGO_URI', 'MONGO_PASSWORD'];
-                foreach ($envVars as $var) {
-                    if (App\Includes\Environment::get($var)) {
-                        $maskedValue = $var === 'MONGO_PASSWORD' ? '***' : 
-                            preg_replace('/\/\/([^:]+):([^@]+)@/', '//\\1:***@', getenv($var));
-                        $results['passed'][] = "Environment variable {$var}: {$maskedValue}";
-                    } else {
-                        $results['warnings'][] = "Environment variable {$var} not set";
-                    }
-                }
-            } catch (Exception $e) {
-                $results['warnings'][] = "Error loading environment variables: " . $e->getMessage();
-                echo "Warning: Failed to load environment variables: " . $e->getMessage() . "\n";   
-            }
-        } else {
-            $results['warnings'][] = "Environment class not found, can't load .env file";
-            echo "Autoloader not available, can't load Environment class\n";
-        }
-    } else {
-        echo "Autoloader not available, can't load Environment class\n";
-    }
-} else {
-    $results['warnings'][] = ".env file not found";
-}
-
 // Check PHP version
 $phpVersion = phpversion();
 $requiredPhpVersion = '8.0.0';
@@ -165,6 +73,46 @@ foreach ($requiredExtensions as $ext) {
     }
 }
 
+// Check Composer dependencies
+if (file_exists('vendor/autoload.php')) {
+    $results['passed'][] = "Composer dependencies installed";
+    
+    // Load autoloader
+    require_once 'vendor/autoload.php';
+    
+    // Check composer.json vs composer.lock
+    if (file_exists('composer.json') && file_exists('composer.lock')) {
+        $composerJson = json_decode(file_get_contents('composer.json'), true);
+        $composerLock = json_decode(file_get_contents('composer.lock'), true);
+        
+        if (isset($composerJson['require']['mongodb/mongodb'])) {
+            $requiredVersion = $composerJson['require']['mongodb/mongodb'];
+            
+            $installedVersion = null;
+            foreach ($composerLock['packages'] as $package) {
+                if ($package['name'] === 'mongodb/mongodb') {
+                    $installedVersion = $package['version'];
+                    break;
+                }
+            }
+            
+            if ($installedVersion) {
+                $results['passed'][] = "MongoDB package: version $installedVersion";
+            } else {
+                $results['warnings'][] = "MongoDB package: not found in composer.lock";
+            }
+        }
+    }
+} else {
+    $results['failed'][] = "Composer dependencies not installed";
+    $allPassed = false;
+    
+    if ($fix) {
+        echo YELLOW . "Attempting to install dependencies...\n" . RESET;
+        echo "Run the following command to install dependencies:\n";
+        echo "composer install\n";
+    }
+}
 
 // Check file structure
 $requiredDirs = ['App', 'public', 'vendor'];
