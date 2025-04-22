@@ -55,10 +55,20 @@ class PageController {
     }
 
     public function searchBooks() {
-        $query = $_GET['q'] ?? '';
+        $searchQuery = $_GET['q'] ?? '';
+        if (empty($searchQuery)) {
+            $this->response->renderView(__DIR__ . '/../Views/search.php', [
+                'error' => 'Please enter a search term'
+            ]);
+            return;
+        }
+        
         $bookService = new BookService();
-        $books = $bookService->searchBooks($query);
-        $this->response->renderView(__DIR__ . '/../Views/search_results.php', ['books' => $books]);
+        $results = $bookService->searchBooks($searchQuery);        
+        $this->response->renderView(__DIR__ . '/../Views/search_results.php', [
+            'query' => $searchQuery,
+            'results' => $results
+        ]);
     }
 
     public function profile(){
