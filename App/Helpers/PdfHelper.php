@@ -23,15 +23,18 @@ class PdfHelper {
     public function extractFirstPageAsImage($pdfPath, $outputPath, $format = 'jpg') {
         // Check if Imagick is installed
         if (!extension_loaded('imagick')) {
+            error_log("Imagick extension not available - using fallback image");
             return $this->fallbackExtractFirstPage($pdfPath, $outputPath);
         }
 
         try {
-            // Check if the PDF exists
-            if (!file_exists($pdfPath)) {
-                error_log("PDF file not found: $pdfPath");
-                return false;
+            // Check if the PDF exists and is readable
+            if (!file_exists($pdfPath) || !is_readable($pdfPath)) {
+                error_log("PDF file not found or not readable: $pdfPath");
+                return $this->fallbackExtractFirstPage($pdfPath, $outputPath);
             }
+            
+            error_log("Attempting to extract first page from: $pdfPath");
             
             // Create Imagick instance
             $imagick = new \Imagick();
@@ -53,11 +56,13 @@ class PdfHelper {
             if (!is_dir($outputDir)) {
                 if (!@mkdir($outputDir, 0777, true)) {
                     error_log("Failed to create thumbnail directory: $outputDir");
-                    return false;
+                    return $this->fallbackExtractFirstPage($pdfPath, $outputPath);
                 }
                 // Explicitly set permissions after creation
                 @chmod($outputDir, 0777);
             }
+            
+            error_log("Writing thumbnail to: $outputPath");
             
             // Write the image to the output path
             $imagick->writeImage($outputPath);
@@ -66,10 +71,16 @@ class PdfHelper {
             $imagick->clear();
             $imagick->destroy();
             
-            return true;
+            if (file_exists($outputPath)) {
+                error_log("Thumbnail created successfully");
+                return true;
+            } else {
+                error_log("Thumbnail file not created - using fallback");
+                return $this->fallbackExtractFirstPage($pdfPath, $outputPath);
+            }
         } catch (\Exception $e) {
             error_log("PDF thumbnail extraction failed: " . $e->getMessage());
-            return false;
+            return $this->fallbackExtractFirstPage($pdfPath, $outputPath);
         }
     }
     
@@ -86,14 +97,9 @@ class PdfHelper {
             }
         }
         
-        // Use default placeholder image
-        $defaultImage = __DIR__ . '/../../public/assets/images/pdf-placeholder.jpg';
         $altDefaultImage = __DIR__ . '/../../public/assets/uploads/thumbnails/placeholder-book.jpg';
         
-        if (file_exists($defaultImage)) {
-            copy($defaultImage, $outputPath);
-            return true;
-        } elseif (file_exists($altDefaultImage)) {
+        if (file_exists($altDefaultImage)) {
             copy($altDefaultImage, $outputPath);
             return true;
         }
