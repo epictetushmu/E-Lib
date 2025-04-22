@@ -28,8 +28,8 @@
                 loader.style.display = 'block';
                 const { data } = await axios.get('/api/v1/featured-books');
 
-                if (data?.status === 'success' && Array.isArray(data.books)) {
-                    renderBooks(data.books);
+                if (data?.status === 'success' && Array.isArray(data.data)) {
+                    renderBooks(data.data);
                 } else {
                     showError('No books found in the collection.');
                 }
