@@ -20,4 +20,5 @@ logs/
 /certificates/
 
 #Ignore assets folder 
-/assets/uploads/
+*.pdf
+*.jpg
