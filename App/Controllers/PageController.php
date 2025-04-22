@@ -55,9 +55,9 @@ class PageController {
     }
 
     public function searchBooks() {
-        $searchQuery = $_GET['q'] ?? '';
+        $searchQuery = $_GET['title'] ?? '';
         if (empty($searchQuery)) {
-            $this->response->renderView(__DIR__ . '/../Views/search.php', [
+            $this->response->renderView(__DIR__ . '/../Views/search_results.php', [
                 'error' => 'Please enter a search term'
             ]);
             return;
