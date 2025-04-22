@@ -12,15 +12,33 @@ class UserController {
     }
 
     public function handleLogin() {
-        $email = $_POST['email'];
-        $password = $_POST['password'];
-        
+        if (empty($_POST)) {
+            // Try to read from input stream (for JSON requests)
+            $inputJSON = file_get_contents('php://input');
+            error_log('Raw input: ' . $inputJSON);
+            $input = json_decode($inputJSON, true);
+            
+            if ($input) {
+                $email = $input['email'] ?? null; 
+                $password = $input['password'] ?? null;
+            } else {
+                ResponseHandler::respond(false, 'No data received', 400);
+                return;
+            }
+        } else {
+            $email = $_POST['email'] ?? null;
+            $password = $_POST['password'] ?? null;
+        }
+
         $user = $this->userService->getUserByEmail($email);
-        if ($user && $user['password'] === $password) {
+        if ($user && password_verify($password, $user['password'])) {
             session_start();
             $_SESSION['user'] = $user;
+            $_SESSION['user_id'] = $user['_id'];
+            error_log('Login successful for: ' . $email);
             ResponseHandler::redirect('/');    
         } else {
+            error_log('Login failed for: ' . $email);
             ResponseHandler::respond(false, 'Invalid credentials', 401);
         }
     }
@@ -31,12 +49,7 @@ class UserController {
     }
 
     public function handleSignup() {
-        // Debug the incoming data
-        error_log('POST data: ' . json_encode($_POST));
-        error_log('Request method: ' . $_SERVER['REQUEST_METHOD']);
-        error_log('Content-Type: ' . $_SERVER['CONTENT_TYPE'] ?? 'Not set');
         
-        // Only continue if data exists
         if (empty($_POST)) {
             // Try to read from input stream (for JSON requests)
             $inputJSON = file_get_contents('php://input');
