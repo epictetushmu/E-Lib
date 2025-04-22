@@ -1,10 +1,10 @@
 <div class="container mt-5">
     <?php if (!empty($book)): ?>
         <div class="row">
-            <!-- Book bookPdf + Actions -->
+            <!-- Book Cover + Actions -->
             <div class="col-md-4">
-                <img src="<?= htmlspecialchars($book['bookPdf'] ?? '/assets/images/placeholder-book.jpg') ?>"
-                     alt="<?= htmlspecialchars($book['title']) ?> bookPdf"
+                <img src="<?= htmlspecialchars($book['thumbnail_path'] ?? '/assets/uploads/thumbnails/placeholder-book.jpg') ?>"
+                     alt="<?= htmlspecialchars($book['title']) ?> cover"
                      class="img-fluid rounded shadow-sm"
                      onerror="this.src='/assets/images/placeholder-book.jpg'">
 
@@ -19,6 +19,15 @@
                             <i class="fas fa-bookmark me-2"></i>Save to List
                         </button>
                     </div>
+                <?php endif; ?>
+                
+                <!-- Download Button -->
+                <?php if (!empty($book['pdf_path'])): ?>
+                <div class="mt-2">
+                    <a href="<?= htmlspecialchars($book['pdf_path']) ?>" class="btn btn-outline-success w-100" download>
+                        <i class="fas fa-file-download me-2"></i>Download PDF
+                    </a>
+                </div>
                 <?php endif; ?>
             </div>
 
