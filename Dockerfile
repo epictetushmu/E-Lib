@@ -49,6 +49,11 @@ RUN composer dump-autoload --optimize
 RUN mkdir -p certificates storage/logs public/uploads cache \
     && chmod -R 777 certificates storage public/uploads cache
 
+# Create directories for asset uploads
+RUN mkdir -p /var/www/public/assets/uploads/pdfs /var/www/public/assets/uploads/thumbnails \
+    && chown -R www-data:www-data /var/www/public/assets/uploads \
+    && chmod -R 755 /var/www/public/assets/uploads
+
 # Environment variable indicating we're in Docker
 ENV DOCKER_ENV=true
 
