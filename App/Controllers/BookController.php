@@ -53,43 +53,53 @@ class BookController {
     }
     
     public function addBook() {
-        $data = $_POST;
-        $title = $data['title'];
-        $author = $data['author'];
-        $year = $data['year'];
-        $description = $data['description'];
-        $bookPdf = $_FILES['bookPdf']; 
-        $categories = json_decode($data['categories'], true); 
+        // Ensure proper error reporting
+        error_log("Book upload attempt started");
+        
+        // Extract form data
+        $title = $_POST['title'] ?? '';
+        $author = $_POST['author'] ?? '';
+        $year = $_POST['year'] ?? '';
+        $description = $_POST['description'] ?? '';
+        $categories = json_decode($_POST['categories'] ?? '[]', true);
 
         // Validate required fields
         if (empty($title)) {
             return $this->response->respond(false, 'Title is required', 400);
         }
-        // Validate file upload
-        $fileUploadPath = "public/assets/";
-        if (isset($bookPdf) && $bookPdf['error'] == 0) {
-            $pdfHelper = new PdfHelper($bookPdf['tmp_name']);
-            $thumbnailDir = 'thumbnails/';
-            $thumbnailPath = $thumbnailDir . basename($bookPdf['name'], '.pdf') . '.jpg';
-            if (!$pdfHelper->extractFirstPageAsImage($thumbnailPath, $fileUploadPath)) {
-                return $this->response->respond(false, 'Error creating thumbnail', 500);
-            }
-        } else {
-            return $this->response->respond(false, 'Error uploading PDF', 400);
+      
+        // Check file upload
+        if (!isset($_FILES['bookPdf']) || $_FILES['bookPdf']['error'] != 0) {
+            error_log("File upload error: " . ($_FILES['bookPdf']['error'] ?? 'No file uploaded'));
+            return $this->response->respond(false, 'PDF file upload error', 400);
         }
 
-        $pdfHelper = new PdfHelper($bookPdf['tmp_name']);
-        $pdfPath = $pdfHelper->storePdf($bookPdf);
+        // Initialize PdfHelper with temporary path
+        $pdfHelper = new PdfHelper($_FILES['bookPdf']['tmp_name']);
+        
+        // Store the PDF
+        $pdfPath = $pdfHelper->storePdf($_FILES['bookPdf']);
+        
         if (!$pdfPath) {
+            error_log("Failed to store PDF");
             return $this->response->respond(false, 'Error storing PDF', 500);
         }
-    
-        $response = $this->bookService->addBook($title, $author, $year,  $description, $categories, $pdfPath, $thumbnailPath);
+        
+        error_log("PDF stored successfully at: $pdfPath");
+        
+        // Generate thumbnail
+        $thumbnailPath = $pdfHelper->getPdfThumbnail();
+        
+        // Add the book to the database
+        $response = $this->bookService->addBook(
+            $title, $author, $year, $description, $categories, 
+            $pdfPath, $thumbnailPath
+        );
+        
         if ($response) {
             return $this->response->respond(true, $response);
         } else {
             return $this->response->respond(false, 'Error adding book', 400);
-    
         }
     }
 }
