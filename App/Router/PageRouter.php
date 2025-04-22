@@ -29,14 +29,16 @@ class PageRouter {
             ['path' => '/signup', 'handler' => [new PageController(), 'signupForm']],
             ['path' => '/view-books', 'handler' => [new PageController(), 'viewBooks']],
             ['path' => '/profile', 'handler' => [new PageController(), 'profile']],
-            ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'viewBook']],
+            ['path' => '/book/([0-9a-f]{24})', 'handler' => [new PageController(), 'viewBook']],
             ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
-            ['path' => '/search/(d+)', 'handler' => [new PageController(), 'searchBooks']],
+            ['path' => '/search_results', 'handler' => [new PageController(), 'searchBooks']],
             ['path' => '/error', 'handler' => [new PageController(), 'error']]
         ];            
     }
 
     public function handleRequest($path) {
+        $pathOnly = parse_url($path, PHP_URL_PATH);
+        
         if ($path === '/login') {
             $ticket = $_GET['ticket'] ?? null;
             // Use Environment to get the application URL
@@ -54,13 +56,13 @@ class PageRouter {
             return;
         }
 
-        foreach ($this->routes as $route) {
-            if (preg_match('#^' . $route['path'] . '$#', $path, $matches)) {
-                call_user_func_array($route['handler'], $matches);
-                return;
-            }
+       
+    foreach ($this->routes as $route) {
+        if (preg_match('#^' . $route['path'] . '$#', $pathOnly, $matches)) {
+            call_user_func_array($route['handler'], $matches);
+            return;
         }
-    
+    }
         
         $pageController = new PageController();
         $pageController->error();    

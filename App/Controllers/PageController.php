@@ -2,7 +2,8 @@
 namespace App\Controllers;
 
 use App\Includes\ResponseHandler;
-use App\Services\BookService; 
+use App\Services\BookService;
+use Exception;
 
 class PageController {
     private $response;   
@@ -25,13 +26,26 @@ class PageController {
         $this->response->renderView(__DIR__ . '/../Views/signup.php');
     }
 
-    public function viewBook() {
-        $id = $_GET['q'] ?? '';      
-        $bookService = new BookService();
-        $book = $bookService->getBookDetails($id);
-        if ($book) {
-            $this->response->renderView(__DIR__ . '/../Views/book_detail.php', ['book' => $book]);
-        } else {
+    public function viewBook($path = null, $id = null) {
+        try {
+            // Remove debug echo statements that cause output before headers
+            if (is_null($id)) {
+                echo "Invalid book ID. id is null.";
+                $this->error();
+                return;
+            }
+            
+            $bookService = new BookService();
+            $book = $bookService->getBookDetails($id);
+            
+            if ($book) {
+                $this->response->renderView(__DIR__ . '/../Views/book_detail.php', ['book' => $book]);
+            } else {
+                $this->error();
+            }
+        } catch(Exception $e) {
+            // Log the error but don't echo it (causes header issues)
+            error_log("Book View Error: " . $e->getMessage());
             $this->error();
         }
     }
@@ -41,10 +55,20 @@ class PageController {
     }
 
     public function searchBooks() {
-        $query = $_GET['q'] ?? '';
+        $searchQuery = $_GET['title'] ?? '';
+        if (empty($searchQuery)) {
+            $this->response->renderView(__DIR__ . '/../Views/search_results.php', [
+                'error' => 'Please enter a search term'
+            ]);
+            return;
+        }
+        
         $bookService = new BookService();
-        $books = $bookService->searchBooks($query);
-        $this->response->renderView(__DIR__ . '/../Views/search_results.php', ['books' => $books]);
+        $results = $bookService->searchBooks($searchQuery);        
+        $this->response->renderView(__DIR__ . '/../Views/search_results.php', [
+            'query' => $searchQuery,
+            'results' => $results
+        ]);
     }
 
     public function profile(){

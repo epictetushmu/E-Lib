@@ -12,7 +12,11 @@ $casUrl = $casUrl ?? 'https://auth.hmu.gr/cas/login?service=https://your-callbac
 
 <div class="container mt-5">
     <div class="col-md-6 offset-md-3">
-        <div class="login-container p-4 border rounded shadow-sm bg-light">
+        <div class="login-container p-4 border rounded shadow-sm bg-light position-relative">
+            <!-- Close Button -->
+            <button type="button" class="btn-close position-absolute top-0 end-0 m-3" 
+                    onclick="closeLoginPopup()" aria-label="Close"></button>
+            
             <h2 class="text-center mb-4">Login</h2>
             <div id="error-message" class="alert alert-danger d-none"></div>
 
@@ -77,4 +81,8 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
         console.error('Login error:', error);
     });
 });
+
+function closeLoginPopup() {
+    document.querySelector('.login-container').style.display = 'none';
+}
 </script>

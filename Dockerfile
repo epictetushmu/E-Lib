@@ -9,6 +9,24 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     && docker-php-ext-install zip
 
+# Install Imagick and its dependencies
+RUN apt-get update && apt-get install -y \
+    libmagickwand-dev \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/* \
+    && pecl install imagick \
+    && docker-php-ext-enable imagick
+
+# Install Ghostscript (required for PDF processing)
+RUN apt-get update && apt-get install -y \
+    ghostscript \
+    && rm -rf /var/lib/apt/lists/*
+
+# Ensure proper PDF policy for Imagick
+RUN if [ -f /etc/ImageMagick-6/policy.xml ]; then \
+        sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml; \
+    fi
+
 # Install MongoDB extension (with OpenSSL support automatically included)
 RUN pecl install mongodb && docker-php-ext-enable mongodb
 
@@ -48,6 +66,11 @@ RUN composer dump-autoload --optimize
 # Create directories for runtime files
 RUN mkdir -p certificates storage/logs public/uploads cache \
     && chmod -R 777 certificates storage public/uploads cache
+
+# Create directories for asset uploads
+RUN mkdir -p /var/www/public/assets/uploads/pdfs /var/www/public/assets/uploads/thumbnails \
+    && chown -R www-data:www-data /var/www/public/assets/uploads \
+    && chmod -R 755 /var/www/public/assets/uploads
 
 # Environment variable indicating we're in Docker
 ENV DOCKER_ENV=true

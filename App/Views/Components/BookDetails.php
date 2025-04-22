@@ -1,10 +1,10 @@
 <div class="container mt-5">
     <?php if (!empty($book)): ?>
         <div class="row">
-            <!-- Book bookPdf + Actions -->
+            <!-- Book Cover + Actions -->
             <div class="col-md-4">
-                <img src="<?= htmlspecialchars($book['bookPdf'] ?? '/assets/images/placeholder-book.jpg') ?>"
-                     alt="<?= htmlspecialchars($book['title']) ?> bookPdf"
+                <img src="<?= htmlspecialchars($book['thumbnail_path'] ?? '/assets/uploads/thumbnails/placeholder-book.jpg') ?>"
+                     alt="<?= htmlspecialchars($book['title']) ?> cover"
                      class="img-fluid rounded shadow-sm"
                      onerror="this.src='/assets/images/placeholder-book.jpg'">
 
@@ -20,6 +20,15 @@
                         </button>
                     </div>
                 <?php endif; ?>
+                
+                <!-- Download Button -->
+                <?php if (!empty($book['pdf_path'])): ?>
+                <div class="mt-2">
+                    <a href="<?= htmlspecialchars($book['pdf_path']) ?>" class="btn btn-outline-success w-100" download>
+                        <i class="fas fa-file-download me-2"></i>Download PDF
+                    </a>
+                </div>
+                <?php endif; ?>
             </div>
 
             <!-- Book Info -->
@@ -27,13 +36,30 @@
                 <h1 class="fw-bold"><?= htmlspecialchars($book['title'] ?? 'Untitled') ?></h1>
 
                 <!-- Genre & Availability -->
-                <div class="mb-2">
-                    <?php if (!empty($book['genre'])): ?>
-                        <span class="badge bg-info"><?= htmlspecialchars($book['genre']) ?></span>
+                <div class="mb-3">
+                    <?php if (!empty($book['categories'])): ?>
+                        <?php 
+                        // Handle MongoDB BSON arrays properly
+                        $categories = $book['categories'];
+                        if ($categories instanceof \MongoDB\Model\BSONArray) {
+                            // Convert BSON array to PHP array
+                            $categories = $categories->getArrayCopy();
+                            foreach ($categories as $category): ?>
+                                <span class="badge bg-info me-1 mb-1"><?= htmlspecialchars((string)$category) ?></span>
+                            <?php endforeach;
+                        } elseif (is_array($categories)) {
+                            // Regular PHP array
+                            foreach ($categories as $category): ?>
+                                <span class="badge bg-info me-1 mb-1"><?= htmlspecialchars((string)$category) ?></span>
+                            <?php endforeach;
+                        } else {
+                            // Single category as string
+                            ?>
+                            <span class="badge bg-info"><?= htmlspecialchars((string)$categories) ?></span>
+                        <?php } ?>
+                    <?php else: ?>
+                        <span class="badge bg-secondary">Uncategorized</span>
                     <?php endif; ?>
-                    <span class="badge <?= ($book['copies'] ?? 0) > 0 ? 'bg-success' : 'bg-danger' ?>">
-                        <?= ($book['copies'] ?? 0) > 0 ? "Available ({$book['copies']})" : 'Unavailable' ?>
-                    </span>
                 </div>
 
                 <!-- Description -->

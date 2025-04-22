@@ -34,7 +34,7 @@ $searchUrl = $searchUrl ?? '/search_results';
 
             <form class="d-flex me-3" id="searchForm" action="<?= htmlspecialchars($searchUrl) ?>" method="GET">
                 <div class="input-group">
-                    <input type="search" name="q" id="bookToSearch" class="form-control" 
+                    <input type="search" name="title" id="bookToSearch" class="form-control" 
                            placeholder="Search titles..." aria-label="Search">
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-search"></i>

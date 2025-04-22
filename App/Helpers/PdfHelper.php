@@ -4,33 +4,38 @@ namespace App\Helpers;
 
 class PdfHelper {
     
-    private $pdfPath; 
+    private $pdfPath;
+    private $thumbnailPath;
 
     /**
      * Constructor
      * 
      * @param string $pdfPath Path to the PDF file
      */
-    public function __construct($pdfPath) {
+    public function __construct($pdfPath = null, $thumbnailPath = null) {
         $this->pdfPath = $pdfPath;
+        $this->thumbnailPath = $thumbnailPath;
     }
 
     /**
      * Extracts the first page of a PDF and saves it as an image
-     * 
-     * @param string $pdfPath Path to the PDF file
-     * @param string $outputPath Path where to save the image
-     * @param string $format Image format (jpg, png)
-     * @return bool True if successful, false otherwise
      */
     public function extractFirstPageAsImage($pdfPath, $outputPath, $format = 'jpg') {
         // Check if Imagick is installed
         if (!extension_loaded('imagick')) {
-            // Fallback if Imagick is not available
+            error_log("Imagick extension not available - using fallback image");
             return $this->fallbackExtractFirstPage($pdfPath, $outputPath);
         }
 
         try {
+            // Check if the PDF exists and is readable
+            if (!file_exists($pdfPath) || !is_readable($pdfPath)) {
+                error_log("PDF file not found or not readable: $pdfPath");
+                return $this->fallbackExtractFirstPage($pdfPath, $outputPath);
+            }
+            
+            error_log("Attempting to extract first page from: $pdfPath");
+            
             // Create Imagick instance
             $imagick = new \Imagick();
             
@@ -46,6 +51,19 @@ class PdfHelper {
             // Optimize the image
             $imagick->setImageCompressionQuality(90);
             
+            // Make sure output directory exists
+            $outputDir = dirname($outputPath);
+            if (!is_dir($outputDir)) {
+                if (!@mkdir($outputDir, 0777, true)) {
+                    error_log("Failed to create thumbnail directory: $outputDir");
+                    return $this->fallbackExtractFirstPage($pdfPath, $outputPath);
+                }
+                // Explicitly set permissions after creation
+                @chmod($outputDir, 0777);
+            }
+            
+            error_log("Writing thumbnail to: $outputPath");
+            
             // Write the image to the output path
             $imagick->writeImage($outputPath);
             
@@ -53,10 +71,16 @@ class PdfHelper {
             $imagick->clear();
             $imagick->destroy();
             
-            return true;
+            if (file_exists($outputPath)) {
+                error_log("Thumbnail created successfully");
+                return true;
+            } else {
+                error_log("Thumbnail file not created - using fallback");
+                return $this->fallbackExtractFirstPage($pdfPath, $outputPath);
+            }
         } catch (\Exception $e) {
-            echo('PDF thumbnail extraction failed: ' . $e->getMessage());
-            return false;
+            error_log("PDF thumbnail extraction failed: " . $e->getMessage());
+            return $this->fallbackExtractFirstPage($pdfPath, $outputPath);
         }
     }
     
@@ -64,79 +88,136 @@ class PdfHelper {
      * Fallback method for extracting first page if Imagick is not available
      */
     private function fallbackExtractFirstPage($pdfPath, $outputPath) {
-        // If no Imagick, we can try to use a default placeholder image
-        if (file_exists('public/images/pdf-placeholder.jpg')) {
-            copy('public/images/pdf-placeholder.jpg', $outputPath);
+        // Make sure output directory exists
+        $outputDir = dirname($outputPath);
+        if (!is_dir($outputDir)) {
+            if (!@mkdir($outputDir, 0777, true)) {
+                error_log("Failed to create directory: $outputDir");
+                return false;
+            }
+        }
+        
+        $altDefaultImage = __DIR__ . '/../../public/assets/uploads/thumbnails/placeholder-book.jpg';
+        
+        if (file_exists($altDefaultImage)) {
+            copy($altDefaultImage, $outputPath);
             return true;
         }
+        
         return false;
     }
     
     /**
      * Gets or creates a thumbnail for a PDF
-     * 
-     * @param string $thumbnailDir Directory to store thumbnails
-     * @return string Path to the thumbnail
      */
-    public function getPdfThumbnail( $thumbnailDir = 'uploads/thumbnails') {
-        // Create the thumbnail directory if it doesn't exist
-        if (!file_exists($thumbnailDir)) {
-            mkdir($thumbnailDir, 0755, true);
+    public function getPdfThumbnail() {
+        // Use environment detection for Docker compatibility
+        if (getenv('DOCKER_ENV') === 'true') {
+            $uploadDir = '/var/www/html/public';
+            $thumbnailDir = $uploadDir . '/assets/uploads/thumbnails';
+            $webPath = '/assets/uploads/thumbnails';
+        } else {
+            // Local development path
+            $projectRoot = dirname(dirname(dirname(__DIR__)));
+            $uploadDir = $projectRoot . '/public';
+            $thumbnailDir = $uploadDir . '/assets/uploads/thumbnails';
+            $webPath = '/assets/uploads/thumbnails';
+        }
+        
+        // Create the directory if it doesn't exist
+        if (!is_dir($thumbnailDir)) {
+            if (!@mkdir($thumbnailDir, 0777, true)) {
+                error_log("Failed to create thumbnail directory: $thumbnailDir");
+                return '/assets/uploads/thumbnails/placeholder-book.jpg';
+            }
+            // Set permissions explicitly
+            @chmod($thumbnailDir, 0777);
         }
         
         // Generate a unique name for the thumbnail
         $thumbnailName = md5(basename($this->pdfPath)) . '.jpg';
         $thumbnailPath = $thumbnailDir . '/' . $thumbnailName;
+        
         // Check if thumbnail already exists
         if (!file_exists($thumbnailPath)) {
             // Extract the first page
-            if (!$this->extractFirstPageAsImage( $this->pdfPath, $thumbnailPath)) {
+            if (!$this->extractFirstPageAsImage($this->pdfPath, $thumbnailPath)) {
                 // Return a default image if extraction fails
-                return '/images/default-pdf-cover.jpg';
+                return '/assets/uploads/thumbnails/placeholder-book.jpg';
             }
         }
         
-        return '/' . $thumbnailPath;
+        return $webPath . '/' . $thumbnailName;
     }
 
+    /**
+     * Stores a PDF file with a proper name
+     */
     public function storePdf($pdfFile) {
-        // Check if the file is a valid PDF
-        if ($pdfFile['error'] === UPLOAD_ERR_OK) {
+        try {
+            // Check if the file is a valid PDF
+            if ($pdfFile['error'] !== UPLOAD_ERR_OK) {
+                error_log("Upload error code: " . $pdfFile['error']);
+                return false;
+            }
+            
+            // Get file information
             $fileTmpPath = $pdfFile['tmp_name'];
             $fileName = $pdfFile['name'];
-            $fileSize = $pdfFile['size'];
             $fileType = $pdfFile['type'];
-            $fileNameCmps = explode(".", $fileName);
-            $fileExtension = strtolower(end($fileNameCmps));
-
-            // Allowed file extensions
-            $allowedExtensions = ['pdf'];
-
-            if (in_array($fileExtension, $allowedExtensions)) {
-                // Generate a unique name for the file
-                $newFileName = uniqid('pdf_', true) . '.' . $fileExtension;
-
-                // Directory to store uploaded files
-                $uploadFileDir = __DIR__ . '/uploads/';
-                if (!is_dir($uploadFileDir)) {
-                    mkdir($uploadFileDir, 0755, true);
-                }
-
-                // Destination path
-                $dest_path = $uploadFileDir . $newFileName;
-
-                // Move the file to the destination path
-                if (move_uploaded_file($fileTmpPath, $dest_path)) {
-                    $this->getPdfThumbnail(); 
-                    return "PDF uploaded successfully!";
-                } else {
-                    return "Error moving the file.";
-                }
-            } else {
-                return "Only PDF files are allowed.";
+            
+            // Extract file extension
+            $fileExtension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+            
+            // Check if it's a PDF
+            if ($fileExtension !== 'pdf') {
+                error_log("Invalid file extension: $fileExtension");
+                return false;
             }
-        } else {
-            return "No file uploaded or upload error.";
+            
+            // Generate a unique name for the file
+            $newFileName = uniqid('pdf_') . '.' . $fileExtension;
+            
+            // Use environment detection for Docker compatibility
+            if (getenv('DOCKER_ENV') === 'true') {
+                $uploadDir = '/var/www/html/public';
+                $uploadFileDir = $uploadDir . '/assets/uploads/pdfs/';
+                $webPath = '/assets/uploads/pdfs';
+            } else {
+                // Local development path
+                $projectRoot = dirname(dirname(dirname(__DIR__)));
+                $uploadDir = $projectRoot . '/public';
+                $uploadFileDir = $uploadDir . '/assets/uploads/pdfs/';
+                $webPath = '/assets/uploads/pdfs';
+            }
+            
+            // Create directory if it doesn't exist
+            if (!is_dir($uploadFileDir)) {
+                if (!@mkdir($uploadFileDir, 0777, true)) {
+                    error_log("Failed to create directory: $uploadFileDir");
+                    return false;
+                }
+                // Set permissions explicitly
+                @chmod($uploadFileDir, 0777);
+            }
+            
+            // Destination path
+            $dest_path = $uploadFileDir . $newFileName;
+            
+            // Move the file
+            if (!move_uploaded_file($fileTmpPath, $dest_path)) {
+                error_log("Failed to move file from $fileTmpPath to $dest_path");
+                return false;
+            }
+            
+            // Set the full server path for internal use
+            $this->pdfPath = $dest_path;
+            
+            // Return web-accessible path
+            return $webPath . '/' . $newFileName;
+        } catch (\Exception $e) {
+            error_log("Error storing PDF: " . $e->getMessage());
+            return false;
         }
     }
 }

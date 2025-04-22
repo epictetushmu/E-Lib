@@ -20,15 +20,21 @@
                 <h2>Search Results <?= !empty($searchQuery) ? 'for "' . htmlspecialchars($searchQuery) . '"' : '' ?></h2>
             </div>
         </div>
-        <?php 
-            if (!empty($results)) {
-                foreach ($results as $book) {
-                    include 'Components/BookCard.php';
-                }
-            } else {
-                echo '<div class="alert alert-info">No results found.</div>';
-            }
-        ?>
+        
+        <!-- Display results in a grid -->
+        <div class="row">
+            <?php if (!empty($results)): ?>
+                <?php foreach ($results as $book): ?>
+                    <?php include 'Components/BookCard.php'; ?>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        No results found for "<?= htmlspecialchars($searchQuery) ?>".
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
     </div>
     <?php 
         include 'Partials/Footer.php';
