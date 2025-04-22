@@ -29,9 +29,9 @@ class PageRouter {
             ['path' => '/signup', 'handler' => [new PageController(), 'signupForm']],
             ['path' => '/view-books', 'handler' => [new PageController(), 'viewBooks']],
             ['path' => '/profile', 'handler' => [new PageController(), 'profile']],
-            ['path' => '/book/(\d+)', 'handler' => [new PageController(), 'viewBook']],
+            ['path' => '/book/([0-9a-f]{24})', 'handler' => [new PageController(), 'viewBook']],
             ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
-            ['path' => '/search/(d+)', 'handler' => [new PageController(), 'searchBooks']],
+            ['path' => '/search/([0-9a-f]{24})', 'handler' => [new PageController(), 'searchBooks']],
             ['path' => '/error', 'handler' => [new PageController(), 'error']]
         ];            
     }
