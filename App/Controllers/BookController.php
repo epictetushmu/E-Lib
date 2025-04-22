@@ -57,7 +57,6 @@ class BookController {
         $title = $data['title'];
         $author = $data['author'];
         $year = $data['year'];
-        $condition = $data['condition'];
         $description = $data['description'];
         $bookPdf = $_FILES['bookPdf']; 
         $categories = json_decode($data['categories'], true); 

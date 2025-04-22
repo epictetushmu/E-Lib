@@ -30,11 +30,7 @@ class MongoConnectionFactory{
         if ($type === 'mongo') {
             try {
                 // Get MongoDB connection
-
                 $mongoDb = self::getMongoConnection($config['dbName'], []);
-                
-                // Create and return the MongoDB wrapper
-                echo("Connected to MongoDB successfully");
                 return $mongoDb;
             } catch (\MongoDB\Driver\Exception\ConnectionTimeoutException $e) {
                 echo("MongoDB connection failed: " . $e->getMessage());
@@ -105,7 +101,6 @@ class MongoConnectionFactory{
                 $options['mongoOptions']['tlsCAFile'] = $certFile;
                 $options['mongoOptions']['tlsAllowInvalidHostnames'] = false;
                 $options['mongoOptions']['tlsAllowInvalidCertificates'] = false;
-                echo("MongoDB SSL/TLS configured with certificate: $certFile");
             } else {
                 // Try with system CA bundle if specific cert not found
                 $options['mongoOptions']['tls'] = true;
@@ -122,12 +117,10 @@ class MongoConnectionFactory{
                 
            
                 self::$mongoClient = new Client($connectionString, ["authSource" => 'admin'], ['serverApi' => $apiVersion]);
-                echo("MongoDB client initialized with secure connection");
           
                 // Get the database and verify connection by running a ping command
                 $db = self::$mongoClient->selectDatabase($dbName);
                 $db->command(['ping' => 1]);
-                echo("MongoDB connection verified with ping command");
                 return $db;
             } catch (\Exception $e) {
                 echo("MongoDB connection error: " . $e->getMessage());
