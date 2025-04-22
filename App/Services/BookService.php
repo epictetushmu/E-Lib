@@ -2,6 +2,8 @@
 namespace App\Services;
 
 use App\Models\Books;
+use MongoDB\BSON\UTCDateTime;
+
 class BookService {
     private $book;
 
@@ -33,8 +35,8 @@ class BookService {
             'pdf_path' => $pdfPath,
             'thumbnail_path' => $thumbnailPath,
             'featured' => random_int(0, 100)< 20 ? true : false, 
-            'created_at' => new \MongoDB\BSON\UTCDateTime(),
-            'updated_at' => new \MongoDB\BSON\UTCDateTime()
+            'created_at' => new UTCDateTime(),
+            'updated_at' => new UTCDateTime()
         ];
         
         // Add PDF paths if available

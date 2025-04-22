@@ -2,9 +2,8 @@
 namespace App\Models;
 
 use App\Controllers\DbController;
-use MongoDB\BSON\UTCDateTime;
 use MongoDB\BSON\ObjectId;
-use MongoDB\BSON\Regex;
+use MongoDB\BSON\Regex; // Ensure this line is present and the MongoDB library is installed
 
 class Books {
     private $db;
