@@ -4,29 +4,25 @@ namespace App\Helpers;
 
 class PdfHelper {
     
-    private $pdfPath; 
+    private $pdfPath;
+    private $thumbnailPath;
 
     /**
      * Constructor
      * 
      * @param string $pdfPath Path to the PDF file
      */
-    public function __construct($pdfPath = null) {
+    public function __construct($pdfPath = null, $thumbnailPath = null) {
         $this->pdfPath = $pdfPath;
+        $this->thumbnailPath = $thumbnailPath;
     }
 
     /**
      * Extracts the first page of a PDF and saves it as an image
-     * 
-     * @param string $pdfPath Path to the PDF file
-     * @param string $outputPath Path where to save the image
-     * @param string $format Image format (jpg, png)
-     * @return bool True if successful, false otherwise
      */
     public function extractFirstPageAsImage($pdfPath, $outputPath, $format = 'jpg') {
         // Check if Imagick is installed
         if (!extension_loaded('imagick')) {
-            // Fallback if Imagick is not available
             return $this->fallbackExtractFirstPage($pdfPath, $outputPath);
         }
 
@@ -55,7 +51,12 @@ class PdfHelper {
             // Make sure output directory exists
             $outputDir = dirname($outputPath);
             if (!is_dir($outputDir)) {
-                mkdir($outputDir, 0755, true);
+                if (!@mkdir($outputDir, 0777, true)) {
+                    error_log("Failed to create thumbnail directory: $outputDir");
+                    return false;
+                }
+                // Explicitly set permissions after creation
+                @chmod($outputDir, 0777);
             }
             
             // Write the image to the output path
@@ -79,35 +80,52 @@ class PdfHelper {
         // Make sure output directory exists
         $outputDir = dirname($outputPath);
         if (!is_dir($outputDir)) {
-            mkdir($outputDir, 0755, true);
+            if (!@mkdir($outputDir, 0777, true)) {
+                error_log("Failed to create directory: $outputDir");
+                return false;
+            }
         }
         
-        // If no Imagick, use default placeholder image
-        if (file_exists(__DIR__ . '/../../public/assets/images/pdf-placeholder.jpg')) {
-            copy(__DIR__ . '/../../public/assets/images/pdf-placeholder.jpg', $outputPath);
+        // Use default placeholder image
+        $defaultImage = __DIR__ . '/../../public/assets/images/pdf-placeholder.jpg';
+        $altDefaultImage = __DIR__ . '/../../public/assets/uploads/thumbnails/placeholder-book.jpg';
+        
+        if (file_exists($defaultImage)) {
+            copy($defaultImage, $outputPath);
+            return true;
+        } elseif (file_exists($altDefaultImage)) {
+            copy($altDefaultImage, $outputPath);
             return true;
         }
+        
         return false;
     }
     
     /**
      * Gets or creates a thumbnail for a PDF
-     * 
-     * @param string $thumbnailDir Directory to store thumbnails
-     * @return string Path to the thumbnail
      */
     public function getPdfThumbnail() {
-        // Use project root to determine paths
-        $projectRoot = dirname(dirname(dirname(__DIR__)));
-        $publicDir = $projectRoot . '/public';
-        $thumbnailDir = $publicDir . '/assets/uploads/thumbnails';
+        // Use environment detection for Docker compatibility
+        if (getenv('DOCKER_ENV') === 'true') {
+            $uploadDir = '/var/www/html/public';
+            $thumbnailDir = $uploadDir . '/assets/uploads/thumbnails';
+            $webPath = '/assets/uploads/thumbnails';
+        } else {
+            // Local development path
+            $projectRoot = dirname(dirname(dirname(__DIR__)));
+            $uploadDir = $projectRoot . '/public';
+            $thumbnailDir = $uploadDir . '/assets/uploads/thumbnails';
+            $webPath = '/assets/uploads/thumbnails';
+        }
         
         // Create the directory if it doesn't exist
         if (!is_dir($thumbnailDir)) {
-            if (!mkdir($thumbnailDir, 0755, true)) {
+            if (!@mkdir($thumbnailDir, 0777, true)) {
                 error_log("Failed to create thumbnail directory: $thumbnailDir");
-                return '/assets/images/default-pdf-cover.jpg';
+                return '/assets/uploads/thumbnails/placeholder-book.jpg';
             }
+            // Set permissions explicitly
+            @chmod($thumbnailDir, 0777);
         }
         
         // Generate a unique name for the thumbnail
@@ -119,13 +137,16 @@ class PdfHelper {
             // Extract the first page
             if (!$this->extractFirstPageAsImage($this->pdfPath, $thumbnailPath)) {
                 // Return a default image if extraction fails
-                return '/assets/images/default-pdf-cover.jpg';
+                return '/assets/uploads/thumbnails/placeholder-book.jpg';
             }
         }
         
-        return '/assets/uploads/thumbnails/' . $thumbnailName;
+        return $webPath . '/' . $thumbnailName;
     }
 
+    /**
+     * Stores a PDF file with a proper name
+     */
     public function storePdf($pdfFile) {
         try {
             // Check if the file is a valid PDF
@@ -149,19 +170,29 @@ class PdfHelper {
             }
             
             // Generate a unique name for the file
-            $newFileName = uniqid('pdf_', true) . '.' . $fileExtension;
+            $newFileName = uniqid('pdf_') . '.' . $fileExtension;
             
-            // Use project root to determine the public directory
-            $projectRoot = dirname(dirname(dirname(__DIR__)));
-            $publicDir = $projectRoot . '/public';
-            $uploadFileDir = $publicDir . '/assets/uploads/pdfs/';
+            // Use environment detection for Docker compatibility
+            if (getenv('DOCKER_ENV') === 'true') {
+                $uploadDir = '/var/www/html/public';
+                $uploadFileDir = $uploadDir . '/assets/uploads/pdfs/';
+                $webPath = '/assets/uploads/pdfs';
+            } else {
+                // Local development path
+                $projectRoot = dirname(dirname(dirname(__DIR__)));
+                $uploadDir = $projectRoot . '/public';
+                $uploadFileDir = $uploadDir . '/assets/uploads/pdfs/';
+                $webPath = '/assets/uploads/pdfs';
+            }
             
             // Create directory if it doesn't exist
             if (!is_dir($uploadFileDir)) {
-                if (!@mkdir($uploadFileDir, 0755, true)) {
+                if (!@mkdir($uploadFileDir, 0777, true)) {
                     error_log("Failed to create directory: $uploadFileDir");
                     return false;
                 }
+                // Set permissions explicitly
+                @chmod($uploadFileDir, 0777);
             }
             
             // Destination path
@@ -173,11 +204,11 @@ class PdfHelper {
                 return false;
             }
             
-            // Set pdfPath property
+            // Set the full server path for internal use
             $this->pdfPath = $dest_path;
             
             // Return web-accessible path
-            return '/assets/uploads/pdfs/' . $newFileName;
+            return $webPath . '/' . $newFileName;
         } catch (\Exception $e) {
             error_log("Error storing PDF: " . $e->getMessage());
             return false;
