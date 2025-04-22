@@ -55,18 +55,39 @@ class PageController {
     }
 
     public function searchBooks() {
-        $searchQuery = $_GET['title'] ?? '';
-        if (empty($searchQuery)) {
+        // Get all search parameters
+        $title = $_GET['title'] ?? '';
+        $author = $_GET['author'] ?? '';
+        $category = $_GET['category'] ?? '';
+        
+        if (empty($title) && empty($author) && empty($category)) {
             $this->response->renderView(__DIR__ . '/../Views/search_results.php', [
-                'error' => 'Please enter a search term'
+                'error' => 'Please enter at least one search term',
+                'results' => []
             ]);
             return;
         }
         
+        $searchParams = [
+            'title' => $title,
+            'author' => $author,
+            'category' => $category,
+        ];
+        
+        $searchParams = array_filter($searchParams);
+        
+        // Perform the search
         $bookService = new BookService();
-        $results = $bookService->searchBooks($searchQuery);        
+        $results = $bookService->searchBooks($searchParams);
+        
+        // Prepare data for the view
         $this->response->renderView(__DIR__ . '/../Views/search_results.php', [
-            'query' => $searchQuery,
+            'searchQuery' => $title, // For backward compatibility
+            'filters' => [
+                'title' => $title,
+                'author' => $author,
+                'category' => $category,
+            ],
             'results' => $results
         ]);
     }

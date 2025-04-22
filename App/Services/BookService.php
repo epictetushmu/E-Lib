@@ -56,8 +56,37 @@ class BookService {
         }
     }
 
-    public function searchBooks($search) {
-        return $this->book->searchBooks($search);
+    /**
+     * Search for books based on multiple criteria
+     */
+    public function searchBooks($params) {
+        // If only a string is passed, treat it as a title search (backwards compatibility)
+        if (is_string($params)) {
+            $params = ['title' => $params];
+        }
+               
+        $query = [];
+        if (!empty($params['title'])) {
+            $query['title'] = ['$regex' => $params['title'], '$options' => 'i'];
+        }        
+        if (!empty($params['author'])) {
+            $query['author'] = ['$regex' => $params['author'], '$options' => 'i'];
+        }        
+        if (!empty($params['category'])) {
+            $query['categories'] = ['$in' => [$params['category']]];
+        }
+        
+        if (empty($query)) {
+            return [];
+        }
+        
+        try {
+            $books = $this->book->searchBooks($query);
+            return $books;
+        } catch (\Exception $e) {
+            error_log("Search error: " . $e->getMessage());
+            return [];
+        }
     }
 }
 

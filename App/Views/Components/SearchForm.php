@@ -10,10 +10,19 @@
 
 // Set default values for parameters
 $filters = $filters ?? [];
-$categories = $categories ?? [];
 $formId = $formId ?? 'advancedSearchForm';
 $searchUrl = $searchUrl ?? '/search_results';
 $uniqueId = uniqid('search_'); // Generate a unique ID prefix to avoid conflicts
+$categories = $categories ?? [
+    'Electronics',
+    'Mathematics',
+    'Programming',
+    'Robotics',
+    'Networking',
+    'telecommunications', 
+    'Physics',
+    'Computer Science', 
+];
 ?>
 
 <div class="card mb-4">
@@ -43,8 +52,14 @@ $uniqueId = uniqid('search_'); // Generate a unique ID prefix to avoid conflicts
                     <select class="form-select" id="<?= $uniqueId ?>_category" name="category">
                         <option value="">All Categories</option>
                         <?php foreach ($categories as $category): ?>
-                            <option value="<?= htmlspecialchars($category['id']) ?>" <?= ($filters['category'] ?? '') == $category['id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($category['name']) ?>
+                            <?php 
+                            // Handle both string categories and object/array categories
+                            $categoryId = is_array($category) ? ($category['id'] ?? $category) : $category;
+                            $categoryName = is_array($category) ? ($category['name'] ?? $category) : $category;
+                            $isSelected = ($filters['category'] ?? '') == $categoryId;
+                            ?>
+                            <option value="<?= htmlspecialchars($categoryId) ?>" <?= $isSelected ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($categoryName) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

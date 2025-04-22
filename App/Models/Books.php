@@ -34,13 +34,8 @@ class Books {
         return  $this->db->insert($this->collection, $book);
     }
 
-    public function searchBooks($search) {
-        $regex = new Regex($search, 'i'); // case-insensitive
-        return $this->db->find($this->collection, [
-            '$or' => [
-                ['title' => $regex],
-                ['author' => $regex]
-            ]
-        ]);
+    public function searchBooks($searchQuery) {
+       
+        return $this->db->find($this->collection, $searchQuery);
     }
 }
