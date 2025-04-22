@@ -36,13 +36,30 @@
                 <h1 class="fw-bold"><?= htmlspecialchars($book['title'] ?? 'Untitled') ?></h1>
 
                 <!-- Genre & Availability -->
-                <div class="mb-2">
-                    <?php if (!empty($book['genre'])): ?>
-                        <span class="badge bg-info"><?= htmlspecialchars($book['genre']) ?></span>
+                <div class="mb-3">
+                    <?php if (!empty($book['categories'])): ?>
+                        <?php 
+                        // Handle MongoDB BSON arrays properly
+                        $categories = $book['categories'];
+                        if ($categories instanceof \MongoDB\Model\BSONArray) {
+                            // Convert BSON array to PHP array
+                            $categories = $categories->getArrayCopy();
+                            foreach ($categories as $category): ?>
+                                <span class="badge bg-info me-1 mb-1"><?= htmlspecialchars((string)$category) ?></span>
+                            <?php endforeach;
+                        } elseif (is_array($categories)) {
+                            // Regular PHP array
+                            foreach ($categories as $category): ?>
+                                <span class="badge bg-info me-1 mb-1"><?= htmlspecialchars((string)$category) ?></span>
+                            <?php endforeach;
+                        } else {
+                            // Single category as string
+                            ?>
+                            <span class="badge bg-info"><?= htmlspecialchars((string)$categories) ?></span>
+                        <?php } ?>
+                    <?php else: ?>
+                        <span class="badge bg-secondary">Uncategorized</span>
                     <?php endif; ?>
-                    <span class="badge <?= ($book['copies'] ?? 0) > 0 ? 'bg-success' : 'bg-danger' ?>">
-                        <?= ($book['copies'] ?? 0) > 0 ? "Available ({$book['copies']})" : 'Unavailable' ?>
-                    </span>
                 </div>
 
                 <!-- Description -->
