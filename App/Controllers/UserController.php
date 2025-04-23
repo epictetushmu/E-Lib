@@ -12,6 +12,10 @@ class UserController {
     }
 
     public function handleLogin() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
         if (empty($_POST)) {
             // Try to read from input stream (for JSON requests)
             $inputJSON = file_get_contents('php://input');
@@ -32,7 +36,6 @@ class UserController {
 
         $user = $this->userService->getUserByEmail($email);
         if ($user && password_verify($password, $user['password'])) {
-            session_start();
             $_SESSION['user'] = $user;
             $_SESSION['user_id'] = $user['_id'];
             error_log('Login successful for: ' . $email);
@@ -45,7 +48,14 @@ class UserController {
 
     public function handleLogout() {
         // Logout logic here...
+        if (!isset($_SESSION['user_id'])) {
+            ResponseHandler::respond(false, 'No user logged in', 401);
+            return;
+        }
+        $_SESSION = [];
+        session_destroy();
         ResponseHandler::respond(true, 'Logout successful');
+       
     }
 
     public function handleSignup() {
@@ -92,5 +102,15 @@ class UserController {
         } else {
             ResponseHandler::respond(false, 'User creation failed', 400);
         }
+    }
+
+    public function getUser($id) {
+        $user = $this->userService->getUserById($id);
+        if ($user) {
+            ResponseHandler::respond(true, $user);
+        } else {
+            ResponseHandler::respond(false, 'User not found', 404);
+        }
+        
     }
 }

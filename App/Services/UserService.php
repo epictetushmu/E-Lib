@@ -21,4 +21,8 @@ class UserService {
         ];
         return $this->user->registerUser($user);
     }
+
+    public function getUserById($id) {
+        return $this->user->getUserById($id);
+    }
 }

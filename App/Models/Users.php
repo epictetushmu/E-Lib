@@ -28,4 +28,8 @@ class Users {
         }
         return false;
     }
+
+    public function getUserById($id) {
+        return $this->db->findOne($this->collection, ['_id' => $id]);
+    }
 }
