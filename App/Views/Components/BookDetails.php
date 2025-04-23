@@ -114,32 +114,6 @@
             <div class="col-12">
                 <h3 class="mb-4">Reviews</h3>
 
-                <?php if (isset($_SESSION['user_id'])): ?>
-                    <!-- Add Review Form -->
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <h5 class="card-title">Add Your Review</h5>
-                            <form id="reviewForm">
-                                <input type="hidden" id="bookId" value="<?= htmlspecialchars($book['_id']) ?>">
-                                <div class="mb-3">
-                                    <label class="form-label">Rating</label>
-                                    <div class="star-rating" id="ratingStars">
-                                        <?php for ($i = 1; $i <= 5; $i++): ?>
-                                            <i class="far fa-star" data-rating="<?= $i ?>"></i>
-                                        <?php endfor; ?>
-                                    </div>
-                                    <input type="hidden" id="rating" value="0">
-                                </div>
-                                <div class="mb-3">
-                                    <label for="comment" class="form-label">Comment</label>
-                                    <textarea class="form-control" id="comment" rows="3" required></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-primary">Submit Review</button>
-                            </form>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
                 <!-- Display Reviews -->
                 <div id="reviewsContainer">
                     <?php if (!empty($reviews)): ?>
@@ -167,6 +141,32 @@
                         </div>
                     <?php endif; ?>
                 </div>
+
+                <?php if (isset($_SESSION['user_id'])): ?>
+                    <!-- Add Review Form -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Add Your Review</h5>
+                            <form id="reviewForm">
+                                <input type="hidden" id="bookId" value="<?= htmlspecialchars($book['_id']) ?>">
+                                <div class="mb-3">
+                                    <label class="form-label">Rating</label>
+                                    <div class="star-rating" id="ratingStars">
+                                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                                            <i class="far fa-star" data-rating="<?= $i ?>"></i>
+                                        <?php endfor; ?>
+                                    </div>
+                                    <input type="hidden" id="rating" value="0">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="comment" class="form-label">Comment</label>
+                                    <textarea class="form-control" id="comment" rows="3" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Submit Review</button>
+                            </form>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     <?php else: ?>
@@ -321,6 +321,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to fetch and update reviews
+    const bookId = document.getElementById('bookId')?.value;
+    if (bookId) {
+        fetchReviews(bookId);
+    }
     function fetchReviews(bookId) {
         axios.get(`/api/v1/reviews/${bookId}`)
             .then(response => {
