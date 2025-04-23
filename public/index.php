@@ -88,6 +88,7 @@ if (!class_exists('App\Router\BaseRouter')) {
     die("Critical error: App\\Router\\BaseRouter class not found despite loading file");
 }
 
+use App\Includes\SessionManager;
 use App\Router\BaseRouter;
 use App\Integration\Database\MongoConnectionFactory;
 
@@ -102,6 +103,7 @@ try {
     die("Critical error: Unable to establish any database connection: " . $e->getMessage());
 }
 
+SessionManager::initialize();
 // Create router with database
 $router = new BaseRouter($baseUrl);
 
