@@ -46,14 +46,18 @@ $searchUrl = $searchUrl ?? '/search_results';
                 <!-- User is logged in -->
                 <div class="dropdown">
                     <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="user-avatar me-2"><?= substr($_SESSION['username'] ?? 'U', 0, 1) ?></div>
-                        <span class="d-none d-md-inline"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></span>
+                        <div class="user-avatar me-2"><?= substr($username, 0, 1) ?></div>
+                        <span class="d-none d-md-inline"><?= htmlspecialchars($username) ?></span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="/profile"><i class="fas fa-user me-2"></i>Profile</a></li>
                         <li><a class="dropdown-item" href="/book"><i class="fas fa-bookmark me-2"></i>My Books</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="/api/v1/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="handleLogout(event)">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </a>
+                        </li>
                     </ul>
                 </div>
             <?php else: ?>
@@ -66,3 +70,18 @@ $searchUrl = $searchUrl ?? '/search_results';
         </div>
     </div>
 </nav>
+
+<script>
+function handleLogout(event) {
+  event.preventDefault();
+  
+  fetch('/api/v1/logout')
+    .then(response => response.json())
+    .then(data => {
+      if(data.status === 'success') {
+        window.location.href = '/';
+      }
+    })
+    .catch(error => console.error('Logout error:', error));
+}
+</script>

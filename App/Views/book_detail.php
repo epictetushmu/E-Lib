@@ -92,32 +92,7 @@
                     }
                 });
             }
-            
-            // Borrow book functionality
-            const borrowBtn = document.getElementById('borrowBtn');
-            if (borrowBtn) {
-                borrowBtn.addEventListener('click', async () => {
-                    const bookId = document.getElementById('bookId').value;
                     
-                    try {
-                        const response = await axios.post('/api/v1/borrow', {
-                            book_id: bookId
-                        });
-                        
-                        if (response.data.status === 'success') {
-                            alert('Book borrowed successfully');
-                            borrowBtn.classList.add('disabled');
-                            borrowBtn.textContent = 'Borrowed';
-                        } else {
-                            alert(response.data.message || 'Failed to borrow book');
-                        }
-                    } catch (error) {
-                        console.error('Error borrowing book:', error);
-                        alert('An error occurred while borrowing the book');
-                    }
-                });
-            }
-            
             // Save to list functionality
             const saveBtn = document.getElementById('saveBtn');
             if (saveBtn) {

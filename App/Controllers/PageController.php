@@ -1,7 +1,8 @@
 <?php
 namespace App\Controllers;
 
-use App\Includes\ResponseHandler;
+use App\Includes\ResponseHandler; 
+use App\Includes\SessionManager;
 use App\Services\BookService;
 use Exception;
 
@@ -15,7 +16,9 @@ class PageController {
 
     public function home() {
         // Instead of using parent render, use ResponseHandler's renderView
-        $this->response->renderView(__DIR__ . '/../Views/home.php');
+        $this->response->renderView(__DIR__ . '/../Views/home.php', [
+           'isLoggedIn' => SessionManager::getCurrentUserId()
+        ]);
     }
 
     public function loginForm() {
