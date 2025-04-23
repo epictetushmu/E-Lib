@@ -29,6 +29,12 @@
                     </a>
                 </div>
                 <?php endif; ?>
+                <!-- Read Online Button -->
+                <div class="mt-2">
+                    <a href="/read/<?= htmlspecialchars($book['_id']) ?>" class="btn btn-outline-info w-100">
+                        <i class="fas fa-book-open me-2"></i>Read Online
+                    </a>
+                </div>  
             </div>
 
             <!-- Book Info -->
