@@ -91,6 +91,8 @@ if (!class_exists('App\Router\BaseRouter')) {
 use App\Includes\SessionManager;
 use App\Router\BaseRouter;
 use App\Integration\Database\MongoConnectionFactory;
+use App\Middleware\AuthMiddleware;
+use App\Middleware\LoggingMiddleware;
 
 $baseUrl = ''; // Set your base URL here
 
@@ -107,4 +109,15 @@ SessionManager::initialize();
 // Create router with database
 $router = new BaseRouter($baseUrl);
 
+// require_once __DIR__ . '/../App/bootstrap.php';
+
+// Add middleware
+$router->addMiddleware(new LoggingMiddleware());
+$router->addMiddleware(new AuthMiddleware([
+    '/profile',
+    '/add-book',
+    '/api/v1/books' // Only POST requests actually need auth, but we keep it simple here
+]));
+
+// Handle the request
 $router->handleRequest();
