@@ -38,4 +38,8 @@ class Books {
        
         return $this->db->find($this->collection, $searchQuery);
     }
+
+    public function addReview($bookId, $review) {
+        $this->db->update($this->collection, ['_id' => new ObjectId($bookId)], ['$push' => ['reviews' => $review]]);
+    }
 }

@@ -88,5 +88,17 @@ class BookService {
             return [];
         }
     }
+
+    public function addReview($bookId, $review) {
+        return $this->book->addReview($bookId, $review);
+    }
+
+    public function getBookReviews($bookId) {
+        $book = $this->book->getBookDetails($bookId);
+        if ($book) {
+            return $book['reviews'] ?? [];
+        }
+        return [];
+    }
 }
 

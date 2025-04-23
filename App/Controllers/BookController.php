@@ -168,4 +168,76 @@ class BookController {
         readfile($pdfPath);
         exit;
     }
+
+    /**
+     * Add a new book review
+     */
+    public function addReview() {
+        // Check authentication
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (empty($_SESSION['user_id'])) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        
+        // Get JSON data
+        $inputJSON = file_get_contents('php://input');
+        $input = json_decode($inputJSON, true);
+        
+        // Validate input
+        if (empty($input['book_id']) || !isset($input['rating']) || empty($input['comment'])) {
+            ResponseHandler::respond(false, 'Missing required fields', 400);
+            return;
+        }
+        
+        // Validate rating
+        $rating = intval($input['rating']);
+        if ($rating < 1 || $rating > 5) {
+            ResponseHandler::respond(false, 'Rating must be between 1 and 5', 400);
+            return;
+        }
+        
+        // Create review object
+        $userService = new UserController();
+        $user = $userService->getUser($_SESSION['user_id']);
+        
+        $review = [
+            'user_id' => $_SESSION['user_id'],
+            'username' => $user['username'] ?? 'Anonymous User',
+            'rating' => $rating,
+            'comment' => $input['comment'],
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+        
+        // Save review
+        $bookService = new BookService();
+        $result = $bookService->addReview($input['book_id'], $review);
+        
+        if ($result) {
+            ResponseHandler::respond(true, 'Review added successfully');
+        } else {
+            ResponseHandler::respond(false, 'Failed to add review', 500);
+        }
+    }
+
+    /**
+     * Get reviews for a book
+     */
+    public function getReviews($bookId) {
+        if (empty($bookId)) {
+            ResponseHandler::respond(false, 'Book ID is required', 400);
+            return;
+        }
+        
+        $bookService = new BookService();
+        $reviews = $bookService->getBookReviews($bookId);
+        if($reviews){ 
+            ResponseHandler::respond(true, $reviews, 200, );
+        }else { 
+            ResponseHandler::respond(false, 'No reviews found', 404);
+        }
+    }
 }
