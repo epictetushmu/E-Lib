@@ -38,4 +38,38 @@ class Books {
        
         return $this->db->find($this->collection, $searchQuery);
     }
+
+    public function addReview($bookId, $review) {
+        try {
+            // Return the result of the update operation
+            $result = $this->db->update(
+                $this->collection, 
+                ['_id' => new ObjectId($bookId)], 
+                ['$push' => ['reviews' => $review]]
+            );
+            
+            return $result;
+        } catch (\Exception $e) {
+            error_log("Error adding review: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function updateBookRating($bookId, $rating, $reviewCount) {
+        try {
+            return $this->db->update(
+                $this->collection,
+                ['_id' => new ObjectId($bookId)],
+                [
+                    '$set' => [
+                        'average_rating' => $rating,
+                        'review_count' => $reviewCount
+                    ]
+                ]
+            );
+        } catch (\Exception $e) {
+            error_log("Error updating book rating: " . $e->getMessage());
+            return false;
+        }
+    }
 }

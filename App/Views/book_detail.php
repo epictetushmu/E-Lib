@@ -11,88 +11,32 @@
 <body class="d-flex flex-column min-vh-100">
     <?php 
         include 'Partials/Header.php';
-        include 'Components/BookDetails.php';
-        include 'Partials/Footer.php';
+    ?> 
+    <div class="container mt-5">
+        <?php if (!empty($book)): 
+            include 'Components/BookDetails.php'; 
+            include 'Components/BookReview.php';
+            ?>
+
+        <?php else: ?>
+        <!-- Book Not Found -->
+            <div class="text-center py-5">
+                <i class="fas fa-book fa-5x mb-3 text-muted"></i>
+                <h3>Book not found</h3>
+                <p class="text-muted">The book you are looking for does not exist or has been removed.</p>
+                <a href="/" class="btn btn-primary mt-3">Return to Home</a>
+            </div>
+        <?php endif; ?>
+    </div>     
+    <?php
+            include 'Partials/Footer.php';
     ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Setup star rating system
-            const stars = document.querySelectorAll('#ratingStars i');
-            const ratingInput = document.getElementById('rating');
-            
-            stars.forEach(star => {
-                star.addEventListener('click', () => {
-                    const rating = parseInt(star.getAttribute('data-rating'));
-                    ratingInput.value = rating;
-                    
-                    // Update stars display
-                    stars.forEach((s, index) => {
-                        if (index < rating) {
-                            s.classList.remove('far');
-                            s.classList.add('fas');
-                        } else {
-                            s.classList.remove('fas');
-                            s.classList.add('far');
-                        }
-                    });
-                });
-                
-                star.addEventListener('mouseover', () => {
-                    const rating = parseInt(star.getAttribute('data-rating'));
-                    
-                    // Temp highlight stars
-                    stars.forEach((s, index) => {
-                        if (index < rating) {
-                            s.classList.add('text-warning');
-                        } else {
-                            s.classList.remove('text-warning');
-                        }
-                    });
-                });
-                
-                star.addEventListener('mouseout', () => {
-                    stars.forEach(s => s.classList.remove('text-warning'));
-                });
-            });
-            
-            // Review submission
-            const reviewForm = document.getElementById('reviewForm');
-            if (reviewForm) {
-                reviewForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    
-                    const bookId = document.getElementById('bookId').value;
-                    const rating = document.getElementById('rating').value;
-                    const comment = document.getElementById('comment').value;
-                    
-                    if (rating === '0') {
-                        alert('Please select a rating');
-                        return;
-                    }
-                    
-                    try {
-                        const response = await axios.post('/api/v1/review', {
-                            book_id: bookId,
-                            rating: rating,
-                            comment: comment
-                        });
-                        
-                        if (response.data.status === 'success') {
-                            alert('Review submitted successfully');
-                            location.reload();
-                        } else {
-                            alert(response.data.message || 'Failed to submit review');
-                        }
-                    } catch (error) {
-                        console.error('Error submitting review:', error);
-                        alert('An error occurred while submitting your review');
-                    }
-                });
-            }
-                    
+         
             // Save to list functionality
             const saveBtn = document.getElementById('saveBtn');
             if (saveBtn) {

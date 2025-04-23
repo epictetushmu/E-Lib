@@ -73,7 +73,7 @@ class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface 
         try {
             $result = $this->db->selectCollection($collection)->updateMany(
                 $filter,
-                ['$set' => $update]
+                $update
             );
             return ['modifiedCount' => $result->getModifiedCount()];
         } catch (Exception $e) {

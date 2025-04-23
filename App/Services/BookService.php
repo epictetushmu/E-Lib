@@ -88,5 +88,60 @@ class BookService {
             return [];
         }
     }
+
+    public function addReview($bookId, $review, $rating = null) {
+        // Make sure rating is included
+        if (isset($rating) && !isset($review['rating'])) {
+            $review['rating'] = intval($rating);
+        }
+        
+        // Make sure review has a timestamp if not already set
+        if (!isset($review['created_at'])) {
+            $review['created_at'] = date('Y-m-d H:i:s');
+        }
+        
+        // Add the review to the book
+        $result = $this->book->addReview($bookId, $review);
+        
+        if ($result) {
+            // Update the book's average rating
+            $this->updateBookRating($bookId);
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Update book's average rating based on all reviews
+     */
+    private function updateBookRating($bookId) {
+        $book = $this->getBookDetails($bookId);
+        if (!$book || empty($book['reviews'])) {
+            return false;
+        }
+        
+        $totalRating = 0;
+        $count = 0;
+        
+        foreach ($book['reviews'] as $review) {
+            if (isset($review['rating'])) {
+                $totalRating += $review['rating'];
+                $count++;
+            }
+        }
+        
+        $averageRating = $count > 0 ? round($totalRating / $count, 1) : 0;
+        
+        // Update the book with the new average rating
+        return $this->book->updateBookRating($bookId, $averageRating, $count);
+    }
+
+    public function getBookReviews($bookId) {
+        $book = $this->book->getBookDetails($bookId);
+        if ($book) {
+            return $book['reviews'] ?? [];
+        }
+        return [];
+    }
 }
 
