@@ -57,6 +57,28 @@ class PageController {
         $this->response->renderView(__DIR__ . '/../Views/add_book.php');
     }
 
+    public function readBook($path = null, $id = null) {
+        try {
+            if (is_null($id)) {
+                echo "Invalid book ID. id is null.";
+                $this->error();
+                return;
+            }
+            
+            $bookService = new BookService();
+            $book = $bookService->getBookDetails($id);
+            
+            if ($book) {
+                $this->response->renderView(__DIR__ . '/../Views/read_book.php', ['book' => $book]);
+            } else {
+                $this->error();
+            }
+        } catch(Exception $e) {
+            error_log("Read Book Error: " . $e->getMessage());
+            $this->error();
+        }
+    }
+
     public function searchBooks() {
         // Get all search parameters
         $title = $_GET['title'] ?? '';
