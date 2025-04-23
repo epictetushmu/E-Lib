@@ -36,7 +36,7 @@ class UserController {
             $_SESSION['user'] = $user;
             $_SESSION['user_id'] = $user['_id'];
             error_log('Login successful for: ' . $email);
-            ResponseHandler::redirect('/');    
+            ResponseHandler::respond(true, 'Login successful', 200);  
         } else {
             error_log('Login failed for: ' . $email);
             ResponseHandler::respond(false, 'Invalid credentials', 401);
@@ -87,9 +87,8 @@ class UserController {
             ResponseHandler::respond(false, 'Invalid email format', 400);
             return;
         }
-        echo "User Name: $userName, Email: $email, Password: $password"; // Debugging output
         if ($this->userService->registerUser($userName, $email, $password)) {
-            ResponseHandler::respond(true, 'User created successfully');
+            ResponseHandler::respond(true, 'User created successfully', 200);
         } else {
             ResponseHandler::respond(false, 'User creation failed', 400);
         }
