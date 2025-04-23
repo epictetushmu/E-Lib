@@ -29,9 +29,7 @@ class ApiRouter {
     }
 
     public function handleRequest($method, $path) {
-        // Debugging output
-        // echo "Method: $method, Path: $path";
-
+        
         foreach ($this->routes as $route) {
             if ($route['method'] === $method && preg_match("#^{$route['path']}$#", $path, $matches)) {
                 array_shift($matches); // Remove the full match from the matches array

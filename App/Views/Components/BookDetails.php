@@ -24,9 +24,15 @@
                 <!-- Download Button -->
                 <?php if (!empty($book['pdf_path'])): ?>
                 <div class="mt-2">
-                    <a href="<?= htmlspecialchars($book['pdf_path']) ?>" class="btn btn-outline-success w-100" download>
-                        <i class="fas fa-file-download me-2"></i>Download PDF
-                    </a>
+                    <?php if (!empty($_SESSION['user_id'])): ?>
+                        <a href="/api/v1/download/<?= htmlspecialchars($book['_id']) ?>" class="btn btn-outline-success w-100" download>
+                            <i class="fas fa-file-download me-2"></i>Download PDF
+                        </a>
+                    <?php else: ?>
+                        <a href="/login?redirect=<?= urlencode('/book/' . $book['_id']) ?>" class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-lock me-2"></i>Login to Download
+                        </a>
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
                 <!-- Read Online Button -->
