@@ -200,10 +200,9 @@ class BookController {
             return;
         }
         
-        // Create review object
-        $userService = new UserController();
-        $user = $userService->getUser($_SESSION['user_id']);
-        
+        $userService = new \App\Services\UserService(); 
+        $user = $userService->getUserById($_SESSION['user_id']);
+      
         $review = [
             'user_id' => $_SESSION['user_id'],
             'username' => $user['username'] ?? 'Anonymous User',
