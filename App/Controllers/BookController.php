@@ -102,4 +102,70 @@ class BookController {
             return $this->response->respond(false, 'Error adding book', 400);
         }
     }
+
+    /**
+     * Handle secure book download
+     * 
+     * @param string $bookId MongoDB ID of the book to download
+     */
+    public function downloadBook($bookId = null) {
+        // Check if user is authenticated
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (empty($_SESSION['user_id'])) {
+            header('Location: /login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+            exit;
+        }
+        
+        // Validate book ID
+        if (!$bookId || !preg_match('/^[0-9a-f]{24}$/', $bookId)) {
+            header('HTTP/1.0 400 Bad Request');
+            echo "Invalid book ID";
+            exit;
+        }
+        
+        // Get book details from database
+        $bookService = new BookService();
+        $book = $bookService->getBookDetails($bookId);
+        
+        if (!$book || empty($book['pdf_path'])) {
+            header('HTTP/1.0 404 Not Found');
+            echo "Book not found or has no PDF";
+            exit;
+        }
+        
+        // Get the absolute path to the PDF file
+        $pdfPath = $_SERVER['DOCUMENT_ROOT'] . $book['pdf_path'];
+        
+        // Check if file exists and is readable
+        if (!file_exists($pdfPath) || !is_readable($pdfPath)) {
+            header('HTTP/1.0 404 Not Found');
+            echo "PDF file not found or not readable";
+            exit;
+        }
+        
+        // Log the download
+        error_log("User {$_SESSION['user_id']} downloaded book {$bookId}");
+        
+        // Get the filename for the Content-Disposition header
+        $filename = basename($pdfPath);
+        if (!empty($book['title'])) {
+            // Create a safe filename based on the book title
+            $safeTitle = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $book['title']);
+            $filename = $safeTitle . '.pdf';
+        }
+        
+        // Set appropriate headers for file download
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($pdfPath));
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        header('Pragma: public');
+        
+        // Output file content and stop script execution
+        readfile($pdfPath);
+        exit;
+    }
 }
