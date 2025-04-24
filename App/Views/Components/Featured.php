@@ -9,7 +9,7 @@
 
         <!-- Books Grid -->
         <div class="row g-4" id="booksGrid">
-            <!-- Dynamic content loaded from API -->
+            <!-- Dynamic content loaded via JavaScript -->
         </div>
     </div>
 </main>
@@ -27,7 +27,7 @@
                 if (data?.status === 'success' && Array.isArray(data.data)) {
                     renderBooks(data.data);
                 } else {
-                    showError('No books found in the collection.');
+                    showError('No featured books found.');
                 }
             } catch (error) {
                 console.error('Error loading featured books:', error);
@@ -41,29 +41,27 @@
             if (!books.length) return showError('No featured books available.');
 
             booksGrid.innerHTML = books.map(book => {
-                // Extract the book ID correctly from MongoDB's ObjectId format
                 const bookId = book._id.$oid || book._id;
-                
                 return `
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100 shadow-sm">
-                        <img src="${book.thumbnail_path || '/assets/uploads/thumbnails/placeholder-book.jpg'}" 
-                             class="card-img-top" style="height: 200px; object-fit: cover;"
-                             alt="${book.title || 'Book cover'}">
-                        <div class="card-body d-flex flex-column">
-                            <h5 class="card-title text-truncate" title="${book.title || 'Unknown Title'}">
-                                ${book.title || 'Unknown Title'}
-                            </h5>
-                            <p class="card-text text-muted small text-truncate">
-                                By ${book.author || 'Unknown Author'}
-                            </p>
-                            ${book.year ? `<p class="card-text small mb-2">${book.year}</p>` : ''}
-                            <a href="/book/${bookId}" class="btn btn-sm btn-primary mt-auto">
-                                View Details
-                            </a>
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100 shadow-sm">
+                            <img src="${book.thumbnail_path || '/assets/uploads/thumbnails/placeholder-book.jpg'}" 
+                                 class="card-img-top" style="height: 200px; object-fit: cover;"
+                                 alt="${book.title || 'Book cover'}">
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title text-truncate" title="${book.title || 'Unknown Title'}">
+                                    ${book.title || 'Unknown Title'}
+                                </h5>
+                                <p class="card-text text-muted small text-truncate">
+                                    By ${book.author || 'Unknown Author'}
+                                </p>
+                                ${book.year ? `<p class="card-text small mb-2">${book.year}</p>` : ''}
+                                <a href="/book/${bookId}" class="btn btn-sm btn-primary mt-auto">
+                                    View Details
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
                 `;
             }).join('');
         };
