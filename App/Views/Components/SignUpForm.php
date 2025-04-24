@@ -1,7 +1,7 @@
 
 <div class="container mt-5">
-    <div class="col-md-6 offset-md-3"></div>
-        <div class="popup-container p-4 border rounded shadow-sm bg-light position-relative"">
+    <div class="col-md-6 offset-md-3">
+        <div class="popup-container p-4 border rounded shadow-sm bg-light position-relative">
             <!-- Close Button -->
             <button type="button" class="btn-close position-absolute top-0 end-0 m-3" 
                         onclick="closePopup('signupPopup')" aria-label="Close"></button>
