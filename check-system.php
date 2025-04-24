@@ -114,6 +114,20 @@ if (file_exists('vendor/autoload.php')) {
     }
 }
 
+// load environment variables 
+if (file_exists('.env')) {
+    try {
+        App\Includes\Environment::load();
+        $results['passed'][] = ".env file loaded successfully";
+    } catch (Exception $e) {
+        $results['failed'][] = ".env file: " . $e->getMessage();
+        $allPassed = false;
+    }
+} else {
+    $results['failed'][] = ".env file not found";
+    $allPassed = false;
+}
+
 // Check file structure
 $requiredDirs = ['App', 'public', 'vendor'];
 $requiredFiles = [
