@@ -13,8 +13,8 @@
     overflow: hidden; /* Prevent scrolling when popup is open */
 }
 
-/* Ensure the popup content is styled properly */
-#loginPopup .login-container, #signupPopup .signup-container {
+/* Standardize the popup content styling */
+.popup-container {
     width: 100%;
     max-width: 500px;
     background: white;
@@ -24,10 +24,26 @@
     z-index: 1100;
     position: relative;
     /* Center the content */
-    margin: auto; /* Automatically center horizontally and vertically */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
+}
+
+/* Add consistent spacing for form elements */
+.popup-container form .form-label {
+    margin-bottom: 5px;
+}
+
+.popup-container form .form-control {
+    margin-bottom: 15px;
+}
+
+.popup-container form .btn {
+    margin-top: 10px;
 }
 
