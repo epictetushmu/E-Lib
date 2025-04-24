@@ -27,6 +27,19 @@ class BookController {
 
     public function listBooks() {
         $books = $this->bookService->getAllBooks();
+        foreach ($books as &$book) {
+            unset($book['pdf_path']);
+            unset($book['reviews']);
+        } 
+        if ($books) {
+            return $this->response->respond(true, $books);
+        } else {
+            return $this->response->respond(false, 'No books found', 404);
+        }
+    }
+
+    public function getAllBooks() {
+        $books = $this->bookService->getAllBooks();
         if ($books) { 
             return $this->response->respond(true, $books);
         } else {

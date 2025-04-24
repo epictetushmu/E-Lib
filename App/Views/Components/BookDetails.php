@@ -5,7 +5,7 @@
         <img src="<?= htmlspecialchars($book['thumbnail_path'] ?? '/assets/uploads/thumbnails/placeholder-book.jpg') ?>"
                 alt="<?= htmlspecialchars($book['title']) ?> cover"
                 class="img-fluid rounded shadow-sm"
-                onerror="this.src='/assets/images/placeholder-book.jpg'">
+                onerror="this.src='/assets/uploads/thumbnails/placeholder-book.jpg'">
 
         <?php if (isset($_SESSION['user_id'])): ?>
             <div class="mt-2">

@@ -65,10 +65,10 @@ $firstLetter = substr($username, 0, 1);
                     <?php foreach($userBooks['borrowed'] as $book): ?>
                         <div class="col-md-4 col-lg-3">
                             <div class="card book-card h-100">
-                                <img src="<?= htmlspecialchars($book['bookPdf'] ?? '/assets/images/placeholder-book.jpg') ?>" 
+                                <img src="<?= htmlspecialchars($book['bookPdf'] ?? '/assets/uploads/thumbnails/placeholder-book.jpg') ?>" 
                                      class="card-img-top book-bookPdf" 
                                      alt="<?= htmlspecialchars($book['title']) ?>"
-                                     onerror="this.src='/assets/images/placeholder-book.jpg'">
+                                     onerror="this.src='/assets/uploads/thumbnails/placeholder-book.jpg'">
                                 <div class="card-body">
                                     <h5 class="card-title"><?= htmlspecialchars($book['title']) ?></h5>
                                     <p class="card-text text-muted"><?= htmlspecialchars($book['author']) ?></p>
@@ -100,10 +100,10 @@ $firstLetter = substr($username, 0, 1);
                     <?php foreach($userBooks['saved'] as $book): ?>
                         <div class="col-md-4 col-lg-3">
                             <div class="card book-card h-100">
-                                <img src="<?= htmlspecialchars($book['bookPdf'] ?? '/assets/images/placeholder-book.jpg') ?>" 
+                                <img src="<?= htmlspecialchars($book['bookPdf'] ?? '/assets/uploads/thumbnails/placeholder-book.jpg') ?>" 
                                      class="card-img-top book-bookPdf" 
                                      alt="<?= htmlspecialchars($book['title']) ?>"
-                                     onerror="this.src='/assets/images/placeholder-book.jpg'">
+                                     onerror="this.src='/assets/uploads/thumbnails/placeholder-book.jpg'">
                                 <div class="card-body">
                                     <h5 class="card-title"><?= htmlspecialchars($book['title']) ?></h5>
                                     <p class="card-text text-muted"><?= htmlspecialchars($book['author']) ?></p>

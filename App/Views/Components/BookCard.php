@@ -1,7 +1,7 @@
 <div class="col-md-4 mb-4">
     <div class="card h-100 shadow-sm">
         <!-- Book thumbnail -->
-        <img src="<?= htmlspecialchars($book['thumbnail_path'] ?? '/assets/images/placeholder-book.jpg') ?>" 
+        <img src="<?= htmlspecialchars($book['thumbnail_path'] ?? '/assets/uploads/thumbnails/placeholder-book.jpg') ?>" 
              class="card-img-top" style="height: 200px; object-fit: cover;"
              alt="<?= htmlspecialchars($book['title'] ?? 'Book cover') ?>">
         

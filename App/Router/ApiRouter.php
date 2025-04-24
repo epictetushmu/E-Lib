@@ -15,7 +15,8 @@ class ApiRouter {
     private function defineRequests() {
         $this->routes = [
             ['method' => 'GET', 'path' => '/api/v1/featured-books', 'handler' => [new BookController(), 'featuredBooks']],
-            ['method' => 'GET', 'path' => '/api/v1/books', 'handler' => [new BookController(), 'listBooks']],
+            ['method' => 'GET', 'path' => '/api/v1/books', 'handler' => [new BookController(), 'getAllBooks']],
+            ['method' => 'GET', 'path' => '/api/v1/list-books', 'handler' => [new BookController(), 'listBooks']],
             ['method' => 'GET', 'path' => '/api/v1/books/([0-9a-f]{24})', 'handler' => [new BookController(), 'viewBook']],
             ['method' => 'POST', 'path' => '/api/v1/books', 'handler' => [new BookController(), 'addBook']],
             ['method' => 'GET', 'path' => '/api/v1/search/(\w+)', 'handler' => [new BookController(), 'searchBooks']],
