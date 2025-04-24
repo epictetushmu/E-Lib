@@ -74,7 +74,7 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     .then(response => {
         if (response.data.status === 'success') {
             console.log('Login successful:', response);
-            
+            closePopup('loginPopup');
         } else {
             errorMessage.textContent = response.data.message || 'Login failed. Please check your credentials.';
             errorMessage.classList.remove('d-none');
