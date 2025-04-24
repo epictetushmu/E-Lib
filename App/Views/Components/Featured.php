@@ -47,7 +47,8 @@
                         <div class="card h-100 shadow-sm">
                             <img src="${book.thumbnail_path || '/assets/uploads/thumbnails/placeholder-book.jpg'}" 
                                  class="card-img-top" style="height: 200px; object-fit: cover;"
-                                 alt="${book.title || 'Book cover'}">
+                                 alt="${book.title || 'Book cover'}"
+                                 onerror="this.src='/assets/uploads/thumbnails/placeholder-book.jpg'">
                             <div class="card-body d-flex flex-column">
                                 <h5 class="card-title text-truncate" title="${book.title || 'Unknown Title'}">
                                     ${book.title || 'Unknown Title'}
