@@ -35,6 +35,9 @@ class UserController {
             ];
             $token = JwtHelper::generateToken($payload);
 
+            $_SESSION['user_id'] = $user['_id'];
+            $_SESSION['token'] = $token;
+
             ResponseHandler::respond(true, [
                 'message' => 'Login successful',
                 'token' => $token

@@ -79,14 +79,23 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     .then(response => {
         response = response.data; 
         if (response.status === 'success') {
-            console.log('Login successful:', response);
 
             if (rememberMe) {
                 localStorage.setItem('authToken', response.data.token);
             }else {
                 sessionStorage.setItem('authToken', response.data.token);
             }
-            window.location.href = redirect || '/';
+
+            // Close the login popup
+            closePopup('loginPopup');
+
+            // Redirect to the appropriate page
+            const redirectUrl = redirect ? new URL(redirect, window.location.origin) : new URL('/', window.location.origin);
+            if (redirectUrl.pathname === '/login') {
+                redirectUrl.pathname = '/';
+            }
+            window.location.href = redirectUrl.pathname;
+
         } else {
             errorMessage.textContent = response.data.message || 'Login failed. Please check your credentials.';
             errorMessage.classList.remove('d-none');

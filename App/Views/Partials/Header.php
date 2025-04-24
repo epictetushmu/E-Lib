@@ -44,7 +44,7 @@ $searchUrl = $searchUrl ?? '/search_results';
 
             <?php if (!empty($_SESSION['user_id'])): ?>
                 <!-- User is logged in -->
-                <div class="dropdown">
+                <div id="profileDropdown" class="dropdown" style="display: none;">
                     <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                         <div class="user-avatar me-2"><?= substr($username, 0, 1) ?></div>
                         <span class="d-none d-md-inline"><?= htmlspecialchars($username) ?></span>
@@ -63,8 +63,8 @@ $searchUrl = $searchUrl ?? '/search_results';
             <?php else: ?>
                 <!-- User is not logged in -->
                 <div class="d-flex">
-                    <button class="btn btn-outline-light me-2" onclick="openPopup('loginPopup')">Login</button>
-                    <button class="btn btn-primary" onclick="openPopup('signupPopup')">Sign Up</button>
+                    <button id="userAction" class="btn btn-outline-light me-2" onclick="openPopup('loginPopup')">Login</button>
+                    <button id="userAction" class="btn btn-primary" onclick="openPopup('signupPopup')">Sign Up</button>
                 </div>
             <?php endif; ?>
         </div>
@@ -85,13 +85,18 @@ $searchUrl = $searchUrl ?? '/search_results';
 
 
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
 function handleLogout(event) {
     event.preventDefault();
     axios.get('/api/v1/logout')
         .then(response => {
             if (response.data.status === 'success') {
+                if (localStorage.getItem('authToken')) {
+                    localStorage.removeItem('authToken');
+                }
+                if (sessionStorage.getItem('authToken')) {
+                    sessionStorage.removeItem('authToken');
+                }
                 window.location.href = '/';
             }
         })
@@ -117,4 +122,29 @@ function openPopup(popupId) {
     popup.style.display = 'flex';
     console.log(`Popup dimensions: width=${popup.offsetWidth}, height=${popup.offsetHeight}`);
 }
+document.addEventListener('DOMContentLoaded', function () {
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    const loginButtons = document.querySelectorAll('#userAction');
+    const userDropdown = document.querySelector('#profileDropdown');
+
+
+    if (authToken) {
+        // User is logged in
+        if (loginButtons) {
+            loginButtons.forEach(button => button.style.display = 'none');
+        }
+        console.log('User is logged in');
+        if (userDropdown) {
+            userDropdown.style.display = 'block';
+        }
+    } else {
+        // User is not logged in
+        if (loginButtons) {
+            loginButtons.forEach(button => button.style.display = 'block');
+        }
+        if (userDropdown) {
+            userDropdown.style.display = 'none';
+        }
+    }
+});
 </script>
