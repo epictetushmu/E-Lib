@@ -38,6 +38,7 @@ class ResponseHandler {
         
         // Check if this is an API call that needs JSON response
         if (self::isApiRequest()) {
+            http_response_code($statusCode);
             header('Content-Type: application/json');
             echo json_encode($response);
             exit();

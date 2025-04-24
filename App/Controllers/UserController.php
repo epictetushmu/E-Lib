@@ -3,6 +3,7 @@ namespace App\Controllers;
 
 use App\Services\UserService; 
 use App\Includes\ResponseHandler;
+use App\Includes\JwtHelper;
 
 class UserController {
     private $userService;
@@ -17,37 +18,28 @@ class UserController {
         }
 
         if (empty($_POST)) {
-            // Try to read from input stream (for JSON requests)
             $inputJSON = file_get_contents('php://input');
-            error_log('Raw input: ' . $inputJSON);
             $input = json_decode($inputJSON, true);
-            
-            if ($input) {
-                $email = $input['email'] ?? null; 
-                $password = $input['password'] ?? null;
-                $redirectUrl = $input['redirect'] ?? null; 
-            } else {
-                ResponseHandler::respond(false, 'No data received', 400);
-                return;
-            }
+            $email = $input['email'] ?? null;
+            $password = $input['password'] ?? null;
         } else {
             $email = $_POST['email'] ?? null;
             $password = $_POST['password'] ?? null;
-            $redirectUrl = $_POST['redirect'] ?? null;
         }
 
         $user = $this->userService->getUserByEmail($email);
         if ($user && password_verify($password, $user['password'])) {
-            $_SESSION['user'] = $user;
-            $_SESSION['user_id'] = $user['_id'];
-            error_log('Login successful for: ' . $email);
-            if($redirectUrl) {
-                header('Location: ' . $redirectUrl);
-                exit();
-            }
-            ResponseHandler::respond(true, 'Login successful', 200);  
+            $payload = [
+                'user_id' => $user['_id'],
+                'email' => $user['email']
+            ];
+            $token = JwtHelper::generateToken($payload);
+
+            ResponseHandler::respond(true, [
+                'message' => 'Login successful',
+                'token' => $token
+            ], 200);
         } else {
-            error_log('Login failed for: ' . $email);
             ResponseHandler::respond(false, 'Invalid credentials', 401);
         }
     }
