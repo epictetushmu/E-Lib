@@ -26,13 +26,13 @@ $casUrl = $casUrl ?? 'https://auth.hmu.gr/cas/login?service=https://your-callbac
                 <?php endif; ?>
 
                 <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="email" name="email" required>
+                    <label for="login-email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="login-email" name="email" required>
                 </div>
 
                 <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
+                    <label for="login-password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="login-password" name="password" required>
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100">Login</button>
@@ -57,8 +57,8 @@ $casUrl = $casUrl ?? 'https://auth.hmu.gr/cas/login?service=https://your-callbac
 document.getElementById('loginForm').addEventListener('submit', function(event) {
     event.preventDefault();
 
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value.trim();
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value.trim();
     const errorMessage = document.getElementById('error-message');
 
     errorMessage.classList.add('d-none');
@@ -81,5 +81,4 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
         console.error('Login error:', error);
     });
 });
-
 </script>

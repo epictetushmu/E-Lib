@@ -7,21 +7,21 @@
     <div id="error-message" class="alert alert-danger d-none"></div>
     <form id="signupForm">
         <div class="mb-3">
-            <label for="username" class="form-label">Username</label>
-            <input type="text" class="form-control" id="username" required>
+            <label for="signup-username" class="form-label">Username</label>
+            <input type="text" class="form-control" id="signup-username" required>
         </div>
         <div class="mb-3">
-            <label for="email" class="form-label">Email</label>
-            <input type="email" class="form-control" id="email" required>
+            <label for="signup-email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="signup-email" required>
         </div>
         <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" required>
+            <label for="signup-password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="signup-password" required>
             <div class="form-text">Password must be at least 8 characters long.</div>
         </div>
         <div class="mb-3">
-            <label for="confirm-password" class="form-label">Confirm Password</label>
-            <input type="password" class="form-control" id="confirm-password" required>
+            <label for="signup-confirm-password" class="form-label">Confirm Password</label>
+            <input type="password" class="form-control" id="signup-confirm-password" required>
         </div>
         <button type="submit" class="btn btn-primary w-100">Sign Up</button>
         <div class="mt-3 text-center">
@@ -35,10 +35,10 @@
         document.getElementById('signupForm').addEventListener('submit', function(event) {
             event.preventDefault();
 
-            const username = document.getElementById('username').value;
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
+            const username = document.getElementById('signup-username').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
             const errorMessage = document.getElementById('error-message');
 
             // Reset error message
