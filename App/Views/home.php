@@ -14,12 +14,6 @@
     <?php 
         include 'Partials/Header.php';
         include 'Components/Hero.php';
-        if (!$isLoggedIn): ?>
-            <div id="loginPopup" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                background-color: rgba(0,0,0,0.5); z-index: 1050;">
-                <?php include 'Components/LoginForm.php'; ?>
-            </div>
-        <?php endif; 
         include 'Components/Featured.php';
         include 'Partials/Footer.php';
     ?>
@@ -42,12 +36,7 @@
             }
             this.sessionStorage.setItem('hasScrolled', 'true');
         }
-    });
-
-    // Optional: close popup
-    function closeLoginPopup() {
-        document.getElementById('loginPopup').style.display = 'none';
-    }
+    });  
 </script>
 </body>
 </html>

@@ -15,7 +15,7 @@ $casUrl = $casUrl ?? 'https://auth.hmu.gr/cas/login?service=https://your-callbac
         <div class="login-container p-4 border rounded shadow-sm bg-light position-relative">
             <!-- Close Button -->
             <button type="button" class="btn-close position-absolute top-0 end-0 m-3" 
-                    onclick="closeLoginPopup()" aria-label="Close"></button>
+                    onclick="closePopup('loginPopup')" aria-label="Close"></button>
             
             <h2 class="text-center mb-4">Login</h2>
             <div id="error-message" class="alert alert-danger d-none"></div>
@@ -38,7 +38,7 @@ $casUrl = $casUrl ?? 'https://auth.hmu.gr/cas/login?service=https://your-callbac
                 <button type="submit" class="btn btn-primary w-100">Login</button>
 
                 <div class="mt-3 text-center">
-                    <p>Don't have an account? <a href="/signup">Sign up</a></p>
+                    <p>Don't have an account? <a href="#" onclick="closePopup('loginPopup'); openPopup('signupPopup');">Sign up</a></p>
                 </div>
             </form>
 
@@ -82,7 +82,4 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     });
 });
 
-function closeLoginPopup() {
-    document.querySelector('.login-container').style.display = 'none';
-}
 </script>

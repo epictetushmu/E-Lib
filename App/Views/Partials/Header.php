@@ -10,7 +10,7 @@
 $activePage = $activePage ?? '';
 $searchUrl = $searchUrl ?? '/search_results';
 ?>
-
+ <link rel="stylesheet" href="/styles/userForm.css"> 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/">
@@ -63,11 +63,22 @@ $searchUrl = $searchUrl ?? '/search_results';
             <?php else: ?>
                 <!-- User is not logged in -->
                 <div class="d-flex">
-                    <a href="/login" class="btn btn-outline-light me-2">Login</a>
-                    <a href="/signup" class="btn btn-primary">Sign Up</a>
+                    <button class="btn btn-outline-light me-2" onclick="openPopup('loginPopup')">Login</button>
+                    <button class="btn btn-primary" onclick="openPopup('signupPopup')">Sign Up</button>
                 </div>
             <?php endif; ?>
         </div>
+
+        <?php if (!$isLoggedIn): ?>
+            <div id="loginPopup" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background-color: rgba(0,0,0,0.5); z-index: 1050;">
+                <?php include 'Components/LoginForm.php'; ?>
+            </div>
+            <div id="signupPopup" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background-color: rgba(0,0,0,0.5); z-index: 1050;">
+                <?php include 'Components/SignUpForm.php'; ?>
+            </div>
+        <?php endif;?>
     </div>
 </nav>
 
@@ -85,5 +96,17 @@ function handleLogout(event) {
     .catch(error => {
       console.error('Logout error:', error);
     });
+}
+function closePopup(popupId) {
+    document.getElementById(popupId).style.display = 'none';
+}
+
+function openPopup(popupId) {
+    const popup = document.getElementById(popupId);
+    if (!popup) {
+        console.error(`Popup with id "${popupId}" not found.`);
+        return;
+    }
+    popup.style.display = 'flex';
 }
 </script>
