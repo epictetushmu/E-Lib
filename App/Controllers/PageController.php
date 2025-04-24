@@ -128,6 +128,26 @@ class PageController {
     public function viewBooks() {
         $bookService = new BookService();
         $books = $bookService->getAllBooks();
+
+        // Convert MongoDB objects to plain PHP types
+        $books = array_map(function ($book) {
+            $book['_id'] = (string) $book['_id']; // Convert ObjectId to string
+            $book['categories'] = is_object($book['categories']) ? $book['categories']->getArrayCopy() : $book['categories']; // Convert BSONArray to plain array
+            $book['created_at'] = is_object($book['created_at']) ? $book['created_at']->toDateTime()->format('Y-m-d H:i:s') : $book['created_at']; // Convert UTCDateTime to string
+            $book['updated_at'] = is_object($book['updated_at']) ? $book['updated_at']->toDateTime()->format('Y-m-d H:i:s') : $book['updated_at']; // Convert UTCDateTime to string
+
+            // Handle reviews if present
+            if (isset($book['reviews']) && is_object($book['reviews'])) {
+                $book['reviews'] = array_map(function ($review) {
+                    $review = $review->getArrayCopy(); // Convert BSONDocument to plain array
+                    $review['user_id'] = (string) $review['user_id']; // Convert ObjectId to string
+                    return $review;
+                }, $book['reviews']->getArrayCopy());
+            }
+
+            return $book;
+        }, $books);
+
         $this->response->renderView(__DIR__ . '/../Views/view_books.php', ['books' => $books]);
     }   
 }
