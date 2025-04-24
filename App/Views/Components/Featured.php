@@ -45,27 +45,22 @@
                 const bookId = book._id.$oid || book._id;
                 
                 return `
-                <div class="col-md-6 col-lg-4 col-xl-3 mb-4">
-                    <div class="card h-100 shadow-sm border-0 book-card">
-                        <div class="position-relative book-cover-wrapper">
-                            <img src="${book.thumbnail_path || '/assets/uploads/thumbnails/placeholder-book.jpg'}"
-                                 alt="${book.title} cover"
-                                 class="card-img-top book-cover"
-                                 onerror="this.src='/assets/uploads/thumbnails/placeholder-book.jpg'">
-                        </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="${book.thumbnail_path || '/assets/uploads/thumbnails/placeholder-book.jpg'}" 
+                             class="card-img-top" style="height: 200px; object-fit: cover;"
+                             alt="${book.title || 'Book cover'}">
                         <div class="card-body d-flex flex-column">
-                            <h5 class="card-title mb-1 text-truncate" title="${book.title}">${book.title}</h5>
-                            <p class="text-muted mb-3 small">${book.author || 'Unknown Author'}</p>
-                            <div class="d-flex justify-content-between mt-auto align-items-center">
-                                <div>
-                                ${book.categories && Array.isArray(book.categories) && book.categories.length > 0 ? 
-                                    `<span class="badge bg-info text-dark">${book.categories[0]}</span>` : 
-                                    `<span class="badge bg-secondary text-light">General</span>`}
-                                </div>
-                                <a href="/book/${bookId}" class="btn btn-sm btn-outline-primary">
-                                    Details <i class="fas fa-arrow-right ms-1"></i>
-                                </a>
-                            </div>
+                            <h5 class="card-title text-truncate" title="${book.title || 'Unknown Title'}">
+                                ${book.title || 'Unknown Title'}
+                            </h5>
+                            <p class="card-text text-muted small text-truncate">
+                                By ${book.author || 'Unknown Author'}
+                            </p>
+                            ${book.year ? `<p class="card-text small mb-2">${book.year}</p>` : ''}
+                            <a href="/book/${bookId}" class="btn btn-sm btn-primary mt-auto">
+                                View Details
+                            </a>
                         </div>
                     </div>
                 </div>

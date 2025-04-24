@@ -39,7 +39,6 @@
             if (!books.length) return showError('No books available.');
 
             booksGrid.innerHTML = books.map(book => {
-                // Extract the book ID correctly from MongoDB's ObjectId format
                 const bookId = book._id.$oid || book._id;
 
                 return `
