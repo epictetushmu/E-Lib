@@ -8,14 +8,15 @@
 
 $formAction = $formAction ?? '/api/v1/login';
 $casUrl = $casUrl ?? 'https://auth.hmu.gr/cas/login?service=https://your-callback-url';
+$redirect = $_GET['redirect'] ?? '/'; // Default to home page if no redirect is provided
 ?>
 
 <div class="container mt-5">
     <div class="col-md-6 offset-md-3">
-        <div class="login-container p-4 border rounded shadow-sm bg-light position-relative">
+        <div class="popup-container p-4 border rounded shadow-sm bg-light position-relative">
             <!-- Close Button -->
             <button type="button" class="btn-close position-absolute top-0 end-0 m-3" 
-                    onclick="closeLoginPopup()" aria-label="Close"></button>
+                    onclick="closePopup('loginPopup')" aria-label="Close"></button>
             
             <h2 class="text-center mb-4">Login</h2>
             <div id="error-message" class="alert alert-danger d-none"></div>
@@ -25,20 +26,22 @@ $casUrl = $casUrl ?? 'https://auth.hmu.gr/cas/login?service=https://your-callbac
                     <?= csrf_field() ?>
                 <?php endif; ?>
 
+                <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirect) ?>">
+
                 <div class="mb-3">
-                    <label for="email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="email" name="email" required>
+                    <label for="login-email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="login-email" name="email" required>
                 </div>
 
                 <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
+                    <label for="login-password" class="form-label">Password</label>
+                    <input type="password" class="form-control" id="login-password" name="password" required>
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100">Login</button>
 
                 <div class="mt-3 text-center">
-                    <p>Don't have an account? <a href="/signup">Sign up</a></p>
+                    <p>Don't have an account? <a href="#" onclick="closePopup('loginPopup'); openPopup('signupPopup');">Sign up</a></p>
                 </div>
             </form>
 
@@ -57,8 +60,9 @@ $casUrl = $casUrl ?? 'https://auth.hmu.gr/cas/login?service=https://your-callbac
 document.getElementById('loginForm').addEventListener('submit', function(event) {
     event.preventDefault();
 
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value.trim();
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    const redirect = document.querySelector('input[name="redirect"]').value;
     const errorMessage = document.getElementById('error-message');
 
     errorMessage.classList.add('d-none');
@@ -69,7 +73,8 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     })
     .then(response => {
         if (response.data.status === 'success') {
-            window.location.href = '/';
+            console.log('Login successful:', response);
+            closePopup('loginPopup');
         } else {
             errorMessage.textContent = response.data.message || 'Login failed. Please check your credentials.';
             errorMessage.classList.remove('d-none');
@@ -81,8 +86,4 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
         console.error('Login error:', error);
     });
 });
-
-function closeLoginPopup() {
-    document.querySelector('.login-container').style.display = 'none';
-}
 </script>

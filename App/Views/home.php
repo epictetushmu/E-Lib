@@ -14,12 +14,6 @@
     <?php 
         include 'Partials/Header.php';
         include 'Components/Hero.php';
-        if (!$isLoggedIn): ?>
-            <div id="loginPopup" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                background-color: rgba(0,0,0,0.5); z-index: 1050;">
-                <?php include 'Components/LoginForm.php'; ?>
-            </div>
-        <?php endif; 
         include 'Components/Featured.php';
         include 'Partials/Footer.php';
     ?>
@@ -28,26 +22,22 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
-    <script>
-    let hasScrolled = false;
+<script>
+let hasScrolled = false;
 
-    window.addEventListener('scroll', function () {
-        if (!hasScrolled && window.scrollY > 50) {
-            hasScrolled = true;
+window.addEventListener('scroll', function () {
+    if (!hasScrolled && window.scrollY > 50) {
+        hasScrolled = true;
 
-            // Only show popup if it's included in DOM
-            const popup = document.getElementById('loginPopup');
-            if (popup) {
-                popup.style.display = 'flex'; // or block based on your modal style
-            }
-            this.sessionStorage.setItem('hasScrolled', 'true');
+        const popup = document.getElementById('loginPopup');
+        if (popup) {
+            popup.style.display = 'flex';
+        } else {
+            console.error('Login popup not found.');
         }
-    });
-
-    // Optional: close popup
-    function closeLoginPopup() {
-        document.getElementById('loginPopup').style.display = 'none';
+        this.sessionStorage.setItem('hasScrolled', 'true');
     }
+});
 </script>
 </body>
 </html>

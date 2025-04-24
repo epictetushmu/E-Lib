@@ -10,7 +10,7 @@
 $activePage = $activePage ?? '';
 $searchUrl = $searchUrl ?? '/search_results';
 ?>
-
+<link rel="stylesheet" href="/styles/userForm.css">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/">
@@ -63,27 +63,58 @@ $searchUrl = $searchUrl ?? '/search_results';
             <?php else: ?>
                 <!-- User is not logged in -->
                 <div class="d-flex">
-                    <a href="/login" class="btn btn-outline-light me-2">Login</a>
-                    <a href="/signup" class="btn btn-primary">Sign Up</a>
+                    <button class="btn btn-outline-light me-2" onclick="openPopup('loginPopup')">Login</button>
+                    <button class="btn btn-primary" onclick="openPopup('signupPopup')">Sign Up</button>
                 </div>
             <?php endif; ?>
         </div>
     </div>
 </nav>
 
+<!-- Login Popup -->
+<div id="loginPopup" class="popup-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background-color: rgba(0,0,0,0.5); z-index: 1050;">
+        <?php include __DIR__ . '/../Components/LoginForm.php'; ?>
+</div>
+
+<!-- Signup Popup -->
+<div id="signupPopup" class="popup-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background-color: rgba(0,0,0,0.5); z-index: 1050;">
+        <?php include __DIR__ . '/../Components/SignUpForm.php'; ?>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
 function handleLogout(event) {
-  event.preventDefault();
+    event.preventDefault();
+    axios.get('/api/v1/logout')
+        .then(response => {
+            if (response.data.status === 'success') {
+                window.location.href = '/';
+            }
+        })
+        .catch(error => {
+            console.error('Logout error:', error);
+        });
+}
+function closePopup(popupId) {
+    const popup = document.getElementById(popupId);
+    if (popup) {
+        popup.style.display = 'none';
+    } else {
+        console.error(`Popup with id "${popupId}" not found.`);
+    }
+}
 
-  axios.get('/api/v1/logout')
-    .then(response => {
-      if (response.data.status === 'success') {
-        window.location.href = '/';
-      }
-    })
-    .catch(error => {
-      console.error('Logout error:', error);
-    });
+function openPopup(popupId) {
+    const popup = document.getElementById(popupId);
+    if (!popup) {
+        console.error(`Popup with id "${popupId}" not found.`);
+        return;
+    }
+    popup.style.display = 'flex';
+    console.log(`Popup dimensions: width=${popup.offsetWidth}, height=${popup.offsetHeight}`);
 }
 </script>
