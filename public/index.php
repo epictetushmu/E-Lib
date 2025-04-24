@@ -93,6 +93,7 @@ use App\Router\BaseRouter;
 use App\Integration\Database\MongoConnectionFactory;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\LoggingMiddleware;
+use App\Middleware\JwtAuthMiddleware;
 
 $baseUrl = ''; // Set your base URL here
 
@@ -118,6 +119,14 @@ $router->addMiddleware(new AuthMiddleware([
     '/add-book',
     '/read/',
     '/api/v1/books' // Only POST requests actually need auth, but we keep it simple here
+]));
+
+$router->addMiddleware(new JwtAuthMiddleware([
+    '/api/v1/books',
+    '/api/v1/reviews',
+    '/api/v1/download',
+    '/api/v1/user',
+    'api/v1/featured-books'
 ]));
 
 // Handle the request
