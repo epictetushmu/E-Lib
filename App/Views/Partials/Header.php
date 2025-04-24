@@ -71,17 +71,19 @@ $searchUrl = $searchUrl ?? '/search_results';
     </div>
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
 function handleLogout(event) {
   event.preventDefault();
-  
-  fetch('/api/v1/logout')
-    .then(response => response.json())
-    .then(data => {
-      if(data.status === 'success') {
+
+  axios.get('/api/v1/logout')
+    .then(response => {
+      if (response.data.status === 'success') {
         window.location.href = '/';
       }
     })
-    .catch(error => console.error('Logout error:', error));
+    .catch(error => {
+      console.error('Logout error:', error);
+    });
 }
 </script>
