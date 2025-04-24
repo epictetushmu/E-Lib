@@ -70,7 +70,6 @@
             })
             .then(response => {
                 if (response.data.status === 'success') {
-                    alert('Signup successful! You can now log in.');
                     window.location.href = '/login';
                 } else {
                     errorMessage.textContent = response.data.message || 'Signup failed!';

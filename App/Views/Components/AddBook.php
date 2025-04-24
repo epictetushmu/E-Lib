@@ -107,7 +107,6 @@ $categories = $categories ?? [
 
                 axios.post("/api/v1/books", formData)
                     .then(response => {
-                        alert("Book added successfully!");
                         submitForm.reset();
                         updateDisplay();
                         updateOptionStyles();

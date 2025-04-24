@@ -49,7 +49,6 @@
                         });
                         
                         if (response.data.status === 'success') {
-                            alert('Book saved to your list');
                             saveBtn.textContent = 'Saved to List';
                             saveBtn.disabled = true;
                         } else {
