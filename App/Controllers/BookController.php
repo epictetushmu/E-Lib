@@ -18,6 +18,10 @@ class BookController {
 
     public function featuredBooks() {
         $books = $this->bookService->getFeaturedBooks();
+        foreach ($books as &$book) {
+            unset($book['pdf_path']);
+            unset($book['reviews']);
+        }
         if ($books) {
             $this->response->respond(true, $books);
         } else {
