@@ -109,7 +109,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const bookId = document.getElementById('bookId').value;
             const rating = document.getElementById('rating').value;
             const comment = document.getElementById('comment').value;
-            
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+            if (!token) {
+                alert('You need to be logged in to submit a review.');
+                return;
+            }
+
             // Validate form
             if (rating === '0') {
                 alert('Please select a rating');
@@ -132,6 +137,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 book_id: bookId,    
                 rating: parseInt(rating),
                 comment: comment
+            },
+            {
+                headers: {
+                    "Authorization": `Bearer ${token}`  
+                }
             })
             .then(response => {
                 if (response.data.status === 'success') {
@@ -174,7 +184,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     function fetchReviews(bookId) {
         
-        axios.get(`/api/v1/reviews/${bookId}`)
+        axios.get(`/api/v1/reviews/${bookId}`, {headers: {
+            "Authorization": `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`
+        }})
             .then(response => {
                 
                 if (response.data.status === 'success') {

@@ -25,7 +25,7 @@ class JwtAuthMiddleware implements MiddlewareInterface {
 
                 if (!$authHeader || !str_starts_with($authHeader, 'Bearer ')) {
                     ResponseHandler::respond(false, 'Unauthorized access', 401);
-                    return;
+                    exit();
                 }
 
                 $token = str_replace('Bearer ', '', $authHeader);
@@ -33,7 +33,7 @@ class JwtAuthMiddleware implements MiddlewareInterface {
 
                 if (!$decoded) {
                     ResponseHandler::respond(false, 'Invalid or expired token', 401);
-                    return;
+                    exit();
                 }
 
                 // Add user info to the request for further processing
