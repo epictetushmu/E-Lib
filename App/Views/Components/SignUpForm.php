@@ -30,7 +30,6 @@
                     <p>Already have an account? <a href="#" onclick="closePopup('signupPopup'); openPopup('loginPopup');">Login</a></p>
                 </div>
             </form>
-            </div>
         </div>
     </div>
 </div>
