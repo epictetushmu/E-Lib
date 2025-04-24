@@ -226,10 +226,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Error fetching reviews');
                 }
             })
-            .catch(error => {
-                console.error('Error fetching reviews:', error);
-                alert('Error fetching reviews. Please try again.');
-            });
     }
 });
 </script>
