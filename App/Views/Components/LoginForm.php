@@ -37,6 +37,10 @@ $redirect = $_GET['redirect'] ?? '/'; // Default to home page if no redirect is 
                     <label for="login-password" class="form-label">Password</label>
                     <input type="password" class="form-control" id="login-password" name="password" required>
                 </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="remember-me" name="remember">
+                    <label for="remember-me" class="form-check-label">Remember me</label>
+                </div>
 
                 <button type="submit" class="btn btn-primary w-100">Login</button>
 
@@ -64,6 +68,7 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     const password = document.getElementById('login-password').value.trim();
     const redirect = document.querySelector('input[name="redirect"]').value;
     const errorMessage = document.getElementById('error-message');
+    const rememberMe = document.getElementById('remember-me').checked;
 
     errorMessage.classList.add('d-none');
 
@@ -72,9 +77,16 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
         password: password
     })
     .then(response => {
-        if (response.data.status === 'success') {
+        response = response.data; 
+        if (response.status === 'success') {
             console.log('Login successful:', response);
-            closePopup('loginPopup');
+
+            if (rememberMe) {
+                localStorage.setItem('authToken', response.data.token);
+            }else {
+                sessionStorage.setItem('authToken', response.data.token);
+            }
+            window.location.href = redirect || '/';
         } else {
             errorMessage.textContent = response.data.message || 'Login failed. Please check your credentials.';
             errorMessage.classList.remove('d-none');
