@@ -25,6 +25,7 @@ class UserController {
             if ($input) {
                 $email = $input['email'] ?? null; 
                 $password = $input['password'] ?? null;
+                $redirectUrl = $input['redirect'] ?? null; 
             } else {
                 ResponseHandler::respond(false, 'No data received', 400);
                 return;
@@ -32,6 +33,7 @@ class UserController {
         } else {
             $email = $_POST['email'] ?? null;
             $password = $_POST['password'] ?? null;
+            $redirectUrl = $_POST['redirect'] ?? null;
         }
 
         $user = $this->userService->getUserByEmail($email);
@@ -39,6 +41,10 @@ class UserController {
             $_SESSION['user'] = $user;
             $_SESSION['user_id'] = $user['_id'];
             error_log('Login successful for: ' . $email);
+            if($redirectUrl) {
+                header('Location: ' . $redirectUrl);
+                exit();
+            }
             ResponseHandler::respond(true, 'Login successful', 200);  
         } else {
             error_log('Login failed for: ' . $email);
@@ -107,7 +113,7 @@ class UserController {
     public function getUser($id) {
         $user = $this->userService->getUserById($id);
         if ($user) {
-            ResponseHandler::respond(true, $user);
+            ResponseHandler::respond(true, $user, 200);
         } else {
             ResponseHandler::respond(false, 'User not found', 404);
         }

@@ -8,11 +8,12 @@
 
 $formAction = $formAction ?? '/api/v1/login';
 $casUrl = $casUrl ?? 'https://auth.hmu.gr/cas/login?service=https://your-callback-url';
+$redirect = $_GET['redirect'] ?? '/'; // Default to home page if no redirect is provided
 ?>
 
 <div class="container mt-5">
     <div class="col-md-6 offset-md-3">
-        <div class="popup-container p-4 border rounded shadow-sm bg-light position-relative"">
+        <div class="popup-container p-4 border rounded shadow-sm bg-light position-relative">
             <!-- Close Button -->
             <button type="button" class="btn-close position-absolute top-0 end-0 m-3" 
                     onclick="closePopup('loginPopup')" aria-label="Close"></button>
@@ -24,6 +25,8 @@ $casUrl = $casUrl ?? 'https://auth.hmu.gr/cas/login?service=https://your-callbac
                 <?php if (function_exists('csrf_field')): ?>
                     <?= csrf_field() ?>
                 <?php endif; ?>
+
+                <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirect) ?>">
 
                 <div class="mb-3">
                     <label for="login-email" class="form-label">Email</label>
@@ -59,6 +62,7 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
 
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value.trim();
+    const redirect = document.querySelector('input[name="redirect"]').value;
     const errorMessage = document.getElementById('error-message');
 
     errorMessage.classList.add('d-none');
@@ -69,7 +73,8 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     })
     .then(response => {
         if (response.data.status === 'success') {
-            window.location.href = '/';
+            console.log('Login successful:', response);
+            
         } else {
             errorMessage.textContent = response.data.message || 'Login failed. Please check your credentials.';
             errorMessage.classList.remove('d-none');
