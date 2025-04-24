@@ -10,7 +10,7 @@
 $activePage = $activePage ?? '';
 $searchUrl = $searchUrl ?? '/search_results';
 ?>
- <link rel="stylesheet" href="/styles/userForm.css"> 
+<link rel="stylesheet" href="/styles/userForm.css">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/">
@@ -68,37 +68,48 @@ $searchUrl = $searchUrl ?? '/search_results';
                 </div>
             <?php endif; ?>
         </div>
-
-        <?php if (!$isLoggedIn): ?>
-            <div id="loginPopup" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                background-color: rgba(0,0,0,0.5); z-index: 1050;">
-                <?php include 'Components/LoginForm.php'; ?>
-            </div>
-            <div id="signupPopup" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                background-color: rgba(0,0,0,0.5); z-index: 1050;">
-                <?php include 'Components/SignUpForm.php'; ?>
-            </div>
-        <?php endif;?>
     </div>
 </nav>
 
+<!-- Login Popup -->
+<div id="loginPopup" class="popup-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background-color: rgba(0,0,0,0.5); z-index: 1050;">
+    <div class="popup-content">
+        <?php include __DIR__ . '/../Components/LoginForm.php'; ?>
+    </div>
+</div>
+
+<!-- Signup Popup -->
+<div id="signupPopup" class="popup-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background-color: rgba(0,0,0,0.5); z-index: 1050;">
+    <div class="popup-content">
+        <?php include __DIR__ . '/../Components/SignUpForm.php'; ?>
+    </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
 function handleLogout(event) {
-  event.preventDefault();
-
-  axios.get('/api/v1/logout')
-    .then(response => {
-      if (response.data.status === 'success') {
-        window.location.href = '/';
-      }
-    })
-    .catch(error => {
-      console.error('Logout error:', error);
-    });
+    event.preventDefault();
+    axios.get('/api/v1/logout')
+        .then(response => {
+            if (response.data.status === 'success') {
+                window.location.href = '/';
+            }
+        })
+        .catch(error => {
+            console.error('Logout error:', error);
+        });
 }
 function closePopup(popupId) {
-    document.getElementById(popupId).style.display = 'none';
+    const popup = document.getElementById(popupId);
+    if (popup) {
+        popup.style.display = 'none';
+    } else {
+        console.error(`Popup with id "${popupId}" not found.`);
+    }
 }
 
 function openPopup(popupId) {

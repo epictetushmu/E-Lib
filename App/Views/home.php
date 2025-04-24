@@ -22,21 +22,22 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
-    <script>
-    let hasScrolled = false;
+<script>
+let hasScrolled = false;
 
-    window.addEventListener('scroll', function () {
-        if (!hasScrolled && window.scrollY > 50) {
-            hasScrolled = true;
+window.addEventListener('scroll', function () {
+    if (!hasScrolled && window.scrollY > 50) {
+        hasScrolled = true;
 
-            // Only show popup if it's included in DOM
-            const popup = document.getElementById('loginPopup');
-            if (popup) {
-                popup.style.display = 'flex'; // or block based on your modal style
-            }
-            this.sessionStorage.setItem('hasScrolled', 'true');
+        const popup = document.getElementById('loginPopup');
+        if (popup) {
+            popup.style.display = 'flex';
+        } else {
+            console.error('Login popup not found.');
         }
-    });  
+        this.sessionStorage.setItem('hasScrolled', 'true');
+    }
+});
 </script>
 </body>
 </html>
