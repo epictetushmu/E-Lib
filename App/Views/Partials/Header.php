@@ -74,17 +74,13 @@ $searchUrl = $searchUrl ?? '/search_results';
 <!-- Login Popup -->
 <div id="loginPopup" class="popup-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                 background-color: rgba(0,0,0,0.5); z-index: 1050;">
-    <div class="popup-content">
         <?php include __DIR__ . '/../Components/LoginForm.php'; ?>
-    </div>
 </div>
 
 <!-- Signup Popup -->
 <div id="signupPopup" class="popup-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                 background-color: rgba(0,0,0,0.5); z-index: 1050;">
-    <div class="popup-content">
         <?php include __DIR__ . '/../Components/SignUpForm.php'; ?>
-    </div>
 </div>
 
 
@@ -119,5 +115,6 @@ function openPopup(popupId) {
         return;
     }
     popup.style.display = 'flex';
+    console.log(`Popup dimensions: width=${popup.offsetWidth}, height=${popup.offsetHeight}`);
 }
 </script>
