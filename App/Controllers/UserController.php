@@ -2,14 +2,17 @@
 namespace App\Controllers;
 
 use App\Services\UserService; 
+use App\Services\BookService;
 use App\Includes\ResponseHandler;
 use App\Includes\JwtHelper;
 
 class UserController {
     private $userService;
-
+    private $bookService;
+    
     public function __construct() {
         $this->userService = new UserService();
+        $this->bookService = new BookService();
     }
 
     public function handleLogin() {
@@ -148,6 +151,38 @@ class UserController {
             ResponseHandler::respond(true, 'Book saved successfully', 200);
         } else {
             ResponseHandler::respond(false, 'Failed to save book', 400);
+        }
+    }
+
+    public function getSavedBooks() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (empty($_SESSION['user_id'])) {
+            ResponseHandler::respond(false, 'User not authenticated', 401);
+            return;
+        }
+
+        $userId = $_SESSION['user_id'] ?? null;
+        $bookIds = $this->userService->getSavedBooks($userId);
+        
+        if (!empty($bookIds)) {
+            $books = [];
+            foreach ($bookIds as $bookId) {
+                $book = $this->bookService->getBookDetails($bookId);
+                if ($book) {
+                    $books[] = $book;
+                }
+            }
+            
+            if (!empty($books)) {
+                ResponseHandler::respond(true, $books, 200);
+            } else {
+                ResponseHandler::respond(false, 'Failed to retrieve book details', 404);
+            }
+        } else {
+            ResponseHandler::respond(false, 'No saved books found', 404);
         }
     }
 }
