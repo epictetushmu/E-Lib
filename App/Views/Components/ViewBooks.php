@@ -47,7 +47,8 @@ function getBooks() {
             const status = book.status || 'available';
             const categories = book.categories ? (Array.isArray(book.categories) ? book.categories.join(', ') : book.categories) : '';
 
-            const row = `
+            // Regular row for displaying book info
+            const displayRow = `
                 <tr id="bookRow-${id}">
                     <td>${title}</td>
                     <td>${author}</td>
@@ -61,38 +62,62 @@ function getBooks() {
                         </div>
                     </td>
                 </tr>
+            `;
+            
+            // Enhanced edit form with better layout and labels
+            const editRow = `
                 <tr id="editRow-${id}" style="display: none;">
                     <td colspan="5">
-                        <form onsubmit="submitEdit(event, '${id}')">
-                            <div class="row g-2 mb-2">
-                                <div class="col-md-3">
-                                    <input type="text" class="form-control" name="title" value="${title}" required>
-                                </div>
-                                <div class="col-md-3">
-                                    <input type="text" class="form-control" name="author" value="${author}" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <input type="text" class="form-control" name="description" value="${description}">
-                                </div>
-                                <div class="col-md-2">
-                                    <select class="form-select" name="status">
-                                        <option value="draft" ${status === 'draft' ? 'selected' : ''}>Draft</option>
-                                        <option value="public" ${status === 'public' ? 'selected' : ''}>Public</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-12 mt-2">
-                                    <input type="text" class="form-control" name="categories" value="${categories}" placeholder="Fiction, Fantasy, Adventure...">
-                                </div>
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Edit Book: ${title}</h5>
                             </div>
-                            <div class="d-flex justify-content-end">
-                                <button type="submit" class="btn btn-success me-2">Save</button>
-                                <button type="button" class="btn btn-secondary" onclick="cancelEdit('${id}')">Cancel</button>
+                            <div class="card-body">
+                                <form onsubmit="submitEdit(event, '${id}')">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="title-${id}" class="form-label">Title</label>
+                                            <input type="text" class="form-control" id="title-${id}" name="title" value="${title}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="author-${id}" class="form-label">Author</label>
+                                            <input type="text" class="form-control" id="author-${id}" name="author" value="${author}" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-8">
+                                            <label for="description-${id}" class="form-label">Description</label>
+                                            <textarea class="form-control" id="description-${id}" name="description" rows="2">${description}</textarea>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="status-${id}" class="form-label">Status</label>
+                                            <select class="form-select" id="status-${id}" name="status">
+                                                <option value="draft" ${status === 'draft' ? 'selected' : ''}>Draft</option>
+                                                <option value="public" ${status === 'public' ? 'selected' : ''}>Public</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="categories-${id}" class="form-label">Categories</label>
+                                        <input type="text" class="form-control" id="categories-${id}" name="categories" 
+                                            value="${categories}" placeholder="Enter categories separated by commas (e.g., Fiction, Fantasy, Adventure)">
+                                        <div class="form-text text-muted">Separate multiple categories with commas</div>
+                                    </div>
+                                    
+                                    <div class="d-flex justify-content-end">
+                                        <button type="button" class="btn btn-secondary me-2" onclick="cancelEdit('${id}')">Cancel</button>
+                                        <button type="submit" class="btn btn-success">Save Changes</button>
+                                    </div>
+                                </form>
                             </div>
-                        </form>
+                        </div>
                     </td>
                 </tr>
             `;
-            tableBody.insertAdjacentHTML('beforeend', row);
+            
+            tableBody.insertAdjacentHTML('beforeend', displayRow + editRow);
         });
     })
     .catch(error => {
