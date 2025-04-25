@@ -23,7 +23,7 @@ class BookService {
         return $this->book->deleteBook($id); 
     }
 
-    public function updateBook($id, string $title, string $author,string $year, string $description, array $categories) {
+    public function updateBook($id, string $title, string $author,string $year, string $description, array $categories, string $status) {
         // Add validation here
   
         //add books the non empty fields 
@@ -34,6 +34,7 @@ class BookService {
             'year' => (int)$year?? null,
             'description' => $description,
             'categories' => $categories,
+            'status' => $status,
             'updated_at' => new UTCDateTime()
         ];
         
@@ -55,7 +56,8 @@ class BookService {
             'categories' => $categories,
             'pdf_path' => $pdfPath,
             'thumbnail_path' => $thumbnailPath,
-            'featured' => random_int(0, 100)< 20 ? true : false, 
+            'featured' => random_int(0, 100)< 50 ? true : false, 
+            'status'=> 'draft', 
             'created_at' => new UTCDateTime(),
             'updated_at' => new UTCDateTime()
         ];
