@@ -126,7 +126,6 @@ $router->addMiddleware(new JwtAuthMiddleware([
     '/api/v1/reviews',
     '/api/v1/download',
     '/api/v1/user',
-    'api/v1/featured-books'
 ]));
 
 // Handle the request
