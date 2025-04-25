@@ -95,7 +95,7 @@ class BookController {
     }
 
     public function listBooks() {
-        $books = $this->bookService->getAllBooks();
+        $books = $this->bookService->getPublicBooks();
         foreach ($books as &$book) {
             unset($book['pdf_path']);
             unset($book['reviews']);

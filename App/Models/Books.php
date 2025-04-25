@@ -17,6 +17,10 @@ class Books {
         return $this->db->find($this->collection);
     }
 
+    public function getPublicBooks() { 
+        return $this->db->find($this->collection, ['status' => 'public']);
+    }
+
     public function getBookDetails($id) {
         return $this->db->findOne($this->collection, ['_id' => new ObjectId($id)]);
     }
@@ -24,7 +28,7 @@ class Books {
     public function getFeaturedBooks() {
         
         $pipeline = [
-            ['$match' => ['featured' => true]],
+            ['$match' => ['featured' => true, 'status' => 'public']],
             ['$sample' => ['size' => 20]]
         ];
         return $this->db->getFeatured($this->collection, $pipeline);

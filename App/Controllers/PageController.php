@@ -123,7 +123,7 @@ class PageController {
 
     public function viewBooks() {
         $bookService = new BookService();
-        $books = $bookService->getAllBooks();
+        $books = $bookService->getPublicBooks();
 
         // Convert MongoDB objects to plain PHP types
         $books = array_map(function ($book) {

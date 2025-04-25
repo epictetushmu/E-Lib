@@ -23,6 +23,10 @@ class BookService {
         return $this->book->deleteBook($id); 
     }
 
+    public function getPublicBooks() {
+        return $this->book->getPublicBooks();
+    }
+
     public function updateBook($id, string $title, string $author,string $year, string $description, array $categories, string $status) {
         // Add validation here
   
