@@ -186,7 +186,7 @@ class UserController {
         }
     }
 
-    public function unsaveBook() {
+    public function removeBook() {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -211,10 +211,10 @@ class UserController {
 
         $userId = $_SESSION['user_id'] ?? null;
 
-        if ($this->userService->unsaveBook($userId, $bookId)) {
-            ResponseHandler::respond(true, 'Book unsaved successfully', 200);
+        if ($this->userService->removeBook($userId, $bookId)) {
+            ResponseHandler::respond(true, 'Book removed successfully', 200);
         } else {
-            ResponseHandler::respond(false, 'Failed to unsave book', 400);
+            ResponseHandler::respond(false, 'Failed to remove book', 400);
         }
     }
 }

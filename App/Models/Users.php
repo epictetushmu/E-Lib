@@ -53,7 +53,7 @@ class Users {
         return false;
     }
 
-    public function unsaveBook($userId, $bookId) {
+    public function removeBook($userId, $bookId) {
         $user = $this->getUserById($userId);
         if ($user) {
             // Convert MongoDB BSONArray to PHP array if needed
@@ -68,7 +68,7 @@ class Users {
                 $savedBooks = array_diff($savedBooks, [$bookId]);
                 return $this->db->update($this->collection, ['_id' => $userId], ['$set' => ['savedBooks' => $savedBooks]]);
             }
-            return true; // Book was already unsaved
+            return true;
         }
         return false;
     }

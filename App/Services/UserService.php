@@ -39,7 +39,7 @@ class UserService {
         return [];
     }
 
-    public function unsaveBook($userId, $bookId) {       
-        return $this->user->unsaveBook($userId, $bookId);
+    public function removeBook($userId, $bookId) {       
+        return $this->user->removeBook($userId, $bookId);
     }
 }

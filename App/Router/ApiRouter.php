@@ -29,6 +29,9 @@ class ApiRouter {
             ['method' => 'POST', 'path' => '/api/v1/login', 'handler' => [new UserController(), 'handleLogin']],
             ['method' => 'GET', 'path' => '/api/v1/user', 'handler' => [new UserController(), 'getUser']],
             ['method' => 'GET', 'path' => '/api/v1/logout', 'handler' => [new UserController(), 'handleLogout']],
+            ['method' => 'POST', 'path' => '/api/v1/save-book', 'handler' => [new UserController(), 'saveBook']],
+            ['method' => 'POST', 'path' => '/api/v1/remove-book', 'handler' => [new UserController(), 'removeBook']],
+            ['method' => 'GET', 'path' => '/api/v1/saved-books', 'handler' => [new UserController(), 'getSavedBooks']],
         ];
     }
 
