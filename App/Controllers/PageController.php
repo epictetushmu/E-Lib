@@ -21,6 +21,10 @@ class PageController {
         ]);
     }
 
+    public function dashboard() {
+        $this->response->renderView(__DIR__ . '/../Views/admin.php');
+    }
+
     public function viewBook($path = null, $id = null) {
         try {
             // Remove debug echo statements that cause output before headers
@@ -119,7 +123,7 @@ class PageController {
 
     public function viewBooks() {
         $bookService = new BookService();
-        $books = $bookService->getAllBooks();
+        $books = $bookService->getPublicBooks();
 
         // Convert MongoDB objects to plain PHP types
         $books = array_map(function ($book) {

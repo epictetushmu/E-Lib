@@ -29,8 +29,73 @@ class BookController {
         }
     }   
 
+    public function deleteBook($id) {
+        $response = $this->bookService->deleteBook($id);
+        if ($response) {
+            return $this->response->respond(true, 'Book deleted successfully');
+        } else {
+            return $this->response->respond(false, 'Error deleting book', 400);
+        }
+    }
+
+    public function updateBook($id) {
+        // Read and decode JSON data from request body
+        $requestBody = file_get_contents('php://input');
+        $data = json_decode($requestBody, true);
+        
+        // If JSON parsing failed, check if regular form data exists
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            // Fall back to $_POST for traditional form submissions
+            $data = $_POST;
+        }
+        
+        // First get the current book data
+        $currentBook = $this->bookService->getBookDetails($id);
+        if (!$currentBook) {
+            return $this->response->respond(false, 'Book not found', 404);
+        }
+        
+        // Only update fields that are provided in the request
+        $title = isset($data['title']) ? $data['title'] : $currentBook['title'];
+        $author = isset($data['author']) ? $data['author'] : $currentBook['author'];
+        $year = isset($data['year']) ? $data['year'] : ($currentBook['year'] ?? '');
+        $description = isset($data['description']) ? $data['description'] : $currentBook['description'];
+        $status = isset($data['status']) ? $data['status'] : $currentBook['status'];
+        
+        // Check if categories are being updated
+        $categories = [];
+        if (isset($data['categories'])) {
+            // Parse categories from the request
+            if (is_string($data['categories'])) {
+                // Handle JSON string format
+                $categories = json_decode($data['categories'], true) ?? [];
+            } else if (is_array($data['categories'])) {
+                // Categories already as array
+                $categories = $data['categories'];
+            }
+        } else if (isset($currentBook['categories'])) {
+            // Use existing categories if not provided in request
+            if ($currentBook['categories'] instanceof \MongoDB\Model\BSONArray) {
+                $categories = $currentBook['categories']->getArrayCopy();
+            } else if (is_array($currentBook['categories'])) {
+                $categories = $currentBook['categories'];
+            }
+        }
+        
+        // Update the book in the database
+        $response = $this->bookService->updateBook(
+            $id, $title, $author, $year, $description, $categories, $status
+        );
+
+        if ($response) {
+            return $this->response->respond(true, 'Book updated successfully');
+        } else {
+            return $this->response->respond(false, 'Error updating book', 400);
+        }
+    }
+
     public function listBooks() {
-        $books = $this->bookService->getAllBooks();
+        $books = $this->bookService->getPublicBooks();
         foreach ($books as &$book) {
             unset($book['pdf_path']);
             unset($book['reviews']);

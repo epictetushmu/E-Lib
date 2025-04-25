@@ -19,6 +19,32 @@ class BookService {
         return $this->book->getFeaturedBooks(); 
     }
 
+    public function deleteBook($id){ 
+        return $this->book->deleteBook($id); 
+    }
+
+    public function getPublicBooks() {
+        return $this->book->getPublicBooks();
+    }
+
+    public function updateBook($id, string $title, string $author,string $year, string $description, array $categories, string $status) {
+        // Add validation here
+  
+        //add books the non empty fields 
+    
+        $book = [
+            'title' => $title,
+            'author' => $author,
+            'year' => (int)$year?? null,
+            'description' => $description,
+            'categories' => $categories,
+            'status' => $status,
+            'updated_at' => new UTCDateTime()
+        ];
+        
+        return $this->book->updateBook($id, $book);
+    }
+
     public function getBookDetails($id) {
         return $this->book->getBookDetails($id);
     }
@@ -34,7 +60,8 @@ class BookService {
             'categories' => $categories,
             'pdf_path' => $pdfPath,
             'thumbnail_path' => $thumbnailPath,
-            'featured' => random_int(0, 100)< 20 ? true : false, 
+            'featured' => random_int(0, 100)< 50 ? true : false, 
+            'status'=> 'draft', 
             'created_at' => new UTCDateTime(),
             'updated_at' => new UTCDateTime()
         ];
