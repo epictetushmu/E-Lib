@@ -72,4 +72,20 @@ class Books {
             return false;
         }
     }
+
+    public function deleteBook($id) {
+        return $this->db->delete($this->collection, ['_id' => new ObjectId($id)]);
+    }
+    public function updateBook($id, $book) {
+        $filteredBook = array_filter($book, function ($value) {
+            return $value !== null && $value !== '';
+        });
+
+        if (empty($filteredBook)) {
+            return false; // No fields to update
+        }
+        
+        return $this->db->update($this->collection, ['_id' => new ObjectId($id)], ['$set' => $filteredBook]);
+    }
+    
 }

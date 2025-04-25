@@ -19,6 +19,27 @@ class BookService {
         return $this->book->getFeaturedBooks(); 
     }
 
+    public function deleteBook($id){ 
+        return $this->book->deleteBook($id); 
+    }
+
+    public function updateBook($id, string $title, string $author,string $year, string $description, array $categories) {
+        // Add validation here
+  
+        //add books the non empty fields 
+    
+        $book = [
+            'title' => $title,
+            'author' => $author,
+            'year' => (int)$year?? null,
+            'description' => $description,
+            'categories' => $categories,
+            'updated_at' => new UTCDateTime()
+        ];
+        
+        return $this->book->updateBook($id, $book);
+    }
+
     public function getBookDetails($id) {
         return $this->book->getBookDetails($id);
     }

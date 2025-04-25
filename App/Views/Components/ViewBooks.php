@@ -1,4 +1,3 @@
-
 <div class="container mt-4">
     <h2 class="mb-4">Manage Books</h2>
     <div class="table-responsive">
@@ -12,7 +11,14 @@
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($books as $book): ?>
+                <?php 
+                // Initialize $books as an empty array if not set
+                $books = $books ?? [];
+                
+                // Only try to loop if $books is iterable
+                if (!empty($books)): 
+                    foreach ($books as $book): 
+                ?>
                     <tr id="bookRow-<?= $book['id'] ?>">
                         <td><?= htmlspecialchars($book['title']) ?></td>
                         <td><?= htmlspecialchars($book['author']) ?></td>
@@ -44,7 +50,11 @@
                             </form>
                         </td>
                     </tr>
-                <?php endforeach; ?>
+                <?php 
+                    endforeach; 
+                endif;
+                ?>
+                <!-- Books will be loaded here by JavaScript -->
             </tbody>
         </table>
     </div>
@@ -69,24 +79,32 @@ function cancelEdit(bookId) {
 function submitEdit(event, bookId) {
     event.preventDefault();
     const form = event.target;
-    const data = new FormData(form);
-
-    axios.post(`/api/v1/books/${bookId}`, {
-        method: 'POST',
-        body: data
-    }, {headers: { "Authorization": "Bearer " + (localStorage.getItem('authToken') || sessionStorage.getItem('authToken')) }})
-    .then(res => res.json())
+    const formData = new FormData(form);
+    
+    // Convert FormData to a plain object
+    const bookData = {};
+    formData.forEach((value, key) => {
+        bookData[key] = value;
+    });
+    
+    axios.put(`/api/v1/books/${bookId}`, bookData, {
+        headers: { 
+            "Authorization": "Bearer " + (localStorage.getItem('authToken') || sessionStorage.getItem('authToken')),
+            "Content-Type": "application/json"
+        }
+    })
     .then(response => {
-        if (response.success) {
-            // Ideally: reload updated book list or update UI inline
-            location.reload(); // For now, just reload
+        if (response.data.success) {
+            // Reload updated book list
+            getBooks(); // Refresh the book list instead of full page reload
+            cancelEdit(bookId); // Close the edit form
         } else {
-            alert('Update failed: ' + response.message);
+            alert('Update failed: ' + (response.data.message || 'Unknown error'));
         }
     })
     .catch(err => {
         console.error('Error updating book:', err);
-        alert('An error occurred.');
+        alert('An error occurred while updating the book');
     });
 }
 function getBooks() {
