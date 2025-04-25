@@ -24,14 +24,17 @@
                         <td><?= htmlspecialchars($book['author']) ?></td>
                         <td><?= htmlspecialchars($book['description']) ?></td>
                         <td>
-                            <button class="btn btn-sm btn-warning" onclick="editBook(<?= $book['id'] ?>)">Edit</button>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-warning" onclick="editBook('<?= $book['id'] ?>')">Edit</button>
+                                <button class="btn btn-danger" onclick="deleteBook('<?= $book['id'] ?>')">Delete</button>
+                            </div>
                         </td>
                     </tr>
 
                     <!-- Hidden edit form row -->
                     <tr id="editRow-<?= $book['id'] ?>" style="display: none;">
                         <td colspan="4">
-                            <form class="edit-form" onsubmit="submitEdit(event, <?= $book['id'] ?>)">
+                            <form class="edit-form" onsubmit="submitEdit(event, '<?= $book['id'] ?>')">
                                 <div class="row g-2">
                                     <div class="col-md-3">
                                         <input type="text" class="form-control" name="title" placeholder="Title" value="<?= htmlspecialchars($book['title']) ?>">
@@ -107,6 +110,20 @@ function submitEdit(event, bookId) {
         alert('An error occurred while updating the book');
     });
 }
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/[&<>"']/g, function(m) {
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        }[m];
+    });
+}
+
 function getBooks() {
     const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
     axios.get('/api/v1/books', {
@@ -117,10 +134,10 @@ function getBooks() {
     .then(response => {
         const books = response.data.data;
         const tableBody = document.querySelector('tbody');
-        tableBody.innerHTML = ''; // Clear previous rows
+        tableBody.innerHTML = '';
 
         books.forEach(book => {
-            const id = book._id?.$oid || book._id; // in case MongoDB _id format
+            const id = book._id?.$oid || book._id;
             const title = escapeHtml(book.title);
             const author = escapeHtml(book.author);
             const description = escapeHtml(book.description);
@@ -131,7 +148,10 @@ function getBooks() {
                     <td>${author}</td>
                     <td>${description}</td>
                     <td>
-                        <button class="btn btn-sm btn-warning" onclick="editBook('${id}')">Edit</button>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-warning" onclick="editBook('${id}')">Edit</button>
+                            <button class="btn btn-danger" onclick="deleteBook('${id}')">Delete</button>
+                        </div>
                     </td>
                 </tr>
                 <tr id="editRow-${id}" style="display: none;">
@@ -164,15 +184,37 @@ function getBooks() {
         alert('Failed to fetch books.');
     });
 }
-function escapeHtml(text) {
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, m => map[m]);
+
+function deleteBook(bookId) {
+    if (!confirm('Are you sure you want to delete this book? This action cannot be undone.')) {
+        return;
+    }
+    
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    axios.delete(`/api/v1/books/${bookId}`, {
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        }
+    })
+    .then(response => {
+        if (response.data.status === 'success') {
+            // Remove the book from the UI
+            const bookRow = document.getElementById(`bookRow-${bookId}`);
+            const editRow = document.getElementById(`editRow-${bookId}`);
+            
+            if (bookRow) bookRow.remove();
+            if (editRow) editRow.remove();
+            
+            alert('Book deleted successfully');
+        } else {
+            alert('Delete failed: ' + (response.data.message || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        console.error('Error deleting book:', err);
+        alert('An error occurred while deleting the book');
+    });
 }
 
 </script>
