@@ -71,10 +71,10 @@ function submitEdit(event, bookId) {
     const form = event.target;
     const data = new FormData(form);
 
-    fetch(`/api/v1/books/${bookId}`, {
+    axios.post(`/api/v1/books/${bookId}`, {
         method: 'POST',
         body: data
-    })
+    }, {headers: { "Authorization": "Bearer " + (localStorage.getItem('authToken') || sessionStorage.getItem('authToken')) }})
     .then(res => res.json())
     .then(response => {
         if (response.success) {
@@ -89,17 +89,72 @@ function submitEdit(event, bookId) {
         alert('An error occurred.');
     });
 }
-function getBooks(){ 
-    axios.get('/api/v1/books', {headers: {'Authorization': 'Bearer ' +( localStorage.getItem('authToken') || sessionStorage.getItem('authToken'))}})
-        .then(response => {
-            console.log(response.data.data);
-            const books = response.data.data;
-            const tableBody = document.querySelector('tbody');
-            tableBody.innerHTML = ''; 
-        })
-        .catch(error => {
-            console.error('Error fetching books:', error);
-            alert('Failed to fetch books.');
+function getBooks() {
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    axios.get('/api/v1/books', {
+        headers: {
+            'Authorization': 'Bearer ' + authToken
+        }
+    })
+    .then(response => {
+        const books = response.data.data;
+        const tableBody = document.querySelector('tbody');
+        tableBody.innerHTML = ''; // Clear previous rows
+
+        books.forEach(book => {
+            const id = book._id?.$oid || book._id; // in case MongoDB _id format
+            const title = escapeHtml(book.title);
+            const author = escapeHtml(book.author);
+            const description = escapeHtml(book.description);
+
+            const row = `
+                <tr id="bookRow-${id}">
+                    <td>${title}</td>
+                    <td>${author}</td>
+                    <td>${description}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="editBook('${id}')">Edit</button>
+                    </td>
+                </tr>
+                <tr id="editRow-${id}" style="display: none;">
+                    <td colspan="4">
+                        <form class="edit-form" onsubmit="submitEdit(event, '${id}')">
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" name="title" placeholder="Title" value="${title}">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control" name="author" placeholder="Author" value="${author}">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control" name="description" placeholder="Description" value="${description}">
+                                </div>
+                                <div class="col-md-2 d-flex justify-content-end">
+                                    <button class="btn btn-success me-2" type="submit">Save</button>
+                                    <button class="btn btn-secondary" type="button" onclick="cancelEdit('${id}')">Cancel</button>
+                                </div>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+            `;
+            tableBody.insertAdjacentHTML('beforeend', row);
         });
+    })
+    .catch(error => {
+        console.error('Error fetching books:', error);
+        alert('Failed to fetch books.');
+    });
 }
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
 </script>
