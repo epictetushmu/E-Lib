@@ -18,6 +18,27 @@
         include 'Partials/Footer.php';
     ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.pathname.includes('/dashboard')) {
+        checkAdminAccess();
+    }
+});
+
+function checkAdminAccess() {
+    // Check if user is admin
+    const isAdmin = localStorage.getItem('isAdmin') === 'true' || 
+                    sessionStorage.getItem('isAdmin') === 'true';
+    
+    // If not admin, redirect to home page
+    if (!isAdmin) {
+        console.log('Unauthorized access to admin dashboard detected');
+        window.location.href = '/';
+    }
+}
+
+</script>
   
 </body>
 </html>

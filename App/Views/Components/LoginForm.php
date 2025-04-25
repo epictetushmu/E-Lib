@@ -67,7 +67,6 @@ $redirect = $_GET['redirect'] ?? '/'; // Default to home page if no redirect is 
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    console.log("DOM loaded - Setting up event listeners");
     
     // Get reference to login form and submit button
     const loginForm = document.getElementById('loginForm');
@@ -115,16 +114,29 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log("Login successful");
                 if (rememberMe) {
                     localStorage.setItem('authToken', response.data.token);
+                    // Store admin status for access control
+                    if (response.data.user.isAdmin) {
+                        localStorage.setItem('isAdmin', 'true');
+                    }
                 } else {
                     sessionStorage.setItem('authToken', response.data.token);
+                    // Store admin status for access control
+                    if (response.data.user.isAdmin) {
+                        sessionStorage.setItem('isAdmin', 'true');
+                    }
                 }
-
-                console.log("Redirecting to:", redirect);
-                const redirectUrl = redirect ? new URL(redirect, window.location.origin) : new URL('/', window.location.origin);
-                window.location.href = redirectUrl.href;
-            } else {
-                console.error("Login failed:", response);
-                errorMessage.textContent = response.data.message || 'Login failed. Please check your credentials.';
+                
+                // Check if user is an admin
+                if (response.data.user.isAdmin) {
+                    console.log("Admin user detected, redirecting to dashboard");
+                    window.location.href = '/dashboard';
+                } else {
+                    // Regular user - use the existing redirect logic
+                    console.log("Regular user, redirecting to:", redirect);
+                    const redirectUrl = redirect ? new URL(redirect, window.location.origin) : new URL('/', window.location.origin);
+                    window.location.href = redirectUrl.href;
+                }
+            } else {                console.error("Login failed:", response);                errorMessage.textContent = response.data.message || 'Login failed. Please check your credentials.';
                 errorMessage.classList.remove('d-none');
             }
         })

@@ -39,8 +39,12 @@ class UserController {
             $_SESSION['token'] = $token;
 
             ResponseHandler::respond(true, [
-                'message' => 'Login successful',
-                'token' => $token
+                'token' => $token, 
+                'user' => [
+                    'id' => $user['_id'],
+                    'email' => $user['email'],
+                    'isAdmin' => $user['isAdmin'] ?? false
+                ]
             ], 200);
         } else {
             ResponseHandler::respond(false, 'Invalid credentials', 401);
