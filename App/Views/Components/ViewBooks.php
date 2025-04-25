@@ -49,8 +49,13 @@
         </table>
     </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    getBooks();
+});
+
+
 function editBook(bookId) {
     document.getElementById('bookRow-' + bookId).style.display = 'none';
     document.getElementById('editRow-' + bookId).style.display = '';
@@ -83,5 +88,18 @@ function submitEdit(event, bookId) {
         console.error('Error updating book:', err);
         alert('An error occurred.');
     });
+}
+function getBooks(){ 
+    axios.get('/api/v1/books', {headers: {'Authorization': 'Bearer ' +( localStorage.getItem('authToken') || sessionStorage.getItem('authToken'))}})
+        .then(response => {
+            console.log(response.data.data);
+            const books = response.data.data;
+            const tableBody = document.querySelector('tbody');
+            tableBody.innerHTML = ''; 
+        })
+        .catch(error => {
+            console.error('Error fetching books:', error);
+            alert('Failed to fetch books.');
+        });
 }
 </script>
