@@ -52,4 +52,24 @@ class Users {
         }
         return false;
     }
+
+    public function unsaveBook($userId, $bookId) {
+        $user = $this->getUserById($userId);
+        if ($user) {
+            // Convert MongoDB BSONArray to PHP array if needed
+            $savedBooksOriginal = $user['savedBooks'] ?? [];
+            
+            // Convert to PHP array if it's a MongoDB\Model\BSONArray
+            $savedBooks = is_object($savedBooksOriginal) && method_exists($savedBooksOriginal, 'getArrayCopy') 
+                ? $savedBooksOriginal->getArrayCopy() 
+                : (array)$savedBooksOriginal;
+            
+            if (in_array($bookId, $savedBooks)) {
+                $savedBooks = array_diff($savedBooks, [$bookId]);
+                return $this->db->update($this->collection, ['_id' => $userId], ['$set' => ['savedBooks' => $savedBooks]]);
+            }
+            return true; // Book was already unsaved
+        }
+        return false;
+    }
 }

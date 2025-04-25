@@ -38,4 +38,8 @@ class UserService {
         }
         return [];
     }
+
+    public function unsaveBook($userId, $bookId) {       
+        return $this->user->unsaveBook($userId, $bookId);
+    }
 }
