@@ -132,7 +132,7 @@ class BookController {
         }
         
         if (empty($_SESSION['user_id'])) {
-            header('Location: /login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+            header('Location: /?showLogin=true&redirect=' . urlencode($_SERVER['REQUEST_URI']));
             exit;
         }
         

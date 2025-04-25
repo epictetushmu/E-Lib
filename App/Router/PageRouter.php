@@ -25,15 +25,15 @@ class PageRouter {
         $this->routes = [
             ['path' => '/index', 'handler' => [new PageController(), 'home']],
             ['path' => '/', 'handler' => [new PageController(), 'home']],
-            ['path' => '/login', 'handler' => [new PageController(), 'loginForm']],
-            ['path' => '/signup', 'handler' => [new PageController(), 'signupForm']],
             ['path' => '/view-books', 'handler' => [new PageController(), 'viewBooks']],
             ['path' => '/profile', 'handler' => [new PageController(), 'profile']],
             ['path' => '/read/([0-9a-f]{24})', 'handler' => [new PageController(), 'readBook']],
             ['path' => '/book/([0-9a-f]{24})', 'handler' => [new PageController(), 'viewBook']],
             ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
             ['path' => '/search_results', 'handler' => [new PageController(), 'searchBooks']],
-            ['path' => '/error', 'handler' => [new PageController(), 'error']]
+            ['path' => '/error', 'handler' => [new PageController(), 'error']],
+            ['path' => '/login', 'handler' => [new PageController(), 'home', ['showLogin' => true]]],
+            ['path' => '/signup', 'handler' => [new PageController(), 'home', ['showSignup' => true]]],
         ];            
     }
 

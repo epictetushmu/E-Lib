@@ -21,14 +21,6 @@ class PageController {
         ]);
     }
 
-    public function loginForm() {
-        $this->response->renderView(__DIR__ . '/../Views/login.php');
-    }
-
-    public function signupForm() {
-        $this->response->renderView(__DIR__ . '/../Views/signup.php');
-    }
-
     public function viewBook($path = null, $id = null) {
         try {
             // Remove debug echo statements that cause output before headers

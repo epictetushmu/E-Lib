@@ -126,7 +126,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
     const loginButtons = document.querySelectorAll('#userAction');
     const userDropdown = document.querySelector('#profileDropdown');
-
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.has('showLogin') || window.location.pathname === '/login') {
+        openPopup('loginPopup');
+    } else if (urlParams.has('showSignup') || window.location.pathname === '/signup') {
+        openPopup('signupPopup');
+    }
 
     if (authToken) {
         // User is logged in

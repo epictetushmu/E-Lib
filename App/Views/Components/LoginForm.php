@@ -24,8 +24,14 @@ $redirect = $_GET['redirect'] ?? '/'; // Default to home page if no redirect is 
             <form id="loginForm">
                 <?php if (function_exists('csrf_field')): ?>
                     <?= csrf_field() ?>
-                <?php endif; ?>
-
+                <?php endif; 
+             
+                    // Capture redirect from URL parameters or use current path as fallback
+                    $redirect = $_GET['redirect'] ?? $_SERVER['REQUEST_URI'];
+                    if ($redirect === '/login' || $redirect === '/signup') {
+                        $redirect = '/'; // Prevent redirect loops
+                    }
+                ?>
                 <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirect) ?>">
 
                 <div class="mb-3">
