@@ -8,11 +8,11 @@
                     <th>Author</th>
                     <th>Description</th>
                     <th>Status</th>
-                    <th style="width: 140px;">Actions</th>
+                    <th style="width: 180px;">Actions</th>
                 </tr>
             </thead>
             <tbody id="booksTableBody">
-                <!-- Rows are dynamically injected by JavaScript -->
+                <!-- Dynamically injected rows -->
             </tbody>
         </table>
     </div>
@@ -20,30 +20,22 @@
 
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    getBooks();
-});
+document.addEventListener('DOMContentLoaded', getBooks);
 
 function escapeHtml(text) {
     if (!text) return '';
-    return text.replace(/[&<>"']/g, function(m) {
-        return {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        }[m];
-    });
+    return text.replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    }[m]));
 }
 
 function getBooks() {
     const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
     axios.get('/api/v1/books', {
-        headers: { 'Authorization': 'Bearer ' + authToken }
+        headers: { Authorization: 'Bearer ' + authToken }
     })
     .then(response => {
-        const books = response.data.data;
+        const books = response.data.data || [];
         const tableBody = document.getElementById('booksTableBody');
         tableBody.innerHTML = '';
 
@@ -53,6 +45,7 @@ function getBooks() {
             const author = escapeHtml(book.author);
             const description = escapeHtml(book.description);
             const status = book.status || 'available';
+            const categories = book.categories ? (Array.isArray(book.categories) ? book.categories.join(', ') : book.categories) : '';
 
             const row = `
                 <tr id="bookRow-${id}">
@@ -63,6 +56,7 @@ function getBooks() {
                     <td>
                         <div class="btn-group btn-group-sm">
                             <button class="btn btn-warning" onclick="editBook('${id}')">Edit</button>
+                            <button class="btn btn-info" onclick="previewBook('${id}')">View PDF</button>
                             <button class="btn btn-danger" onclick="deleteBook('${id}')">Delete</button>
                         </div>
                     </td>
@@ -86,6 +80,9 @@ function getBooks() {
                                         <option value="public" ${status === 'public' ? 'selected' : ''}>Public</option>
                                     </select>
                                 </div>
+                                <div class="col-md-12 mt-2">
+                                    <input type="text" class="form-control" name="categories" value="${categories}" placeholder="Fiction, Fantasy, Adventure...">
+                                </div>
                             </div>
                             <div class="d-flex justify-content-end">
                                 <button type="submit" class="btn btn-success me-2">Save</button>
@@ -106,12 +103,12 @@ function getBooks() {
 
 function editBook(bookId) {
     document.getElementById(`bookRow-${bookId}`).style.display = 'none';
-    document.getElementById(`editRow-${bookId}`).style.display = '';
+    document.getElementById(`editRow-${bookId}`).style.display = 'table-row';
 }
 
 function cancelEdit(bookId) {
     document.getElementById(`editRow-${bookId}`).style.display = 'none';
-    document.getElementById(`bookRow-${bookId}`).style.display = '';
+    document.getElementById(`bookRow-${bookId}`).style.display = 'table-row';
 }
 
 function submitEdit(event, bookId) {
@@ -121,7 +118,11 @@ function submitEdit(event, bookId) {
     const bookData = {};
 
     formData.forEach((value, key) => {
-        bookData[key] = value;
+        if (key === 'categories') {
+            bookData[key] = value.split(',').map(item => item.trim()).filter(item => item);
+        } else {
+            bookData[key] = value;
+        }
     });
 
     const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
@@ -140,7 +141,7 @@ function submitEdit(event, bookId) {
     })
     .catch(err => {
         console.error('Error updating book:', err);
-        alert('An error occurred while updating the book');
+        alert('An error occurred while updating the book.');
     });
 }
 
@@ -149,7 +150,7 @@ function deleteBook(bookId) {
 
     const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
     axios.delete(`/api/v1/books/${bookId}`, {
-        headers: { 'Authorization': 'Bearer ' + authToken }
+        headers: { Authorization: 'Bearer ' + authToken }
     })
     .then(response => {
         if (response.data.status === 'success') {
@@ -162,7 +163,12 @@ function deleteBook(bookId) {
     })
     .catch(err => {
         console.error('Error deleting book:', err);
-        alert('An error occurred while deleting the book');
+        alert('An error occurred while deleting the book.');
     });
+}
+
+function previewBook(bookId) {
+    const previewUrl = `/read/${bookId}`;
+    window.open(previewUrl, '_blank');
 }
 </script>
