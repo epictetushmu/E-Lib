@@ -21,6 +21,10 @@ class PageController {
         ]);
     }
 
+    public function dashboard() {
+        $this->response->renderView(__DIR__ . '/../Views/admin.php');
+    }
+
     public function viewBook($path = null, $id = null) {
         try {
             // Remove debug echo statements that cause output before headers

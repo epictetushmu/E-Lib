@@ -118,6 +118,7 @@ $router->addMiddleware(new AuthMiddleware([
     '/profile',
     '/add-book',
     '/read/',
+    '/dashboard',
     '/api/v1/books' // Only POST requests actually need auth, but we keep it simple here
 ]));
 
