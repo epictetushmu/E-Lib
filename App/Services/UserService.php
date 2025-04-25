@@ -25,4 +25,8 @@ class UserService {
     public function getUserById($id) {
         return $this->user->getUserById($id);
     }
+
+    public function saveBook($userId, $bookId) {
+        return $this->user->saveBook($userId, $bookId);
+    }
 }

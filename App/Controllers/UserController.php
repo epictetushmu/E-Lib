@@ -118,4 +118,36 @@ class UserController {
         }
         
     }
+
+    public function saveBook() { 
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (empty($_SESSION['user_id'])) {
+            ResponseHandler::respond(false, 'User not authenticated', 401);
+            return;
+        }
+        
+        if (empty($_POST)) {
+            $inputJSON = file_get_contents('php://input');
+            $input = json_decode($inputJSON, true);
+            $bookId = $input['book_id'] ?? null;
+        } else {
+            $bookId = $_POST['book_id'] ?? null;
+        }
+
+        if (empty($bookId)) {
+            ResponseHandler::respond(false, 'Book ID is required', 400);
+            return;
+        }
+
+        $userId = $_SESSION['user_id'] ?? null;
+
+        if ($this->userService->saveBook($userId, $bookId)) {
+            ResponseHandler::respond(true, 'Book saved successfully', 200);
+        } else {
+            ResponseHandler::respond(false, 'Failed to save book', 400);
+        }
+    }
 }
