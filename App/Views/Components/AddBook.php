@@ -96,7 +96,7 @@ $categories = $categories ?? [
                 const year = document.getElementById("year").value;
                 const description = document.getElementById("description").value;
                 const bookPdf = document.getElementById("bookPdf").files[0];
-
+                const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken"); 
                 const formData = new FormData();
                 formData.append("title", title);
                 formData.append("author", author);
@@ -105,15 +105,19 @@ $categories = $categories ?? [
                 formData.append("description", description);
                 formData.append("bookPdf", bookPdf);
 
-                axios.post("/api/v1/books", formData)
-                    .then(response => {
-                        submitForm.reset();
-                        updateDisplay();
-                        updateOptionStyles();
-                    })
-                    .catch(error => {
-                        alert("An error occurred. Please try again.");
-                    });
+                axios.post("/api/v1/books", formData, {
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                })
+                .then(response => {
+                    submitForm.reset();
+                    updateDisplay();
+                    updateOptionStyles();
+                })
+                .catch(error => {
+                    alert("An error occurred. Please try again.");
+                });
             });
 
             condition.addEventListener("change", (event) => {

@@ -17,3 +17,8 @@ ini_set('display_errors', 0); // Disable displaying errors directly to the clien
 // date_default_timezone_set('UTC');
 
 // Additional application initialization can go here
+
+define('JWT_SECRET_KEY', 'your-secret-key'); // Replace with a secure key
+
+// Include Composer autoloader
+// require_once __DIR__ . '../vendor/autoload.php';

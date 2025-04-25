@@ -24,20 +24,21 @@
 
 <script>
 let hasScrolled = false;
+if(sessionStorage.getItem('authToken') === null && localStorage.getItem('authToken') === null) {
+    window.addEventListener('scroll', function () {
+        if (!hasScrolled && window.scrollY > 50) {
+            hasScrolled = true;
 
-window.addEventListener('scroll', function () {
-    if (!hasScrolled && window.scrollY > 50) {
-        hasScrolled = true;
-
-        const popup = document.getElementById('loginPopup');
-        if (popup) {
-            popup.style.display = 'flex';
-        } else {
-            console.error('Login popup not found.');
+            const popup = document.getElementById('loginPopup');
+            if (popup) {
+                popup.style.display = 'flex';
+            } else {
+                console.error('Login popup not found.');
+            }
+            this.sessionStorage.setItem('hasScrolled', 'true');
         }
-        this.sessionStorage.setItem('hasScrolled', 'true');
-    }
 });
+}
 </script>
 </body>
 </html>

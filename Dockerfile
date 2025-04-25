@@ -49,7 +49,7 @@ RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available
 COPY composer.json composer.lock* ./
 
 # Install dependencies
-RUN composer install --no-scripts --no-autoloader
+RUN composer install
 
 # Copy the MongoDB certificate setup script
 COPY setup-mongodb-cert.php docker-entrypoint.php ./

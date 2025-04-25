@@ -23,13 +23,13 @@ class BookService {
         return $this->book->getBookDetails($id);
     }
 
-    public function addBook(string $title, string $author,int $year, string $description, array $categories , $pdfPath = null, $thumbnailPath = null) {
+    public function addBook(string $title, string $author,string $year, string $description, array $categories , $pdfPath = null, $thumbnailPath = null) {
         // Add validation here
         
         $book = [
             'title' => $title,
             'author' => $author,
-            'year' => (int)$year,
+            'year' => (int)$year?? null,
             'description' => $description,
             'categories' => $categories,
             'pdf_path' => $pdfPath,

@@ -16,10 +16,10 @@
         
             <!-- Download Button -->
             <?php if (!empty($book['pdf_path'])): ?>
-                <div class="mt-2">
-                    <a href="/api/v1/download/<?= htmlspecialchars($book['_id']) ?>" class="btn btn-outline-success w-100" download>
-                        <i class="fas fa-file-download me-2"></i>Download PDF
-                    </a>
+               <div class="mt-2">
+                <button id="downloadBtn" class="btn btn-outline-success w-100">
+                    <i class="fas fa-file-download me-2"></i>Download PDF
+                </button>
                 </div>
             <?php endif; ?>
             <!-- Read Online Button -->
@@ -136,6 +136,38 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Failed to copy URL: ', err);
                     alert('Could not copy link. Please try again.');
                 });
+        });
+    }
+
+    const downloadBtn = document.getElementById('downloadBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', async function() {
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+            if (!token) {
+                alert('You must be logged in to download this file.');
+                return;
+            }
+
+            try {
+                const response = await axios.get('/api/v1/download/<?= htmlspecialchars($book['_id']) ?>', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    responseType: 'blob' // Important for downloading files
+                });
+
+                // Create a link element to download the file
+                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', '<?= htmlspecialchars($book["title"]) ?>.pdf');
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            } catch (error) {
+                console.error('Error downloading the file:', error);
+                alert('Failed to download the file. Please try again.');
+            }
         });
     }
 });
