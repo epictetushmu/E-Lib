@@ -118,8 +118,7 @@ class UserController {
             ResponseHandler::respond(true, $user, 200);
         } else {
             ResponseHandler::respond(false, 'User not found', 404);
-        }
-        
+        }   
     }
 
     public function saveBook() { 
