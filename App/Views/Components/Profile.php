@@ -12,10 +12,23 @@ $profile = $profile ?? [];
 $userBooks = $userBooks ?? ['borrowed' => [], 'saved' => []];
 $searchUrl = $searchUrl ?? '/search';
 
+// Parse MongoDB date format - handles both string format and MongoDB UTCDateTime object
+function parseMongoDate($dateValue) {
+    if (is_object($dateValue) && method_exists($dateValue, 'toDateTime')) {
+        // Handle MongoDB UTCDateTime object
+        return $dateValue->toDateTime()->format('F j, Y');
+    } elseif (is_string($dateValue)) {
+        // Handle ISO string format "2025-04-26T00:40:57.019+00:00"
+        $date = new DateTime($dateValue);
+        return $date->format('F j, Y');
+    }
+    return 'N/A';
+}
+
 // Make sure session data is available as fallback
 $username = htmlspecialchars($profile['username'] ?? $_SESSION['username'] ?? 'User');
 $email = htmlspecialchars($profile['email'] ?? $_SESSION['email'] ?? '');
-$memberSince = isset($profile['created_at']) ? date('F j, Y', strtotime($profile['created_at'])) : 'N/A';
+$memberSince = isset($profile['createdAt']) ? parseMongoDate($profile['createdAt']) : 'N/A';
 $firstLetter = substr($username, 0, 1);
 ?>
 
