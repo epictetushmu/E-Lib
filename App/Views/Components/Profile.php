@@ -49,9 +49,6 @@ $firstLetter = substr($username, 0, 1);
                 <p class="text-muted">
                     <i class="fas fa-clock me-2"></i>Member since: <?= $memberSince ?>
                 </p>
-                <button class="btn btn-sm btn-outline-secondary" id="editProfileBtn">
-                    <i class="fas fa-edit me-2"></i>Edit Profile
-                </button>
             </div>
         </div>
     </div>
