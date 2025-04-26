@@ -34,35 +34,5 @@
             include 'Partials/Footer.php';
     ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-         
-            // Save to list functionality
-            const saveBtn = document.getElementById('saveBtn');
-            if (saveBtn) {
-                saveBtn.addEventListener('click', async () => {
-                    const bookId = document.getElementById('bookId').value;
-                    
-                    try {
-                        const response = await axios.post('/api/v1/save-book', {
-                            book_id: bookId
-                        });
-                        
-                        if (response.data.status === 'success') {
-                            saveBtn.textContent = 'Saved to List';
-                            saveBtn.disabled = true;
-                        } else {
-                            alert(response.data.message || 'Failed to save book');
-                        }
-                    } catch (error) {
-                        console.error('Error saving book:', error);
-                        alert('An error occurred while saving the book');
-                    }
-                });
-            }
-        });
-    </script>
 </body>
 </html>

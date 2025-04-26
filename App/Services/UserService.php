@@ -1,5 +1,6 @@
 <?php
 namespace App\Services;
+
 use App\Models\Users;
 
 class UserService {
@@ -24,5 +25,21 @@ class UserService {
 
     public function getUserById($id) {
         return $this->user->getUserById($id);
+    }
+
+    public function saveBook($userId, $bookId) {
+        return $this->user->saveBook($userId, $bookId);
+    }
+
+    public function getSavedBooks($userId) {
+        $user = $this->getUserById($userId);
+        if ($user && isset($user['savedBooks'])) {
+            return $user['savedBooks'];
+        }
+        return [];
+    }
+
+    public function removeBook($userId, $bookId) {       
+        return $this->user->removeBook($userId, $bookId);
     }
 }
