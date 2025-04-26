@@ -18,7 +18,10 @@ class UserService {
         $user = [ 
             'username' => $userName,
             'email' => $email,
-            'password' => password_hash($password, PASSWORD_BCRYPT)
+            'password' => password_hash($password, PASSWORD_BCRYPT), 
+            'isAdmin' => false,
+            'savedBooks' => [], 
+            'createdAt' => new \MongoDB\BSON\UTCDateTime()
         ];
         return $this->user->registerUser($user);
     }
