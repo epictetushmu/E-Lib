@@ -212,15 +212,21 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         })
         .catch(function(error) {
+           
             console.error('Error loading saved books:', error);
-            savedBooksContainer.innerHTML = `
-                <div class="text-center py-5">
-                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                    <h4>Error loading books</h4>
-                    <p class="text-muted">${error.response?.data?.message || 'There was a problem loading your saved books.'}</p>
-                    <button class="btn btn-primary" onclick="loadSavedBooks()">Retry</button>
-                </div>
-            `;
+            if (error.response.data.status === "success") {
+                showNoSavedBooksMessage();
+            } else {
+                console.error('Error loading saved books:', error);  
+                savedBooksContainer.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                        <h4>Error loading books</h4>
+                        <p class="text-muted">${error.response?.data?.message || 'There was a problem loading your saved books.'}</p>
+                        <button class="btn btn-primary" onclick="loadSavedBooks()">Retry</button>
+                    </div>
+                `;
+            }
         });
     }
     
