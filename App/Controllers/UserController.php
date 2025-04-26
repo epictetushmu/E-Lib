@@ -118,8 +118,7 @@ class UserController {
             ResponseHandler::respond(true, $user, 200);
         } else {
             ResponseHandler::respond(false, 'User not found', 404);
-        }
-        
+        }   
     }
 
     public function saveBook() { 
@@ -178,12 +177,10 @@ class UserController {
             
             if (!empty($books)) {
                 ResponseHandler::respond(true, $books, 200);
-            } else {
-                ResponseHandler::respond(false, 'Failed to retrieve book details', 404);
-            }
-        } else {
-            ResponseHandler::respond(false, 'No saved books found', 404);
+            } 
         }
+        ResponseHandler::respond(true, 'No saved books found', 404);
+        
     }
 
     public function removeBook() {

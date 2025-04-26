@@ -12,10 +12,23 @@ $profile = $profile ?? [];
 $userBooks = $userBooks ?? ['borrowed' => [], 'saved' => []];
 $searchUrl = $searchUrl ?? '/search';
 
+// Parse MongoDB date format - handles both string format and MongoDB UTCDateTime object
+function parseMongoDate($dateValue) {
+    if (is_object($dateValue) && method_exists($dateValue, 'toDateTime')) {
+        // Handle MongoDB UTCDateTime object
+        return $dateValue->toDateTime()->format('F j, Y');
+    } elseif (is_string($dateValue)) {
+        // Handle ISO string format "2025-04-26T00:40:57.019+00:00"
+        $date = new DateTime($dateValue);
+        return $date->format('F j, Y');
+    }
+    return 'N/A';
+}
+
 // Make sure session data is available as fallback
 $username = htmlspecialchars($profile['username'] ?? $_SESSION['username'] ?? 'User');
 $email = htmlspecialchars($profile['email'] ?? $_SESSION['email'] ?? '');
-$memberSince = isset($profile['created_at']) ? date('F j, Y', strtotime($profile['created_at'])) : 'N/A';
+$memberSince = isset($profile['createdAt']) ? parseMongoDate($profile['createdAt']) : 'N/A';
 $firstLetter = substr($username, 0, 1);
 ?>
 
@@ -36,9 +49,6 @@ $firstLetter = substr($username, 0, 1);
                 <p class="text-muted">
                     <i class="fas fa-clock me-2"></i>Member since: <?= $memberSince ?>
                 </p>
-                <button class="btn btn-sm btn-outline-secondary" id="editProfileBtn">
-                    <i class="fas fa-edit me-2"></i>Edit Profile
-                </button>
             </div>
         </div>
     </div>
@@ -202,15 +212,21 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         })
         .catch(function(error) {
+           
             console.error('Error loading saved books:', error);
-            savedBooksContainer.innerHTML = `
-                <div class="text-center py-5">
-                    <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                    <h4>Error loading books</h4>
-                    <p class="text-muted">${error.response?.data?.message || 'There was a problem loading your saved books.'}</p>
-                    <button class="btn btn-primary" onclick="loadSavedBooks()">Retry</button>
-                </div>
-            `;
+            if (error.response.data.status === "success") {
+                showNoSavedBooksMessage();
+            } else {
+                console.error('Error loading saved books:', error);  
+                savedBooksContainer.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                        <h4>Error loading books</h4>
+                        <p class="text-muted">${error.response?.data?.message || 'There was a problem loading your saved books.'}</p>
+                        <button class="btn btn-primary" onclick="loadSavedBooks()">Retry</button>
+                    </div>
+                `;
+            }
         });
     }
     

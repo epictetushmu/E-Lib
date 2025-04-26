@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Includes\ResponseHandler; 
 use App\Includes\SessionManager;
 use App\Services\BookService;
+use App\Services\UserService;
 use Exception;
 
 class PageController {
@@ -114,7 +115,23 @@ class PageController {
     }
 
     public function profile(){
-        $this->response->renderView(__DIR__ . '/../Views/profile.php');
+        // Check if the user is logged in
+        if (!SessionManager::isLoggedIn()) {
+            $this->response->renderView(__DIR__ . '/../Views/login.php', [
+                'error' => 'You must be logged in to view this page.'
+            ]);
+            return;
+        }
+        $userId = SessionManager::getCurrentUserId();
+        $user = new UserService();
+        $userDetails = $user->getUserById($userId);
+        if (!$userDetails) {
+            $this->response->renderView(__DIR__ . '/../Views/error.php', [
+                'error' => 'User not found.'
+            ]);
+            return;
+        }
+        $this->response->renderView(__DIR__ . '/../Views/profile.php', ['profile' => $userDetails]);
     }
 
     public function error() {

@@ -18,7 +18,9 @@ class UserService {
         $user = [ 
             'username' => $userName,
             'email' => $email,
-            'password' => password_hash($password, PASSWORD_BCRYPT)
+            'password' => password_hash($password, PASSWORD_BCRYPT), 
+            'isAdmin' => false,
+            'createdAt' => new \MongoDB\BSON\UTCDateTime()
         ];
         return $this->user->registerUser($user);
     }
@@ -33,10 +35,10 @@ class UserService {
 
     public function getSavedBooks($userId) {
         $user = $this->getUserById($userId);
-        if ($user && isset($user['savedBooks'])) {
+        if (!empty($user['savedBooks'])) {
             return $user['savedBooks'];
         }
-        return [];
+        return null;
     }
 
     public function removeBook($userId, $bookId) {       
