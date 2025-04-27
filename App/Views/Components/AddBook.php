@@ -1,29 +1,8 @@
-<?php
-/**
- * Add Book Form Component
- * 
- * @param string $formAction Optional - URL where the form will POST data (default: '/api/v1/books/add')
- * @param array $categories Optional - List of available categories (default: hardcoded)
- */
-
-$formAction = $formAction ?? '/api/v1/books/add';
-$categories = $categories ?? [
-    'Electronics',
-    'Mathematics',
-    'Programming',
-    'Robotics',
-    'Networking',
-    'telecommunications', 
-    'Physics',
-    'Computer Science', 
-];
-?>
-
 <div class="container mt-5">
     <h2 class="text-center fw-bold">Add a New Book</h2>
 
     <div class="card p-4 shadow mt-4">
-        <form id="bookForm" method="POST" action="<?= htmlspecialchars($formAction) ?>" enctype="multipart/form-data">
+        <form id="bookForm" method="POST" action="" enctype="multipart/form-data">
             <?php if (function_exists('csrf_field')): ?>
                 <?= csrf_field() ?>
             <?php endif; ?>
@@ -41,16 +20,21 @@ $categories = $categories ?? [
             <div class="mb-3">
                 <label for="category" class="form-label">Category</label>
                 <select class="form-select" id="category" name="category[]" multiple>
-                    <?php foreach ($categories as $cat): ?>
-                        <option value="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></option>
-                    <?php endforeach; ?>
+                    <option value="Electronics">Electronics</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Programming">Programming</option>
+                    <option value="Robotics">Robotics</option>
+                    <option value="Networking">Networking</option>
+                    <option value="Telecommunications">Telecommunications</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Computer Science">Computer Science</option>
                 </select>
                 <small class="form-text text-muted">Hold Ctrl (Cmd on Mac) to select multiple categories.</small>
             </div>
 
             <div class="mb-3">
                 <label for="year" class="form-label">Publication Year</label>
-                <input type="number" class="form-control" id="year" name="year" min="0" max="<?= date('Y') ?>">
+                <input type="number" class="form-control" id="year" name="year" min="0">
             </div>
 
             <div class="mb-3">
@@ -71,140 +55,52 @@ $categories = $categories ?? [
         </form>
     </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
 <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const dropdown = document.getElementById("customDropdown");
-            const dropdownOptions = document.getElementById("dropdownOptions");
-            const select = document.getElementById("category");
-            const condition = document.getElementById("condition");
-            const submitForm = document.getElementById("bookForm");
-            const clearForm = document.getElementById("clearForm");
+document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("bookForm");
 
-            clearForm.addEventListener("click", () => {
-                submitForm.reset();
-                updateDisplay();
-                updateOptionStyles();
-            });
+    const yearInput = document.getElementById("year");
+    yearInput.max = new Date().getFullYear();
 
-            submitForm.addEventListener("submit", (event) => {
-                event.preventDefault();
+    const clearForm = document.getElementById("clearForm");
+    clearForm.addEventListener("click", () => {
+        form.reset();
+    });
 
-                const title = document.getElementById("title").value;
-                const author = document.getElementById("author").value;
-                const categories = Array.from(select.selectedOptions).map(option => option.value);
-                const year = document.getElementById("year").value;
-                const description = document.getElementById("description").value;
-                const bookPdf = document.getElementById("bookPdf").files[0];
-                const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken"); 
-                const formData = new FormData();
-                formData.append("title", title);
-                formData.append("author", author);
-                formData.append("categories", JSON.stringify(categories));
-                formData.append("year", year);
-                formData.append("description", description);
-                formData.append("bookPdf", bookPdf);
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
 
-                axios.post("/api/v1/books", formData, {
-                    headers: {
-                        "Authorization": `Bearer ${token}`
-                    }
-                })
-                .then(response => {
-                    submitForm.reset();
-                    updateDisplay();
-                    updateOptionStyles();
-                })
-                .catch(error => {
-                    alert("An error occurred. Please try again.");
-                });
-            });
+        const title = document.getElementById("title").value;
+        const author = document.getElementById("author").value;
+        const selectedCategories = Array.from(document.getElementById("category").selectedOptions).map(option => option.value);
+        const year = yearInput.value;
+        const description = document.getElementById("description").value;
+        const bookPdf = document.getElementById("bookPdf").files[0];
+        const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
 
-            condition.addEventListener("change", (event) => {
-                const value = event.target.value;
-                if (value === "undefined") {
-                    document.getElementById("year").disabled = true;
-                } else {
-                    document.getElementById("year").disabled = false;
-                }
-            });
+        const formData = new FormData();
+        formData.append("title", title);
+        formData.append("author", author);
+        formData.append("categories", JSON.stringify(selectedCategories));
+        formData.append("year", year);
+        formData.append("description", description);
+        formData.append("bookPdf", bookPdf);
 
-            dropdown.addEventListener("click", () => {
-                dropdownOptions.classList.toggle("hidden");
-            });
-
-            dropdownOptions.addEventListener("click", (event) => {
-                const target = event.target;
-                if (target.tagName === "LI") {
-                    const value = target.getAttribute("data-value");
-                    const option = Array.from(select.options).find(opt => opt.value === value);
-
-                    const selectedCount = Array.from(select.options).filter(opt => opt.selected).length;
-
-                    if (!option.selected && selectedCount >= 3) {
-                        target.classList.add("disabled");
-                        return;
-                    }
-
-                    option.selected = !option.selected;
-
-                    updateDisplay();
-                    updateOptionStyles();
-                }
-            });
-
-            const updateDisplay = () => {
-                const selected = Array.from(select.selectedOptions).map(option => option.text).join(", ");
-                dropdown.textContent = selected || "Select categories";
-            };
-
-            const updateOptionStyles = () => {
-                const selectedCount = Array.from(select.options).filter(opt => opt.selected).length;
-                Array.from(dropdownOptions.children).forEach(item => {
-                    const value = item.getAttribute("data-value");
-                    const option = Array.from(select.options).find(opt => opt.value === value);
-
-                    if (!option.selected && selectedCount >= 3) {
-                        item.classList.add("dull");
-                    } else {
-                        item.classList.remove("dull");
-                    }
-                });
-            };
-
-            document.addEventListener("click", (event) => {
-                if (!dropdown.parentElement.contains(event.target)) {
-                    dropdownOptions.classList.add("hidden");
-                }
-            });
-
-            const elementsWithDescriptions = document.querySelectorAll("input, textarea, .custom-select-wrapper");
-
-            elementsWithDescriptions.forEach(element => {
-                element.addEventListener("mouseenter", showTooltip);
-                element.addEventListener("mouseleave", hideTooltip);
-            });
-
-            function showTooltip(event) {
-                const target = event.target;
-                const tooltip = target.parentElement.querySelector(".tooltip");
-
-                if (tooltip) {
-                    const rect = target.getBoundingClientRect();
-                    tooltip.style.top = `${window.scrollY + rect.top - tooltip.offsetHeight - 10}px`;
-                    tooltip.style.left = `${window.scrollX + rect.left}px`;
-
-                    tooltip.classList.add("visible");
-                }
+        axios.post("/api/v1/books", formData, {
+            headers: {
+                "Authorization": `Bearer ${token}`
             }
-
-            function hideTooltip(event) {
-                const target = event.target;
-                const tooltip = target.parentElement.querySelector(".tooltip");
-
-                if (tooltip) {
-                    tooltip.classList.remove("visible");
-                }
-            }
+        })
+        .then(response => {
+            alert("Book added successfully!");
+            form.reset();
+        })
+        .catch(error => {
+            alert("An error occurred. Please try again.");
         });
+    });
+});
 </script>
