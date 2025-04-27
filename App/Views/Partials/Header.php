@@ -129,24 +129,26 @@ function openPopup(popupId) {
 }
 document.addEventListener('DOMContentLoaded', function () {
     const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    const isAdmin = localStorage.getItem('isAdmin') || sessionStorage.getItem('isAdmin');
+
     const loginButtons = document.querySelectorAll('#userAction');
     const userDropdown = document.querySelector('#profileDropdown');
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    if (urlParams.has('showLogin') || window.location.pathname === '/login') {
-        openPopup('loginPopup');
-    } else if (urlParams.has('showSignup') || window.location.pathname === '/signup') {
-        openPopup('signupPopup');
-    }
 
     if (authToken) {
         // User is logged in
         if (loginButtons) {
             loginButtons.forEach(button => button.style.display = 'none');
         }
-        console.log('User is logged in');
         if (userDropdown) {
             userDropdown.style.display = 'block';
+        }
+
+        // Check if user is admin
+        if (isAdmin === 'true') {
+            const dashboardLink = document.createElement('li');
+            dashboardLink.innerHTML = '<a class="dropdown-item" href="/dashboard"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a>';
+            const dropdownMenu = userDropdown.querySelector('.dropdown-menu');
+            dropdownMenu.insertBefore(dashboardLink, dropdownMenu.firstChild);
         }
     } else {
         // User is not logged in
