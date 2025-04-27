@@ -4,11 +4,12 @@
         <table class="table table-striped align-middle">
             <thead class="table-dark">
                 <tr>
-                    <th>Title</th>
-                    <th>Author</th>
-                    <th>Description</th>
-                    <th>Status</th>
-                    <th style="width: 180px;">Actions</th>
+                    <th class="text-center">Title</th>
+                    <th class="text-center">Author</th>
+                    <th class="text-center">Description</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Featured</th>
+                    <th class="text-center" style="width: 180px;">Actions</th>
                 </tr>
             </thead>
             <tbody id="booksTableBody">
@@ -60,14 +61,25 @@ function getBooks() {
             const description = escapeHtml(book.description);
             const status = book.status || 'available';
             const categories = book.categories ? (Array.isArray(book.categories) ? book.categories.join(', ') : book.categories) : '';
+            const featured = book.featured || false;
 
             const displayRow = `
                 <tr id="bookRow-${id}">
-                    <td>${title}</td>
-                    <td>${author}</td>
-                    <td>${description}</td>
-                    <td><span class="badge ${status === 'public' ? 'bg-success' : 'bg-secondary'}">${status.charAt(0).toUpperCase() + status.slice(1)}</span></td>
-                    <td>
+                    <td class="text-center">${title}</td>
+                    <td class="text-center">${author}</td>
+                    <td class="text-center">${description}</td>
+                    <td class="text-center">
+                        <span class="badge ${status === 'public' ? 'bg-success' : 'bg-secondary'}">
+                            ${status.charAt(0).toUpperCase() + status.slice(1)}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge ${featured ? 'bg-warning text-dark' : 'bg-light text-dark'}">
+                            <i class="bi bi-star${featured ? '-fill' : ''}"></i> 
+                            ${featured ? 'Featured' : 'Regular'}
+                        </span>
+                    </td>
+                    <td class="text-center">
                         <div class="btn-group btn-group-sm">
                             <button class="btn btn-warning" onclick="editBook('${id}')">
                                 <i class="bi bi-pencil-square"></i> Edit
