@@ -9,6 +9,15 @@
 // Default values
 $activePage = $activePage ?? '';
 $searchUrl = $searchUrl ?? '/search_results';
+
+// Initialize username from session if available
+$username = '';
+if (!empty($_SESSION['user_id']) && !empty($_SESSION['user_name'])) {
+    $username = $_SESSION['user_name'];
+} else if (!empty($_SESSION['user_id']) && !empty($_SESSION['user_email'])) {
+    // Fallback to email if name isn't available
+    $username = $_SESSION['user_email'];
+}
 ?>
 <link rel="stylesheet" href="/styles/userForm.css">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -46,8 +55,8 @@ $searchUrl = $searchUrl ?? '/search_results';
                 <!-- User is logged in -->
                 <div id="profileDropdown" class="dropdown" style="display: none;">
                     <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="user-avatar me-2"><?= substr($username, 0, 1) ?></div>
-                        <span class="d-none d-md-inline"><?= htmlspecialchars($username) ?></span>
+                        <div class="user-avatar me-2"><?= !empty($username) ? htmlspecialchars(substr($username, 0, 1)) : '?' ?></div>
+                        <span class="d-none d-md-inline"><?= htmlspecialchars($username ?: 'User') ?></span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="/profile"><i class="fas fa-user me-2"></i>Profile</a></li>

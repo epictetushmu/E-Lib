@@ -40,12 +40,15 @@ class UserController {
 
             $_SESSION['user_id'] = $user['_id'];
             $_SESSION['token'] = $token;
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['isAdmin'] = $user['isAdmin'] ?? false;
 
             ResponseHandler::respond(true, [
                 'token' => $token, 
                 'user' => [
                     'id' => $user['_id'],
                     'email' => $user['email'],
+                    'username' => $user['username'],
                     'isAdmin' => $user['isAdmin'] ?? false
                 ]
             ], 200);
@@ -213,5 +216,84 @@ class UserController {
         } else {
             ResponseHandler::respond(false, 'Failed to remove book', 400);
         }
+    }
+    
+    /**
+     * View error logs (admin only)
+     */
+    public function viewLogs() {
+        // Check if user is admin
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        // Only allow admins to access logs
+        if (empty($_SESSION['isAdmin']) || $_SESSION['isAdmin'] !== true) {
+            ResponseHandler::respond(false, 'Unauthorized', 403);
+            return;
+        }
+        
+        $logPath = dirname(__DIR__, 2) . '/storage/logs/php_errors.log';
+        $requestLogPath = dirname(__DIR__, 2) . '/storage/logs/requests.log';
+        
+        $logs = [];
+        
+        // Check if error log exists and is readable
+        if (file_exists($logPath) && is_readable($logPath)) {
+            // Get the last 100 lines (adjust as needed)
+            $errorLogs = $this->getTailOfFile($logPath, 100);
+            $logs['errors'] = $errorLogs;
+        } else {
+            $logs['errors'] = 'Error log file not found or not readable';
+        }
+        
+        // Check if request log exists and is readable
+        if (file_exists($requestLogPath) && is_readable($requestLogPath)) {
+            $requestLogs = $this->getTailOfFile($requestLogPath, 50);
+            $logs['requests'] = $requestLogs;
+        } else {
+            $logs['requests'] = 'Request log file not found or not readable';
+        }
+        
+        // Send logs as JSON response
+        ResponseHandler::respond(true, 'Logs retrieved successfully', 200, $logs);
+    }
+    
+    /**
+     * Helper method to get the last N lines of a file
+     */
+    private function getTailOfFile($filePath, $lines = 100) {
+        $handle = fopen($filePath, "r");
+        $linecounter = $lines;
+        $pos = -2;
+        $beginning = false;
+        $text = [];
+        
+        while ($linecounter > 0) {
+            $t = " ";
+            while ($t != "\n") {
+                if (fseek($handle, $pos, SEEK_END) == -1) {
+                    $beginning = true;
+                    break;
+                }
+                $t = fgetc($handle);
+                $pos--;
+            }
+            
+            if ($beginning) {
+                rewind($handle);
+            }
+            
+            $text[] = fgets($handle);
+            
+            if ($beginning) {
+                break;
+            }
+            
+            $linecounter--;
+        }
+        
+        fclose($handle);
+        return array_reverse($text);
     }
 }
