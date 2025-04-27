@@ -136,8 +136,6 @@ class BookController {
     }
     
     public function addBook() {
-        // Ensure proper error reporting
-        error_log("Book upload attempt started");
         
         // Extract form data
         $title = $_POST['title'] ?? '';

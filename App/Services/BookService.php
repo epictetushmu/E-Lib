@@ -61,7 +61,7 @@ class BookService {
             'categories' => $categories,
             'pdf_path' => $pdfPath,
             'thumbnail_path' => $thumbnailPath,
-            'featured' => random_int(0, 100)< 50 ? true : false, 
+            'featured' => false, 
             'status'=> 'draft', 
             'created_at' => new UTCDateTime(),
             'updated_at' => new UTCDateTime()
