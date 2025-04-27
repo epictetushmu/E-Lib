@@ -35,6 +35,7 @@ class PageRouter {
             ['path' => '/dashboard', 'handler' => [new PageController(), 'dashboard']],
             ['path' => '/login', 'handler' => [new PageController(), 'home', ['showLogin' => true]]],
             ['path' => '/signup', 'handler' => [new PageController(), 'home', ['showSignup' => true]]],
+            ['path' => '/admin/logs', 'handler' => [new PageController(), 'viewLogs']],
         ];            
     }
 
@@ -78,13 +79,7 @@ class PageRouter {
         header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
         
         // Updated CSP for icons, Bootstrap, SweetAlert2, etc.
-        header("Content-Security-Policy: 
-            default-src 'self'; 
-            style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; 
-            script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; 
-            font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; 
-            img-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
-        ");
+        header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;");
     
         // API-specific headers
         header('Access-Control-Allow-Origin: *');

@@ -169,4 +169,22 @@ class PageController {
 
         $this->response->renderView(__DIR__ . '/../Views/view_books.php', ['books' => $books]);
     }   
+    
+    /**
+     * View system logs (admin-only page)
+     */
+    public function viewLogs() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        // Only allow admins to access logs page
+        if (empty($_SESSION['isAdmin']) || $_SESSION['isAdmin'] !== true) {
+            // Redirect to home page if not admin
+            header('Location: /');
+            exit;
+        }
+        
+        ResponseHandler::renderView(__DIR__ . '/../Views/logs.php');
+    }
 }
