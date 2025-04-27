@@ -22,14 +22,16 @@
                 <!-- Categories -->
                 <?php if (!empty($book['categories'])): ?>
                     <div class="mb-2">
-                        <?php 
-                        $maxCategoriesToShow = 2;
-                        $categoriesToShow = array_slice($book['categories'], 0, $maxCategoriesToShow);
+                        <?php
+                        $categoriesArray = is_object($book['categories']) && method_exists($book['categories'], 'getArrayCopy')
+                            ? $book['categories']->getArrayCopy()
+                            : (array) $book['categories'];
+                        $categoriesToShow = array_slice($categoriesArray, 0, 2);
                         foreach ($categoriesToShow as $category): ?>
                             <span class="badge bg-secondary me-1"><?= htmlspecialchars($category) ?></span>
                         <?php endforeach; ?>
-                        <?php if (count($book['categories']) > $maxCategoriesToShow): ?>
-                            <span class="badge bg-secondary">+<?= count($book['categories']) - $maxCategoriesToShow ?> more</span>
+                        <?php if (count($book['categories']) > 2): ?>
+                            <span class="badge bg-secondary">+<?= count($book['categories']) - 2 ?> more</span>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>

@@ -103,6 +103,12 @@ class PageController {
         $results = $bookService->searchBooks($searchParams);
         
         // Prepare data for the view
+        $results = array_map(function ($result) {
+            $result['_id'] = (string) $result['_id']; // Convert ObjectId to string
+            $result['categories'] = is_object($result['categories']) ? $result['categories']->getArrayCopy() : $result['categories']; // Convert BSONArray to plain array
+            return $result;
+        }, $results);
+
         $this->response->renderView(__DIR__ . '/../Views/search_results.php', [
             'searchQuery' => $title, // For backward compatibility
             'filters' => [
@@ -111,7 +117,7 @@ class PageController {
                 'category' => $category,
             ],
             'results' => $results
-        ]);
+        ]);        
     }
 
     public function profile(){

@@ -110,7 +110,10 @@ class BookService {
         
         try {
             $books = $this->book->searchBooks($query);
-            return $books;
+            if (is_array($books)) {
+                return $books; // Ensure all matching books are returned
+            }
+            return []; // Return an empty array if no matches are found
         } catch (\Exception $e) {
             error_log("Search error: " . $e->getMessage());
             return [];

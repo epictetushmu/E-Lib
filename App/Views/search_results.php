@@ -19,7 +19,7 @@
     <div class="container mt-5">
         <div class="row mb-4">
             <div class="col">
-                <h2>Search Results <?= !empty($searchQuery) ? 'for "' . htmlspecialchars($searchQuery) . '"' : '' ?></h2>
+                <h2>Search Results <?= !empty($searchQuery) && is_string($searchQuery) ? 'for "' . htmlspecialchars($searchQuery) . '"' : '' ?></h2>
             </div>
         </div>
         
