@@ -97,4 +97,9 @@ $categories = $categories ?? [
         });
     }
 })();
+document.querySelector('button[type="reset"]').addEventListener('click', function(e) {
+    // Reset search query URL
+    window.location.href = '<?= htmlspecialchars($searchUrl) ?>';
+});
+
 </script>
