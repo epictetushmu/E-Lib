@@ -227,9 +227,18 @@ class UserController {
             session_start();
         }
         
-        // Only allow admins to access logs
+        // First verify JWT token (should be handled by middleware)
+        $headers = getallheaders();
+        $authHeader = $headers['Authorization'] ?? null;
+        
+        if (!$authHeader || !str_starts_with($authHeader, 'Bearer ')) {
+            ResponseHandler::respond(false, 'Unauthorized access', 401);
+            exit();
+        }
+
+        // Even with valid token, check if user is admin in session
         if (empty($_SESSION['isAdmin']) || $_SESSION['isAdmin'] !== true) {
-            ResponseHandler::respond(false, 'Unauthorized', 403);
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
             return;
         }
         

@@ -119,6 +119,7 @@ $router->addMiddleware(new AuthMiddleware([
     '/add-book',
     '/read/',
     '/dashboard',
+    '/admin/logs', // Added protection for admin logs page
     '/api/v1/books' // Only POST requests actually need auth, but we keep it simple here
 ]));
 
@@ -127,6 +128,7 @@ $router->addMiddleware(new JwtAuthMiddleware([
     '/api/v1/reviews',
     '/api/v1/download',
     '/api/v1/user',
+    '/api/v1/admin/logs', // Added protection for admin logs API endpoint
     'api/v1/save-book',
     'api/v1/remove-book',
     'api/v1/saved-books',

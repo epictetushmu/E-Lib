@@ -127,11 +127,27 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Check admin access immediately on page load
+            checkAdminAccess();
+            
             const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
             const refreshBtn = document.getElementById('refreshBtn');
             const downloadBtn = document.getElementById('downloadBtn');
             const autoRefreshToggle = document.getElementById('autoRefresh');
             let refreshInterval;
+
+            // Function to check admin access
+            function checkAdminAccess() {
+                const isAdmin = localStorage.getItem('isAdmin') === 'true' || 
+                                sessionStorage.getItem('isAdmin') === 'true';
+                
+                if (!isAdmin) {
+                    console.error('Unauthorized access to admin logs detected');
+                    window.location.href = '/';
+                    return false;
+                }
+                return true;
+            }
 
             // Initial load
             loadLogs();
@@ -181,6 +197,9 @@
             });
 
             function loadLogs() {
+                // Check admin access again before making API calls
+                if (!checkAdminAccess()) return;
+                
                 axios.get('/api/v1/admin/logs', {
                     headers: {
                         'Authorization': 'Bearer ' + authToken
@@ -244,6 +263,13 @@
                 .catch(error => {
                     console.error('Error loading logs:', error);
                     const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+                    
+                    // If unauthorized (401) or forbidden (403), redirect to home
+                    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                        console.error('Unauthorized access detected');
+                        window.location.href = '/';
+                        return;
+                    }
                     
                     document.getElementById('errorLogsContent').innerHTML = `
                         <div class="alert alert-danger">

@@ -178,9 +178,16 @@ class PageController {
             session_start();
         }
         
-        // Only allow admins to access logs page
+        // Check if user is authenticated
+        if (!SessionManager::isLoggedIn()) {
+            // Redirect to login page
+            header('Location: /login?redirect=' . urlencode('/admin/logs'));
+            exit;
+        }
+        
+        // Check if user is admin
         if (empty($_SESSION['isAdmin']) || $_SESSION['isAdmin'] !== true) {
-            // Redirect to home page if not admin
+            // Redirect to home page with unauthorized message
             header('Location: /');
             exit;
         }
