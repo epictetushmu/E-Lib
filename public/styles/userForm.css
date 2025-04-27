@@ -2,7 +2,6 @@ body {
     /* Remove the flex display that's forcing centering */
     background-color: #f8f9fa;
     min-height: 100vh;
-    padding: 20px 0;
 }
 
 .login-container {
