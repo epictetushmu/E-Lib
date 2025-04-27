@@ -118,6 +118,15 @@ function getBooks() {
                                                 <option value="public" ${status === 'public' ? 'selected' : ''}>Public</option>
                                             </select>
                                         </div>
+                                        <div class="col-md-4">
+                                            <label for="featured-${id}" class="form-label">Featured</label>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="featured-${id}" name="featured" value="true" ${book.featured ? 'checked' : ''}>
+                                                <label class="form-check-label" for="featured-${id}">
+                                                    Mark as Featured
+                                                </label>
+                                            </div>
+                                        </div>
                                         <div class="col-12">
                                             <label for="categories-${id}" class="form-label">Categories</label>
                                             <input type="text" class="form-control" id="categories-${id}" name="categories"

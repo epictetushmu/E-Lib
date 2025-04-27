@@ -27,7 +27,7 @@ class BookService {
         return $this->book->getPublicBooks();
     }
 
-    public function updateBook($id, string $title, string $author,string $year, string $description, array $categories, string $status) {
+    public function updateBook($id, string $title, string $author,string $year, string $description, array $categories, string $status, string $featured) {
         // Add validation here
   
         //add books the non empty fields 
@@ -38,6 +38,7 @@ class BookService {
             'year' => (int)$year?? null,
             'description' => $description,
             'categories' => $categories,
+            'featured' => (bool)$featured?? false,
             'status' => $status,
             'updated_at' => new UTCDateTime()
         ];
