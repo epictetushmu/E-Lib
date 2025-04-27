@@ -120,7 +120,7 @@ function getBooks() {
                                         </div>
                                         <div class="col-md-4">
                                             <label for="featured-${id}" class="form-label">Featured</label>
-                                            <div class="form-check">
+                                            <div class="form-check form-switch">
                                                 <input class="form-check-input" type="checkbox" id="featured-${id}" name="featured" value="true" ${book.featured ? 'checked' : ''}>
                                                 <label class="form-check-label" for="featured-${id}">
                                                     Mark as Featured
