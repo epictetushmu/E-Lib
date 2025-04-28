@@ -1,34 +1,38 @@
-FROM php:8.1-apache
+# Use PHP 8.2 with Apache
+FROM php:8.2-apache
 
-# Install dependencies and OpenSSL dev libraries
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    libzip-dev \
-    zip \
-    unzip \
     git \
-    libssl-dev \
-    && docker-php-ext-install zip
+    unzip \
+    libzip-dev \
+    libicu-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    curl \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Imagick and its dependencies
+# Install PHP extensions
+RUN docker-php-ext-install zip pdo_mysql exif pcntl
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg
+RUN docker-php-ext-install gd
+
+# Install Imagick
 RUN apt-get update && apt-get install -y \
-    libmagickwand-dev \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/* \
+    libmagickwand-dev --no-install-recommends \
     && pecl install imagick \
     && docker-php-ext-enable imagick
 
-# Install Ghostscript (required for PDF processing)
-RUN apt-get update && apt-get install -y \
-    ghostscript \
-    && rm -rf /var/lib/apt/lists/*
-
-# Ensure proper PDF policy for Imagick
-RUN if [ -f /etc/ImageMagick-6/policy.xml ]; then \
-        sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml; \
-    fi
-
-# Install MongoDB extension (with OpenSSL support automatically included)
+# Install MongoDB extension with version control
 RUN pecl install mongodb && docker-php-ext-enable mongodb
+
+# Install cURL extension for better fallback options
+RUN apt-get update && apt-get install -y \
+    libcurl4-openssl-dev \
+    && docker-php-ext-install curl \
+    && docker-php-ext-enable curl
 
 # Verify OpenSSL is enabled (it's usually built-in with PHP)
 RUN php -m | grep -q openssl || (echo "OpenSSL extension is not available!" && exit 1)
