@@ -52,6 +52,12 @@ COPY composer.json composer.lock* ./
 # Install dependencies
 RUN composer install
 
+
+# Create directories for runtime files
+RUN mkdir -p certificates storage/logs public/uploads cache \
+    && chmod -R 777 certificates storage public/uploads cache
+
+
 # Copy the MongoDB certificate setup script
 COPY setup-mongodb-cert.php docker-entrypoint.php ./
 
@@ -63,10 +69,6 @@ COPY . .
 
 # Generate optimized autoloader
 RUN composer dump-autoload --optimize
-
-# Create directories for runtime files
-RUN mkdir -p certificates storage/logs public/uploads cache \
-    && chmod -R 777 certificates storage public/uploads cache
 
 # Environment variable indicating we're in Docker
 ENV DOCKER_ENV=true
