@@ -56,20 +56,26 @@ COPY composer.json composer.lock* ./
 # Install dependencies
 RUN composer install
 
+# Create directories for runtime files with proper permissions
+RUN mkdir -p /var/www/html/certificates /var/www/html/storage/logs /var/www/html/public/uploads /var/www/html/public/assets/uploads/pdfs /var/www/html/public/assets/uploads/thumbnails /var/www/html/cache \
+    && chmod -R 777 /var/www/html/certificates /var/www/html/storage /var/www/html/public/uploads /var/www/html/public/assets /var/www/html/cache
 
-# Create directories for runtime files
-RUN mkdir -p certificates storage/logs public/uploads cache \
-    && chmod -R 777 certificates storage public/uploads cache
-
-
-# Copy the MongoDB certificate setup script
+# Copy the MongoDB certificate setup script and entrypoint
 COPY setup-mongodb-cert.php docker-entrypoint.php ./
 
-# Run the certificate setup during build for basic setup
+# Try multiple certificate download methods during build
+RUN echo "Attempting certificate download during build..." \
+    && php -r 'file_put_contents("certificates/mongodb-ca.pem", file_get_contents("https://truststore.pki.mongodb.com/atlas-root-ca.pem") ?: "");' \
+    || echo "Primary certificate download method failed, will try alternatives..."
+
+# Run the certificate setup with fallback methods during build
 RUN php setup-mongodb-cert.php
 
 # Copy the rest of the application
 COPY . .
+
+# Set the certificate path in environment
+ENV MONGO_CERT_FILE=/var/www/html/certificates/mongodb-ca.pem
 
 # Generate optimized autoloader
 RUN composer dump-autoload --optimize

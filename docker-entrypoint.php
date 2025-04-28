@@ -2,39 +2,83 @@
 /**
  * Docker Entrypoint Script
  * 
- * This script runs when the Docker container starts, ensuring proper setup.
- * - Sets up MongoDB certificates
- * - Verifies database connection
- * - Starts the web server
+ * This script runs when the Docker container starts,
+ * handling any necessary setup/configuration before
+ * starting the Apache server.
  */
 
-// Run the certificate setup script
-echo "Setting up MongoDB certificates...\n";
-require_once __DIR__ . '/setup-mongodb-cert.php';
-
-// Verify MongoDB connection
-echo "Verifying MongoDB connection...\n";
-try {
-    require_once __DIR__ . '/vendor/autoload.php';
-    $connectionString = getenv('MONGO_URI') ?: 'mongodb://localhost:27017';
-    
-    // Replace placeholder with actual password
-    $mongoPassword = getenv('MONGO_PASSWORD');
-    if ($mongoPassword && strpos($connectionString, '<db_password>') !== false) {
-        $connectionString = str_replace('<db_password>', $mongoPassword, $connectionString);
-    }
-    
-    echo "Connecting to MongoDB at: " . preg_replace('/\/\/([^:]+):([^@]+)@/', '//\\1:***@', $connectionString) . "\n";
-    
-    // Try to connect
-    $factory = new App\Integration\Database\MongoConnectionFactory();
-    $db = $factory->create('mongo', ['fallback' => false]);
-    echo "✓ MongoDB connection successful!\n";
-} catch (Exception $e) {
-    echo "✗ MongoDB connection failed: " . $e->getMessage() . "\n";
-    // Continue anyway, as the application might use fallback
+// Output function that works in CLI or browser
+function output($message) {
+    echo $message . PHP_EOL;
 }
 
-// Pass control to Apache
-echo "Starting web server...\n";
-exec("apache2-foreground");
+output('Starting E-Lib Docker container setup...');
+
+// Check for environment variables
+output('Checking environment configuration...');
+if (file_exists(__DIR__ . '/.env')) {
+    output('Found .env file');
+} else {
+    output('No .env file found, checking if environment variables are set directly');
+}
+
+// Ensure storage directories exist and are writable
+$directories = [
+    __DIR__ . '/storage/logs',
+    __DIR__ . '/public/uploads',
+    __DIR__ . '/public/assets/uploads/pdfs',
+    __DIR__ . '/public/assets/uploads/thumbnails',
+    __DIR__ . '/certificates',
+    __DIR__ . '/cache'
+];
+
+output('Checking required directories...');
+foreach ($directories as $dir) {
+    if (!is_dir($dir)) {
+        output("Creating directory: $dir");
+        mkdir($dir, 0777, true);
+    }
+    chmod($dir, 0777);
+    output("Directory $dir is ready");
+}
+
+// Ensure MongoDB certificate exists and is valid
+output('Checking MongoDB certificate...');
+$certFile = __DIR__ . '/certificates/mongodb-ca.pem';
+
+// Verify certificate and try to fix if needed
+if (!file_exists($certFile) || filesize($certFile) < 100) {
+    output('MongoDB certificate is missing or invalid, attempting to fix...');
+    
+    // Try to run the cert setup script
+    output('Running MongoDB certificate setup script...');
+    include_once __DIR__ . '/setup-mongodb-cert.php';
+    
+    // Double-check that the certificate now exists
+    if (!file_exists($certFile) || filesize($certFile) < 100) {
+        output('WARNING: MongoDB certificate still unavailable after setup attempts');
+        output('The application will attempt to use system CA certificates for MongoDB connections');
+    } else {
+        output('MongoDB certificate is now ready');
+    }
+} else {
+    output('MongoDB certificate is already available');
+}
+
+// Set environment variables for the certificate
+putenv("MONGO_CERT_FILE=$certFile");
+$_ENV['MONGO_CERT_FILE'] = $certFile;
+
+output('Setting Docker environment flag...');
+putenv("DOCKER_ENV=true");
+$_ENV['DOCKER_ENV'] = 'true';
+
+// Set proper permissions for the web server user
+output('Setting proper file permissions...');
+exec('chown -R www-data:www-data /var/www/html');
+
+output('E-Lib container setup complete!');
+output('Starting Apache server...');
+
+// Start Apache in foreground
+exec('apache2-foreground');
