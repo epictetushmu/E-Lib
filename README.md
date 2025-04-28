@@ -46,12 +46,32 @@ To get started with the E-Lib project:
    
    Edit the `.env` file with your specific configuration values.
 
-2. **Environment Variables**:
+2. **Required Environment Variables**:
    The following environment variables can be configured:
-   - `MONGO_URI`: MongoDB server hostname
+   - `APP_ENV`: Application environment (development, production)
+   - `API_BASE_URL`: Base URL for API endpoints
+   - `CAS_SERVER_URL`: CAS server URL for authentication
+   - `JWT_SECRET_KEY`: Secret key for JWT token generation and validation
+   - `MONGO_URI`: MongoDB connection string (supports variable substitution with ${MONGO_PASSWORD})
    - `MONGO_PASSWORD`: MongoDB password
+   - `MONGO_CERT_FILE`: Path to MongoDB certificate file
    - `NGROK_AUTH_TOKEN`: Ngrok token for development tunneling
-   - `CAS_SERVER_URL` : Cas server url for authentication
+   - `DATABASE_NAME`: Name of the MongoDB database (production only)
+
+3. **Variable Substitution**:
+   The environment system supports variable substitution. For example, in your MongoDB URI:
+   ```
+   MONGO_URI=mongodb+srv://username:${MONGO_PASSWORD}@hostname/
+   ```
+   
+   This will substitute `${MONGO_PASSWORD}` with the value of the `MONGO_PASSWORD` environment variable.
+
+4. **Multiple Environments**:
+   Different environment files are available:
+   - `.env`: Default development environment
+   - `.env.production`: Production settings
+   
+   To use a specific environment file, you can specify it when initializing the application or set the `APP_ENV` variable.
 
 ### Local Development with Docker
 1. **Clone the Repository**:
