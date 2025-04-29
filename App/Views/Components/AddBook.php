@@ -41,6 +41,11 @@
                 <label for="description" class="form-label">Description</label>
                 <textarea class="form-control" id="description" name="description" rows="3"></textarea>
             </div>
+            
+            <div class="mb-3">
+                <label for="isbn" class="form-label">ISBN</label>
+                <textarea type="number" class="form-control" id="isbn" name="isbn" rows="3"></textarea>
+            </div>            
 
             <div class="mb-3">
                 <label for="bookPdf" class="form-label">Book</label>
@@ -78,6 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const selectedCategories = Array.from(document.getElementById("category").selectedOptions).map(option => option.value);
         const year = yearInput.value;
         const description = document.getElementById("description").value;
+        const isbn = document.getElementById("isbn").value;
         const bookPdf = document.getElementById("bookPdf").files[0];
         const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
 
@@ -86,6 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
         formData.append("author", author);
         formData.append("categories", JSON.stringify(selectedCategories));
         formData.append("year", year);
+        formData.append("isbn", isbn); 
         formData.append("description", description);
         formData.append("bookPdf", bookPdf);
 

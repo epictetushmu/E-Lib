@@ -141,6 +141,7 @@ class BookController {
         $title = $_POST['title'] ?? '';
         $author = $_POST['author'] ?? '';
         $year = $_POST['year'] ?? '';
+        $isbn = $_POST['isbn'] ?? '';
         $description = $_POST['description'] ?? '';
         $categories = json_decode($_POST['categories'] ?? '[]', true);
 
@@ -173,7 +174,7 @@ class BookController {
         
         // Add the book to the database
         $response = $this->bookService->addBook(
-            $title, $author, $year, $description, $categories, 
+            $title, $author, $year, $description, $categories, $isbn,
             $pdfPath, $thumbnailPath
         );
         
