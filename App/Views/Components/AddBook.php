@@ -44,7 +44,7 @@
             
             <div class="mb-3">
                 <label for="isbn" class="form-label">ISBN</label>
-                <textarea type="number" class="form-control" id="isbn" name="isbn" rows="3"></textarea>
+                <input type="number" class="form-control" id="isbn" name="isbn"></input>
             </div>            
 
             <div class="mb-3">

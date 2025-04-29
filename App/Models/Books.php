@@ -59,6 +59,11 @@ class Books {
         }
     }
 
+    public function getBookByTitle($title) {
+        $regex = new Regex($title, 'i'); // 'i' for case-insensitive
+        return $this->db->findOne($this->collection, ['title' => $regex]);
+    }
+
     public function updateBookRating($bookId, $rating, $reviewCount) {
         try {
             return $this->db->update(

@@ -143,6 +143,10 @@ class BookService {
         return $result;
     }
 
+    public function getBookByTitle($title) {
+        return $this->book->getBookByTitle($title);
+    }
+
     /**
      * Update book's average rating based on all reviews
      */

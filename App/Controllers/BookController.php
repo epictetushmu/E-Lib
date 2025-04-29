@@ -149,6 +149,10 @@ class BookController {
         if (empty($title)) {
             return $this->response->respond(false, 'Title is required', 400);
         }
+
+        if ($this->bookService->getBookByTitle($title)) {
+            return $this->response->respond(false, 'Book already exists', 400);
+        }
       
         // Check file upload
         if (!isset($_FILES['bookPdf']) || $_FILES['bookPdf']['error'] != 0) {
