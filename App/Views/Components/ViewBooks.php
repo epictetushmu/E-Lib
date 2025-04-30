@@ -154,6 +154,7 @@ function editBook(bookId) {
             const categories = book.categories ? (Array.isArray(book.categories) ? book.categories.join(', ') : book.categories) : '';
             const featured = book.featured || false;
             const isbn = book.isbn || '';
+            const downloadable = book.downloadable !== false; // Default to true if not set
 
             const editForm = `
                 <form id="editForm-${id}" onsubmit="submitEdit(event, '${id}')">
@@ -194,7 +195,18 @@ function editBook(bookId) {
                         </div>
                         <div class="col-md-4">
                             <label for="isbn-${id}" class="form-label">ISBN</label>
-                            <input type="number" class="form-control" id="isbn-${id}" name="isbn" value="${isbn}">
+                            <input type="text" class="form-control" id="isbn-${id}" name="isbn" value="${isbn}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Downloadable</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="downloadable" id="downloadableYes-${id}" value="true" ${downloadable ? 'checked' : ''}>
+                                <label class="form-check-label" for="downloadableYes-${id}">Yes</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="downloadable" id="downloadableNo-${id}" value="false" ${!downloadable ? 'checked' : ''}>
+                                <label class="form-check-label" for="downloadableNo-${id}">No</label>
+                            </div>
                         </div>
                         <div class="col-12">
                             <label for="categories-${id}" class="form-label">Categories</label>

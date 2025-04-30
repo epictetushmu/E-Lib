@@ -63,6 +63,9 @@ class BookController {
         $status = isset($data['status']) ? $data['status'] : $currentBook['status'];
         $featured = isset($data['featured']) ? $data['featured'] : $currentBook['featured'];
         $isbn = isset($data['isbn']) ? $data['isbn'] : ($currentBook['isbn'] ?? '');
+        $downloadable = isset($data['downloadable']) ? 
+            ($data['downloadable'] === 'yes' || $data['downloadable'] === true || $data['downloadable'] === 'true') : 
+            ($currentBook['downloadable'] ?? true);
         
         // Check if categories are being updated
         $categories = [];
@@ -86,7 +89,7 @@ class BookController {
         
         // Update the book in the database
         $response = $this->bookService->updateBook(
-            $id, $title, $author, $year, $description, $categories, $status, $featured, $isbn
+            $id, $title, $author, $year, $description, $categories, $status, $featured, $isbn, $downloadable
         );
 
         if ($response) {
@@ -145,7 +148,9 @@ class BookController {
         $isbn = $_POST['isbn'] ?? '';
         $description = $_POST['description'] ?? '';
         $categories = json_decode($_POST['categories'] ?? '[]', true);
-        $downloadable = $_POST['downloadable'] ?? 'false';
+        
+        // Parse the downloadable value as a boolean
+        $downloadable = filter_var($_POST['downloadable'] ?? 'true', FILTER_VALIDATE_BOOLEAN);
 
         // Validate required fields
         if (empty($title)) {
@@ -180,8 +185,8 @@ class BookController {
         
         // Add the book to the database
         $response = $this->bookService->addBook(
-            $title, $author, $year, $description, $categories, $isbn, $downloadable,
-            $pdfPath, $thumbnailPath
+            $title, $author, $year, $description, $categories, $isbn,
+            $pdfPath, $thumbnailPath, $downloadable
         );
         
         if ($response) {
@@ -221,6 +226,13 @@ class BookController {
         if (!$book || empty($book['pdf_path'])) {
             header('HTTP/1.0 404 Not Found');
             echo "Book not found or has no PDF";
+            exit;
+        }
+        
+        // Check if the book is downloadable
+        if (isset($book['downloadable']) && $book['downloadable'] === false) {
+            header('HTTP/1.0 403 Forbidden');
+            echo "This book is not available for download";
             exit;
         }
         
