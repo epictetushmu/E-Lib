@@ -62,6 +62,7 @@ class BookController {
         $description = isset($data['description']) ? $data['description'] : $currentBook['description'];
         $status = isset($data['status']) ? $data['status'] : $currentBook['status'];
         $featured = isset($data['featured']) ? $data['featured'] : $currentBook['featured'];
+        $isbn = isset($data['isbn']) ? $data['isbn'] : ($currentBook['isbn'] ?? '');
         
         // Check if categories are being updated
         $categories = [];
@@ -85,7 +86,7 @@ class BookController {
         
         // Update the book in the database
         $response = $this->bookService->updateBook(
-            $id, $title, $author, $year, $description, $categories, $status, $featured
+            $id, $title, $author, $year, $description, $categories, $status, $featured, $isbn
         );
 
         if ($response) {
