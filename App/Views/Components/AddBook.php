@@ -44,13 +44,27 @@
             
             <div class="mb-3">
                 <label for="isbn" class="form-label">ISBN</label>
-                <input type="number" class="form-control" id="isbn" name="isbn"></input>
+                <input type="number" class="form-control" id="isbn" name="isbn">
             </div>            
 
             <div class="mb-3">
                 <label for="bookPdf" class="form-label">Book</label>
                 <input type="file" class="form-control" id="bookPdf" name="bookPdf" accept="application/pdf" required>
                 <small class="form-text text-muted">Upload a PDF file.</small>
+            </div>
+            
+            <!-- Downloadable option -->
+            <div class="mb-3">
+                <label class="form-label">Downloadable</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="downloadable" id="downloadableYes" value="true" checked>
+                    <label class="form-check-label" for="downloadableYes">Yes</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="downloadable" id="downloadableNo" value="false">
+                    <label class="form-check-label" for="downloadableNo">No</label>
+                </div>
+                <small class="form-text text-muted">Whether users can download this book's PDF.</small>
             </div>
 
             <div class="text-center">
@@ -85,6 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const description = document.getElementById("description").value;
         const isbn = document.getElementById("isbn").value;
         const bookPdf = document.getElementById("bookPdf").files[0];
+        const downloadable = document.querySelector('input[name="downloadable"]:checked').value;
         const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
 
         const formData = new FormData();
@@ -95,6 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
         formData.append("isbn", isbn); 
         formData.append("description", description);
         formData.append("bookPdf", bookPdf);
+        formData.append("downloadable", downloadable);
 
         axios.post("/api/v1/books", formData, {
             headers: {

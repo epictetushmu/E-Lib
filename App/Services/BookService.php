@@ -27,7 +27,7 @@ class BookService {
         return $this->book->getPublicBooks();
     }
 
-    public function updateBook($id, string $title, string $author, string $year, string $description, array $categories, string $status, string $featured, string $isbn) {
+    public function updateBook($id, string $title, string $author, string $year, string $description, array $categories, string $status, string $featured, string $isbn, bool $downloadable = true) {
         // Add validation here
   
         //add books the non empty fields 
@@ -39,6 +39,7 @@ class BookService {
             'description' => $description,
             'categories' => $categories,
             'isbn' => $isbn,
+            'downloadable' => $downloadable,
             'featured' => (bool)$featured?? false,
             'status' => $status,
             'updated_at' => new UTCDateTime()
@@ -51,7 +52,7 @@ class BookService {
         return $this->book->getBookDetails($id);
     }
 
-    public function addBook(string $title, string $author,string $year, string $description, array $categories, string $isbn, $pdfPath = null, $thumbnailPath = null) {
+    public function addBook(string $title, string $author, string $year, string $description, array $categories, string $isbn, $pdfPath = null, $thumbnailPath = null, bool $downloadable = true) {
         // Add validation here
         
         $book = [
@@ -63,6 +64,7 @@ class BookService {
             'pdf_path' => $pdfPath,
             'isbn' =>  $isbn,
             'thumbnail_path' => $thumbnailPath,
+            'downloadable' => (bool)$downloadable,
             'featured' => false, 
             'status'=> 'draft', 
             'created_at' => new UTCDateTime(),

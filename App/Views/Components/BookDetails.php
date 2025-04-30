@@ -1,4 +1,3 @@
-
 <div class="row">
     <!-- Book Cover + Actions Column -->
     <div class="col-md-4">
@@ -7,39 +6,30 @@
                 class="img-fluid rounded shadow-sm"
                 onerror="this.src='/assets/uploads/thumbnails/placeholder-book.jpg'">
 
-        <?php if (isset($_SESSION['user_id'])): ?>
-            <div class="mt-2">
-                <button id="saveBtn" class="btn btn-outline-primary w-100">
-                    <i class="fas fa-bookmark me-2"></i>Save to List
+        <!-- Action Buttons -->
+        <div class="action-buttons mt-4">
+            <?php if (isset($_SESSION['user_id']) && !empty($_SESSION['user_id'])): ?>
+                <button id="saveBtn" class="btn btn-outline-primary me-2 action-btn">
+                    <i class="fas fa-bookmark me-1"></i> Save to Reading List
                 </button>
-            </div>
-        
-            <!-- Download Button -->
-            <?php if (!empty($book['pdf_path'])): ?>
-               <div class="mt-2">
-                <button id="downloadBtn" class="btn btn-outline-success w-100">
-                    <i class="fas fa-file-download me-2"></i>Download PDF
+                
+                <button id="previewBtn" class="btn btn-info me-2 action-btn">
+                    <i class="fas fa-eye me-1"></i> Online Preview
                 </button>
-                </div>
+                
+                <?php if (!isset($book['downloadable']) || $book['downloadable'] === true): ?>
+                    <button id="downloadBtn" class="btn btn-success me-2 action-btn">
+                        <i class="fas fa-download me-1"></i> Download PDF
+                    </button>
+                <?php else: ?>
+                    <button class="btn btn-outline-secondary me-2 action-btn" disabled title="This book is not available for download">
+                        <i class="fas fa-ban me-1"></i> Download Disabled
+                    </button>
+                <?php endif; ?>
             <?php endif; ?>
-            <!-- Read Online Button -->
-            <div class="mt-2">
-                <a href="/read/<?= htmlspecialchars($book['_id']) ?>" class="btn btn-outline-info w-100">
-                    <i class="fas fa-book-open me-2"></i>Read Online
-                </a>
-            </div>  
-        <?php else: ?>
-            <!-- Login to access -->
-            <div class="mt-2">
-                <a href="/login?redirect=<?= urlencode('/book/' . $book['_id']) ?>" class="btn btn-outline-secondary w-100">
-                    <i class="fas fa-lock me-2"></i>Login for Full Access
-                </a>
-            </div>
-        <?php endif; ?>
-        <!-- Share Button -->
-        <div class="mt-2">
-            <button id="shareBtn" class="btn btn-outline-secondary w-100">
-                <i class="fas fa-share-alt me-2"></i>Share
+            
+            <button id="shareBtn" class="btn btn-outline-secondary action-btn">
+                <i class="fas fa-share-alt me-1"></i> Share
             </button>
         </div>
     </div>
@@ -192,6 +182,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error downloading the file:', error);
                 alert('Failed to download the file. Please try again.');
             }
+        });
+    }
+
+    // Add event listener for preview button
+    const previewBtn = document.getElementById('previewBtn');
+    if (previewBtn) {
+        previewBtn.addEventListener('click', function() {
+            const bookId = document.getElementById('bookId').value;
+            window.open(`/read/${bookId}`, '_blank');
         });
     }
 });
