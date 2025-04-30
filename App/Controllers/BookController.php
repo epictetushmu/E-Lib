@@ -145,6 +145,7 @@ class BookController {
         $isbn = $_POST['isbn'] ?? '';
         $description = $_POST['description'] ?? '';
         $categories = json_decode($_POST['categories'] ?? '[]', true);
+        $downloadable = $_POST['downloadable'] ?? 'false';
 
         // Validate required fields
         if (empty($title)) {
@@ -179,7 +180,7 @@ class BookController {
         
         // Add the book to the database
         $response = $this->bookService->addBook(
-            $title, $author, $year, $description, $categories, $isbn,
+            $title, $author, $year, $description, $categories, $isbn, $downloadable,
             $pdfPath, $thumbnailPath
         );
         

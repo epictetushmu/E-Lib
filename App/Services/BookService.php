@@ -51,7 +51,7 @@ class BookService {
         return $this->book->getBookDetails($id);
     }
 
-    public function addBook(string $title, string $author,string $year, string $description, array $categories, string $isbn, $pdfPath = null, $thumbnailPath = null) {
+    public function addBook(string $title, string $author,string $year, string $description, array $categories, string $isbn, string $downloadable, $pdfPath = null, $thumbnailPath = null) {
         // Add validation here
         
         $book = [
@@ -64,6 +64,7 @@ class BookService {
             'isbn' =>  $isbn,
             'thumbnail_path' => $thumbnailPath,
             'featured' => false, 
+            'downloadable' => $downloadable,
             'status'=> 'draft', 
             'created_at' => new UTCDateTime(),
             'updated_at' => new UTCDateTime()
