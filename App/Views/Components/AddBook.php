@@ -57,15 +57,16 @@
             <div class="mb-3">
                 <label class="form-label">Downloadable</label>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="downloadable" id="downloadableYes" value="yes" checked>
+                    <input class="form-check-input" type="radio" name="downloadable" id="downloadableYes" value="true" checked>
                     <label class="form-check-label" for="downloadableYes">Yes</label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="downloadable" id="downloadableNo" value="no">
+                    <input class="form-check-input" type="radio" name="downloadable" id="downloadableNo" value="false">
                     <label class="form-check-label" for="downloadableNo">No</label>
                 </div>
+                <small class="form-text text-muted">Whether users can download this book's PDF.</small>
             </div>
-            
+
             <div class="text-center">
                 <button type="submit" class="btn btn-primary">Insert</button>
                 <button type="reset" class="btn btn-secondary" id="clearForm">Clear</button>
