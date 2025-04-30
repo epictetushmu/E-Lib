@@ -62,6 +62,7 @@ class BookController {
         $description = isset($data['description']) ? $data['description'] : $currentBook['description'];
         $status = isset($data['status']) ? $data['status'] : $currentBook['status'];
         $featured = isset($data['featured']) ? $data['featured'] : $currentBook['featured'];
+        $isbn = isset($data['isbn']) ? $data['isbn'] : ($currentBook['isbn'] ?? '');
         
         // Check if categories are being updated
         $categories = [];
@@ -85,7 +86,7 @@ class BookController {
         
         // Update the book in the database
         $response = $this->bookService->updateBook(
-            $id, $title, $author, $year, $description, $categories, $status, $featured
+            $id, $title, $author, $year, $description, $categories, $status, $featured, $isbn
         );
 
         if ($response) {
@@ -141,12 +142,17 @@ class BookController {
         $title = $_POST['title'] ?? '';
         $author = $_POST['author'] ?? '';
         $year = $_POST['year'] ?? '';
+        $isbn = $_POST['isbn'] ?? '';
         $description = $_POST['description'] ?? '';
         $categories = json_decode($_POST['categories'] ?? '[]', true);
 
         // Validate required fields
         if (empty($title)) {
             return $this->response->respond(false, 'Title is required', 400);
+        }
+
+        if ($this->bookService->getBookByTitle($title)) {
+            return $this->response->respond(false, 'Book already exists', 400);
         }
       
         // Check file upload
@@ -173,7 +179,7 @@ class BookController {
         
         // Add the book to the database
         $response = $this->bookService->addBook(
-            $title, $author, $year, $description, $categories, 
+            $title, $author, $year, $description, $categories, $isbn,
             $pdfPath, $thumbnailPath
         );
         

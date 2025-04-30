@@ -1,34 +1,38 @@
-FROM php:8.1-apache
+# Use PHP 8.2 with Apache
+FROM php:8.2-apache
 
-# Install dependencies and OpenSSL dev libraries
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    libzip-dev \
-    zip \
-    unzip \
     git \
-    libssl-dev \
-    && docker-php-ext-install zip
+    unzip \
+    libzip-dev \
+    libicu-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    curl \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Imagick and its dependencies
+# Install PHP extensions
+RUN docker-php-ext-install zip pdo_mysql exif pcntl
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg
+RUN docker-php-ext-install gd
+
+# Install Imagick
 RUN apt-get update && apt-get install -y \
-    libmagickwand-dev \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/* \
+    libmagickwand-dev --no-install-recommends \
     && pecl install imagick \
     && docker-php-ext-enable imagick
 
-# Install Ghostscript (required for PDF processing)
-RUN apt-get update && apt-get install -y \
-    ghostscript \
-    && rm -rf /var/lib/apt/lists/*
-
-# Ensure proper PDF policy for Imagick
-RUN if [ -f /etc/ImageMagick-6/policy.xml ]; then \
-        sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml; \
-    fi
-
-# Install MongoDB extension (with OpenSSL support automatically included)
+# Install MongoDB extension with version control
 RUN pecl install mongodb && docker-php-ext-enable mongodb
+
+# Install cURL extension for better fallback options
+RUN apt-get update && apt-get install -y \
+    libcurl4-openssl-dev \
+    && docker-php-ext-install curl \
+    && docker-php-ext-enable curl
 
 # Verify OpenSSL is enabled (it's usually built-in with PHP)
 RUN php -m | grep -q openssl || (echo "OpenSSL extension is not available!" && exit 1)
@@ -52,20 +56,26 @@ COPY composer.json composer.lock* ./
 # Install dependencies
 RUN composer install
 
+# Create directories for runtime files with proper permissions
+RUN mkdir -p /var/www/html/certificates /var/www/html/storage/logs /var/www/html/public/uploads /var/www/html/public/assets/uploads/pdfs /var/www/html/public/assets/uploads/thumbnails /var/www/html/cache \
+    && chmod -R 777 /var/www/html/certificates /var/www/html/storage /var/www/html/public/uploads /var/www/html/public/assets /var/www/html/cache
 
-# Create directories for runtime files
-RUN mkdir -p certificates storage/logs public/uploads cache \
-    && chmod -R 777 certificates storage public/uploads cache
-
-
-# Copy the MongoDB certificate setup script
+# Copy the MongoDB certificate setup script and entrypoint
 COPY setup-mongodb-cert.php docker-entrypoint.php ./
 
-# Run the certificate setup during build for basic setup
+# Try multiple certificate download methods during build
+RUN echo "Attempting certificate download during build..." \
+    && php -r 'file_put_contents("certificates/mongodb-ca.pem", file_get_contents("https://truststore.pki.mongodb.com/atlas-root-ca.pem") ?: "");' \
+    || echo "Primary certificate download method failed, will try alternatives..."
+
+# Run the certificate setup with fallback methods during build
 RUN php setup-mongodb-cert.php
 
 # Copy the rest of the application
 COPY . .
+
+# Set the certificate path in environment
+ENV MONGO_CERT_FILE=/var/www/html/certificates/mongodb-ca.pem
 
 # Generate optimized autoloader
 RUN composer dump-autoload --optimize
