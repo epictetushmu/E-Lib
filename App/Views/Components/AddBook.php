@@ -44,7 +44,13 @@
             
             <div class="mb-3">
                 <label for="isbn" class="form-label">ISBN</label>
-                <input type="number" class="form-control" id="isbn" name="isbn">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="isbnRaw" placeholder="Enter ISBN-10 or ISBN-13" style="display: none;">
+                    <input type="text" class="form-control" id="isbnFormatted" name="isbn" placeholder="Enter ISBN-10 or ISBN-13">
+                </div>
+                <div id="isbnHelp" class="form-text">
+                    <span id="isbnValidation" class="text-danger"></span>
+                </div>
             </div>            
 
             <div class="mb-3">
@@ -87,9 +93,172 @@ document.addEventListener("DOMContentLoaded", () => {
     const clearForm = document.getElementById("clearForm");
     clearForm.addEventListener("click", () => {
         form.reset();
+        document.getElementById("isbnValidation").textContent = "";
     });
 
+    // ISBN validation and formatting
+    const isbnFormatted = document.getElementById("isbnFormatted");
+    const isbnValidation = document.getElementById("isbnValidation");
+    
+    // Store raw value to use for validation
+    let rawIsbn = "";
+    
+    isbnFormatted.addEventListener("input", function(e) {
+        const cursorPosition = this.selectionStart;
+        
+        // Get input value and clean it
+        let value = this.value.replace(/[^0-9X]/gi, '');
+        
+        // Force uppercase X (for ISBN-10)
+        value = value.replace(/x/g, 'X');
+        
+        // Update raw ISBN for validation
+        rawIsbn = value;
+        
+        // Limit length
+        if (value.length > 13) {
+            value = value.slice(0, 13);
+            rawIsbn = value;
+        }
+        
+        // Format for display
+        let formatted = formatISBN(value);
+        
+        // Only update the field value if it's different (to avoid cursor issues)
+        if (this.value !== formatted) {
+            this.value = formatted;
+            
+            // Try to maintain cursor position after formatting
+            // This is approximate since formatting changes the string length
+            let newPosition = cursorPosition;
+            // Add adjustment for hyphen positions
+            if (value.length >= 1 && cursorPosition > 1) newPosition++;
+            if (value.length >= 4 && cursorPosition > 4) newPosition++;
+            if (value.length >= 7 && cursorPosition > 7) newPosition++;
+            if (value.length >= 12 && cursorPosition > 12) newPosition++;
+            
+            this.setSelectionRange(newPosition, newPosition);
+        }
+        
+        // Validate ISBN
+        let validationMessage = validateISBN(rawIsbn);
+        isbnValidation.textContent = validationMessage;
+    });
+    
+    // Format ISBN with hyphens based on standard rules
+    function formatISBN(isbn) {
+        if (!isbn) return '';
+        
+        if (isbn.length <= 1) return isbn;
+        
+        if (isbn.length <= 4) {
+            // Partial ISBN-10/13: X-...
+            return isbn.substring(0, 1) + 
+                  (isbn.length > 1 ? '-' + isbn.substring(1) : '');
+        }
+        
+        if (isbn.length <= 7) {
+            // Partial ISBN-10/13: X-XXX-...
+            return isbn.substring(0, 1) + '-' + 
+                   isbn.substring(1, 4) + 
+                  (isbn.length > 4 ? '-' + isbn.substring(4) : '');
+        }
+        
+        if (isbn.length <= 10) {
+            if (isbn.length === 10) {
+                // Complete ISBN-10: X-XXX-XXXXX-X
+                return isbn.substring(0, 1) + '-' + 
+                       isbn.substring(1, 4) + '-' + 
+                       isbn.substring(4, 9) + '-' + 
+                       isbn.substring(9, 10);
+            } else {
+                // Partial ISBN-10: X-XXX-XXXXX...
+                return isbn.substring(0, 1) + '-' + 
+                       isbn.substring(1, 4) + '-' + 
+                       isbn.substring(4);
+            }
+        } else {
+            if (isbn.length === 13) {
+                // Complete ISBN-13: XXX-X-XXX-XXXXX-X
+                return isbn.substring(0, 3) + '-' + 
+                       isbn.substring(3, 4) + '-' + 
+                       isbn.substring(4, 7) + '-' + 
+                       isbn.substring(7, 12) + '-' + 
+                       isbn.substring(12, 13);
+            } else {
+                // Partial ISBN-13: XXX-X-XXX-XXXXX...
+                return isbn.substring(0, 3) + '-' + 
+                       isbn.substring(3, 4) + '-' + 
+                       isbn.substring(4, 7) + '-' + 
+                       isbn.substring(7);
+            }
+        }
+    }
+    
+    // Basic ISBN validation
+    function validateISBN(isbn) {
+        if (!isbn) return '';
+        
+        // For incomplete ISBNs, just show a message about expected length
+        if (isbn.length < 10) {
+            return 'Continue entering digits (ISBN-10: 10 digits, ISBN-13: 13 digits)';
+        }
+        
+        if (isbn.length !== 10 && isbn.length !== 13) {
+            return 'ISBN must be 10 or 13 characters long';
+        }
+        
+        if (isbn.length === 10) {
+            // Only last character can be 'X' in ISBN-10
+            if (/[X]/i.test(isbn.substring(0, 9))) {
+                return 'Only the last character of ISBN-10 can be X';
+            }
+            
+            // Validate ISBN-10 checksum
+            let sum = 0;
+            for (let i = 0; i < 9; i++) {
+                sum += parseInt(isbn.charAt(i)) * (10 - i);
+            }
+            
+            let checkDigit = 11 - (sum % 11);
+            if (checkDigit === 11) checkDigit = 0;
+            if (checkDigit === 10) checkDigit = 'X';
+            
+            const lastChar = isbn.charAt(9).toUpperCase();
+            if (lastChar !== checkDigit.toString()) {
+                return 'Invalid ISBN-10 checksum';
+            }
+            
+            return 'Valid ISBN-10';
+        }
+        
+        if (isbn.length === 13) {
+            // ISBN-13 cannot have 'X'
+            if (/[X]/i.test(isbn)) {
+                return 'ISBN-13 cannot contain X';
+            }
+            
+            // Validate ISBN-13 checksum
+            let sum = 0;
+            for (let i = 0; i < 12; i++) {
+                sum += parseInt(isbn.charAt(i)) * (i % 2 === 0 ? 1 : 3);
+            }
+            
+            let checkDigit = 10 - (sum % 10);
+            if (checkDigit === 10) checkDigit = 0;
+            
+            if (parseInt(isbn.charAt(12)) !== checkDigit) {
+                return 'Invalid ISBN-13 checksum';
+            }
+            
+            return 'Valid ISBN-13';
+        }
+        
+        return '';
+    }
+
     form.addEventListener("submit", (event) => {
+        // When submitting, extract the raw ISBN (without hyphens)
         event.preventDefault();
 
         const title = document.getElementById("title").value;
@@ -97,10 +266,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const selectedCategories = Array.from(document.getElementById("category").selectedOptions).map(option => option.value);
         const year = yearInput.value;
         const description = document.getElementById("description").value;
-        const isbn = document.getElementById("isbn").value;
+        
+        // Get the raw ISBN without hyphens for storage
+        const isbn = rawIsbn; 
+        
         const bookPdf = document.getElementById("bookPdf").files[0];
         const downloadable = document.querySelector('input[name="downloadable"]:checked').value;
         const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
+        
+        // Validate ISBN before submission
+        const isbnError = validateISBN(isbn);
+        if (isbn && (isbnError !== 'Valid ISBN-10' && isbnError !== 'Valid ISBN-13')) {
+            alert("Please enter a valid ISBN before submitting.");
+            return;
+        }
 
         const formData = new FormData();
         formData.append("title", title);

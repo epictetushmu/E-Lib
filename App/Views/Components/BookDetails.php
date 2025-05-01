@@ -76,7 +76,7 @@
                     <p><strong>Published:</strong> <?= htmlspecialchars($book['published_date']) ?></p>
                 <?php endif; ?>
                 <?php if (!empty($book['isbn'])): ?>
-                    <p><strong>ISBN:</strong> <?= htmlspecialchars($book['isbn']) ?></p>
+                    <p><strong>ISBN:</strong> <span class="formatted-isbn"><?= htmlspecialchars($book['isbn']) ?></span></p>
                 <?php endif; ?>
             </div>
             <div class="col-md-6">
@@ -101,6 +101,38 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const shareBtn = document.getElementById('shareBtn');
+    
+    // Format ISBN numbers for better readability
+    const formatIsbnElements = document.querySelectorAll('.formatted-isbn');
+    formatIsbnElements.forEach(element => {
+        const isbn = element.textContent.trim();
+        element.textContent = formatISBN(isbn);
+    });
+    
+    // Format ISBN with hyphens based on standard rules
+    function formatISBN(isbn) {
+        if (!isbn) return isbn;
+        
+        // Remove any existing non-alphanumeric characters
+        isbn = isbn.replace(/[^0-9X]/gi, '');
+        
+        if (isbn.length === 10) {
+            // Format ISBN-10: 1-234-56789-X
+            return isbn.substring(0, 1) + '-' + 
+                   isbn.substring(1, 4) + '-' + 
+                   isbn.substring(4, 9) + '-' + 
+                   isbn.substring(9, 10);
+        } else if (isbn.length === 13) {
+            // Format ISBN-13: 978-1-234-56789-7
+            return isbn.substring(0, 3) + '-' + 
+                   isbn.substring(3, 4) + '-' + 
+                   isbn.substring(4, 7) + '-' + 
+                   isbn.substring(7, 12) + '-' + 
+                   isbn.substring(12, 13);
+        }
+        
+        return isbn; // Return unformatted if not correct length
+    }
     
     if (shareBtn) {
         shareBtn.addEventListener('click', function() {
