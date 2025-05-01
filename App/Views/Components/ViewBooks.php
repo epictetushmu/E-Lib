@@ -667,14 +667,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Close the modal automatically after 2 seconds
                     setTimeout(() => {
-                        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('massUploadModal'));
-                        modalInstance.hide();
+                        const modalElement = document.getElementById('massUploadModal');
+                        const modalInstance = bootstrap.Modal.getInstance(modalElement);
                         
-                        // Clear the form data
-                        filesContainer.innerHTML = '';
-                        updateFileCount();
-                        uploadProgressContainer.style.display = 'none';
-                        uploadFeedback.style.display = 'none';
+                        if (modalInstance) {
+                            // Properly hide and dispose of the modal
+                            modalInstance.hide();
+                            
+                            // Remove backdrop and reset body styles after the modal transition
+                            modalElement.addEventListener('hidden.bs.modal', function () {
+                                // Remove any lingering backdrop
+                                const backdrop = document.querySelector('.modal-backdrop');
+                                if (backdrop) {
+                                    backdrop.remove();
+                                }
+                                
+                                // Reset body styles
+                                document.body.classList.remove('modal-open');
+                                document.body.style.paddingRight = '';
+                                document.body.style.overflow = '';
+                                
+                                // Clear the form data
+                                filesContainer.innerHTML = '';
+                                updateFileCount();
+                                uploadProgressContainer.style.display = 'none';
+                                uploadFeedback.style.display = 'none';
+                            }, { once: true });
+                        }
                     }, 2000);
                 } else {
                     uploadFeedback.className = 'alert alert-warning';

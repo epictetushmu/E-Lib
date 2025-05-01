@@ -364,7 +364,8 @@ class BookController {
         $defaultCategories = !empty($_POST['defaultCategories']) ? json_decode($_POST['defaultCategories'], true) : [];
         $defaultStatus = $_POST['defaultStatus'] ?? 'draft';
         $defaultDownloadable = filter_var($_POST['defaultDownloadable'] ?? 'true', FILTER_VALIDATE_BOOLEAN);
-        echo $defaultDownloadable;
+        // Remove the debug echo that corrupts JSON response
+        
         // Track upload results
         $results = [
             'success' => [],
