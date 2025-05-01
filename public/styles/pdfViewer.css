@@ -7,3 +7,84 @@ canvas {
     border: 1px solid #ccc;
     margin-top: 10px;
 }
+
+.pdf-container {
+    position: relative;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+}
+
+#pdfPages {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#pdfPages canvas {
+    max-width: 100%;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+#loadingSpinner {
+    position: relative;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 30px;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+#loadingSpinner .spinner-border {
+    border-width: 0.25em;
+    color: #0d6efd;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.toolbar {
+    background-color: #f1f3f5;
+    padding: 10px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+/* Make the toolbar sticky at the top */
+.toolbar.sticky {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* Fullscreen mode enhancements */
+#pdfViewer.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    background: white;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* Responsive styling for smaller screens */
+@media (max-width: 768px) {
+    .toolbar {
+        flex-direction: column;
+    }
+    
+    .toolbar > div {
+        margin-bottom: 10px;
+        width: 100%;
+    }
+}

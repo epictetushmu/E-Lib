@@ -37,13 +37,14 @@
         </div>
 
         <!-- Loading Spinner -->
-        <div id="loadingSpinner" class="text-center my-3" style="display: none;">
-            <div class="spinner-border text-primary" role="status"></div>
+        <div id="loadingSpinner" class="text-center my-5 py-5" style="display: block;">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+            <div class="mt-3">Loading PDF...</div>
         </div>
 
         <!-- PDF Canvas -->
-      <!-- PDF Scroll Container -->
-        <div class="pdf-container" style="height: 90vh; overflow-y: auto;">
+        <!-- PDF Scroll Container -->
+        <div class="pdf-container" style="height: 90vh; overflow-y: auto; display: none;" id="pdfContainer">
             <div id="pdfPages"></div>
         </div>
 
@@ -59,8 +60,16 @@
     let currentPage = 1;
     const pdfPagesContainer = document.getElementById('pdfPages');
     const spinner = document.getElementById('loadingSpinner');
+    const pdfContainer = document.getElementById('pdfContainer');
 
-    const showSpinner = (show) => spinner.style.display = show ? 'block' : 'none';
+    // Initial state - spinner shown, PDF container hidden
+    const showSpinner = (show) => {
+        spinner.style.display = show ? 'block' : 'none';
+        pdfContainer.style.display = show ? 'none' : 'block';
+    };
+
+    // Show spinner initially
+    showSpinner(true);
 
     function updateNavButtons() {
         document.getElementById('pageNum').textContent = currentPage;
@@ -76,7 +85,7 @@
     }
 
     function renderAllPages() {
-        showSpinner(true);
+        // We keep the spinner visible
         pdfPagesContainer.innerHTML = '';
         const promises = [];
 
@@ -100,8 +109,12 @@
         }
 
         Promise.all(promises).then(() => {
-            showSpinner(false);
+            showSpinner(false); // Hide spinner and show PDF only after all pages are rendered
             scrollToPage(currentPage);
+        }).catch(error => {
+            showSpinner(false);
+            alert('Failed to render PDF pages.');
+            console.error('Error rendering pages:', error);
         });
     }
 
@@ -153,6 +166,9 @@
     });
 
     // Load the PDF
+    // Show loader before loading begins
+    showSpinner(true);
+    
     pdfjsLib.getDocument(url).promise.then(pdf => {
         pdfDoc = pdf;
         document.getElementById('pageCount').textContent = pdfDoc.numPages;
@@ -161,6 +177,16 @@
     }).catch(error => {
         showSpinner(false);
         alert('Failed to load PDF.');
-        console.error(error);
+        console.error('Error loading PDF:', error);
+        
+        // Display error message in the PDF container
+        pdfContainer.style.display = 'block';
+        pdfContainer.innerHTML = `
+            <div class="alert alert-danger text-center my-5">
+                <h4><i class="fas fa-exclamation-triangle me-2"></i>Error Loading PDF</h4>
+                <p>The PDF could not be loaded. Please try again later.</p>
+                <p class="small text-muted">Error details: ${error.message}</p>
+            </div>
+        `;
     });
 </script>
