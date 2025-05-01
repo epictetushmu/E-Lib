@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     libfreetype6-dev \
     curl \
     openssl \
+    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
@@ -19,23 +20,23 @@ RUN docker-php-ext-install zip pdo_mysql exif pcntl
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg
 RUN docker-php-ext-install gd
 
+# OpenSSL is already built into PHP, just verify it's enabled
+RUN php -r 'if(!extension_loaded("openssl")) exit(1);'
+
 # Install Imagick
 RUN apt-get update && apt-get install -y \
     libmagickwand-dev --no-install-recommends \
     && pecl install imagick \
     && docker-php-ext-enable imagick
 
-# Install MongoDB extension with version control
+# Install MongoDB extension with SSL support
 RUN pecl install mongodb && docker-php-ext-enable mongodb
 
-# Install cURL extension for better fallback options
+# Install cURL extension with SSL support
 RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     && docker-php-ext-install curl \
     && docker-php-ext-enable curl
-
-# Verify OpenSSL is enabled (it's usually built-in with PHP)
-RUN php -m | grep -q openssl || (echo "OpenSSL extension is not available!" && exit 1)
 
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite

@@ -79,6 +79,13 @@ class MongoConnectionFactory{
             $connectionString = str_replace('<db_password>', $mongoPassword, $connectionString);
         }
         
+        // Initialize options array if not already
+        if (!isset($options['mongoOptions'])) {
+            $options['mongoOptions'] = [];
+        }
+        
+        $useSsl = true;
+        
         // TLS configuration for MongoDB Atlas
         if (extension_loaded('openssl')) {
             // Default directory for certificates
@@ -108,8 +115,9 @@ class MongoConnectionFactory{
             }
         } else {
             echo("Warning: OpenSSL extension not loaded. SSL/TLS connections will not work properly.");
+            $useSsl = false;
         }
-
+        
         // Create client if it doesn't exist
         if (self::$mongoClient === null) {
             try {
@@ -180,15 +188,10 @@ class MongoConnectionFactory{
                 curl_close($ch);
             }
             
-            // Last resort - use hardcoded certificate content
+            // Last resort - use a default certificate or fail 
             if ($certContent === false || empty($certContent)) {
-                echo("All download attempts failed, using bundled certificate...");
-                $certContent = self::getBundledCertificate();
-                
-                if (empty($certContent)) {
-                    echo("Failed to get bundled certificate!");
-                    return false;
-                }
+                echo("All download attempts failed, cannot proceed without certificate.");
+                return false;
             }
             
             // Save the certificate to disk
@@ -211,39 +214,6 @@ class MongoConnectionFactory{
         }
     }
     
-    /**
-     * Get MongoDB Atlas bundled certificate content
-     * This serves as a last resort if certificate download fails
-     * 
-     * @return string Certificate content
-     */
-    private static function getBundledCertificate() {
-        // This is the MongoDB Atlas CA certificate content (as of 2023)
-        // Hardcoding this is a last resort fallback for environments with restricted outbound connections
-        return "-----BEGIN CERTIFICATE-----
-MIIDrzCCApegAwIBAgIQCDvgVpBCRrGhdWrJWZHHSjANBgkqhkiG9w0BAQUFADBh
-MQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYDVQQLExB3
-d3cuZGlnaWNlcnQuY29tMSAwHgYDVQQDExdEaWdpQ2VydCBHbG9iYWwgUm9vdCBD
-QTAeFw0wNjExMTAwMDAwMDBaFw0zMTExMTAwMDAwMDBaMGExCzAJBgNVBAYTAlVT
-MRUwEwYDVQQKEwxEaWdpQ2VydCBJbmMxGTAXBgNVBAsTEHd3dy5kaWdpY2VydC5j
-b20xIDAeBgNVBAMTF0RpZ2lDZXJ0IEdsb2JhbCBSb290IENBMIIBIjANBgkqhkiG
-9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4jvhEXLeqKTTo1eqUKKPC3eQyaKl7hLOllsB
-CSDMAZOnTjC3U/dDxGkAV53ijSLdhwZAAIEJzs4bg7/fzTtxRuLWZscFs3YnFo97
-nh6Vfe63SKMI2tavegw5BmV/Sl0fvBf4q77uKNd0f3p4mVmFaG5cIzJLv07A6Fpt
-43C/dxC//AH2hdmoRBBYMql1GNXRor5H4idq9Joz+EkIYIvUX7Q6hL+hqkpMfT7P
-T19sdl6gSzeRntwi5m3OFBqOasv+zbMUZBfHWymeMr/y7vrTC0LUq7dBMtoM1O/4
-gdW7jVg/tRvoSSiicNoxBN33shbyTApOB6jtSj1etX+jkMOvJwIDAQABo2MwYTAO
-BgNVHQ8BAf8EBAMCAYYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUA95QNVbR
-TLtm8KPiGxvDl7I90VUwHwYDVR0jBBgwFoAUA95QNVbRTLtm8KPiGxvDl7I90VUw
-DQYJKoZIhvcNAQEFBQADggEBAMucN6pIExIK+t1EnE9SsPTfrgT1eXkIoyQY/Esr
-hMAtudXH/vTBH1jLuG2cenTnmCmrEbXjcKChzUyImZOMkXDiqw8cvpOp/2PV5Adg
-06O/nVsJ8dWO41P0jmP6P6fbtGbfYmbW0W5BjfIttep3Sp+dWOIrWcBAI+0tKIJF
-PnlUkiaY4IBIqDfv8NZ5YBberOgOzW6sRBc4L0na4UU+Krk2U886UAb3LujEV0ls
-YSEY1QSteDwsOoBrp+uvFRTp2InBuThs4pFsiv9kuXclVzDAGySj4dzp30d8tbQk
-CAUw7C29C79Fv1C5qfPrmAESrciIxpg0X40KPMbp1ZWVbd4=
------END CERTIFICATE-----";
-    }
-
     /**
      * Get the MongoDB client instance
      * 
