@@ -564,73 +564,137 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadProgress.textContent = '0%';
         uploadFeedback.style.display = 'block';
         uploadFeedback.className = 'alert alert-info';
-        uploadFeedback.innerHTML = '<i class="bi bi-arrow-repeat spin me-2"></i> Starting upload...';
+        uploadFeedback.innerHTML = '<i class="bi bi-arrow-repeat spin me-2"></i> Preparing files for upload...';
         
         // Disable upload button during operation
         uploadButton.disabled = true;
         
-        // Process files one by one for better error handling
-        for (let i = 0; i < fileItems.length; i++) {
-            const item = fileItems[i];
-            const file = item._file;
-            const title = item.querySelector('.file-title').value.trim();
-            const author = item.querySelector('.file-author').value.trim() || defaultValues.author;
+        try {
+            // Create FormData for mass upload
+            const formData = new FormData();
+            
+            // Add default values
+            formData.append('defaultAuthor', defaultValues.author);
+            formData.append('defaultCategories', JSON.stringify(defaultValues.categories));
+            formData.append('defaultStatus', defaultValues.status);
+            formData.append('defaultDownloadable', defaultValues.downloadable ? 'true' : 'false');
+            
+            // Add each file and its metadata
+            fileItems.forEach((item, index) => {
+                const file = item._file;
+                const title = item.querySelector('.file-title').value.trim();
+                const author = item.querySelector('.file-author').value.trim();
+                
+                // Add file to FormData with indexed name
+                formData.append(`books[name][]`, file.name);
+                formData.append(`books[type][]`, file.type);
+                formData.append(`books[tmp_name][]`, file.tmp_name);
+                formData.append(`books[error][]`, '0');
+                formData.append(`books[size][]`, file.size);
+                
+                // Append the actual file
+                formData.append(`books[]`, file);
+                
+                // Add metadata for this specific file
+                if (title || author) {
+                    const metadata = {
+                        title: title,
+                        author: author || defaultValues.author
+                    };
+                    
+                    formData.append(`metadata_${index}`, JSON.stringify(metadata));
+                }
+            });
             
             // Update progress
-            const progressPercent = Math.round(((i) / fileItems.length) * 100);
-            uploadProgress.style.width = `${progressPercent}%`;
-            uploadProgress.textContent = `${progressPercent}%`;
-            uploadFeedback.innerHTML = `<i class="bi bi-arrow-repeat spin me-2"></i> Uploading ${i+1} of ${fileItems.length}: <strong>${escapeHtml(title)}</strong>`;
+            uploadFeedback.innerHTML = '<i class="bi bi-arrow-repeat spin me-2"></i> Uploading files...';
             
-            try {
-                await uploadSingleFile(file, {
-                    title, 
-                    author,
-                    categories: defaultValues.categories,
-                    downloadable: defaultValues.downloadable,
-                    status: defaultValues.status
-                });
+            // Get auth token
+            const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+            
+            // Send request to the mass upload endpoint
+            const response = await axios.post('/api/v1/books/mass-upload', formData, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'multipart/form-data'
+                },
+                onUploadProgress: progressEvent => {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    uploadProgress.style.width = `${percentCompleted}%`;
+                    uploadProgress.textContent = `${percentCompleted}%`;
+                }
+            });
+            
+            // Process response
+            if (response.data.status === "success") {
+                const results = response.data.data?.results || {};
                 
-                // Mark as success
-                uploadStats.success++;
-                item.classList.add('list-group-item-success');
-            } catch (error) {
-                console.error('Upload error:', error);
-                uploadStats.failed++;
-                item.classList.add('list-group-item-danger');
+                // Update statistics
+                uploadStats.success = results.success?.length || 0;
+                uploadStats.failed = results.failed?.length || 0;
+                
+                // Mark UI items as success or failure
+                if (results.success) {
+                    results.success.forEach(item => {
+                        const element = Array.from(fileItems).find(el => 
+                            el._file.name === item.filename || 
+                            el.querySelector('.file-title').value === item.title
+                        );
+                        if (element) element.classList.add('list-group-item-success');
+                    });
+                }
+                
+                if (results.failed) {
+                    results.failed.forEach(item => {
+                        const element = Array.from(fileItems).find(el => el._file.name === item.filename);
+                        if (element) {
+                            element.classList.add('list-group-item-danger');
+                            const reasonDiv = document.createElement('div');
+                            reasonDiv.className = 'small text-danger mt-1';
+                            reasonDiv.textContent = item.reason;
+                            element.appendChild(reasonDiv);
+                        }
+                    });
+                }
+                
+                // Show final status
+                uploadProgress.style.width = '100%';
+                uploadProgress.textContent = '100%';
+                
+                if (uploadStats.failed === 0) {
+                    uploadFeedback.className = 'alert alert-success';
+                    uploadFeedback.innerHTML = `<i class="bi bi-check-circle me-2"></i> All ${uploadStats.success} books were uploaded successfully!`;
+                    
+                    // Close the modal automatically after 2 seconds
+                    setTimeout(() => {
+                        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('massUploadModal'));
+                        modalInstance.hide();
+                        
+                        // Clear the form data
+                        filesContainer.innerHTML = '';
+                        updateFileCount();
+                        uploadProgressContainer.style.display = 'none';
+                        uploadFeedback.style.display = 'none';
+                    }, 2000);
+                } else {
+                    uploadFeedback.className = 'alert alert-warning';
+                    uploadFeedback.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i> ${uploadStats.success} succeeded, ${uploadStats.failed} failed.`;
+                }
+            } else {
+                uploadFeedback.className = 'alert alert-danger';
+                uploadFeedback.innerHTML = `<i class="bi bi-x-circle me-2"></i> Upload failed: ${response.data.message || 'Unknown error'}`;
             }
-        }
-        
-        // Complete the progress
-        uploadProgress.style.width = '100%';
-        uploadProgress.textContent = '100%';
-        
-        // Show final status
-        if (uploadStats.failed === 0) {
-            uploadFeedback.className = 'alert alert-success';
-            uploadFeedback.innerHTML = `<i class="bi bi-check-circle me-2"></i> All ${uploadStats.success} books were uploaded successfully!`;
+        } catch (error) {
+            console.error('Mass upload error:', error);
+            uploadFeedback.className = 'alert alert-danger';
+            uploadFeedback.innerHTML = `<i class="bi bi-x-circle me-2"></i> Upload failed: ${error.response?.data?.message || error.message || 'Network error'}`;
+        } finally {
+            // Re-enable upload button
+            uploadButton.disabled = false;
             
-            // Close the modal automatically after 2 seconds
-            setTimeout(() => {
-                const modalInstance = bootstrap.Modal.getInstance(document.getElementById('massUploadModal'));
-                modalInstance.hide();
-                
-                // Clear the form data
-                filesContainer.innerHTML = '';
-                updateFileCount();
-                uploadProgressContainer.style.display = 'none';
-                uploadFeedback.style.display = 'none';
-            }, 2000);
-        } else {
-            uploadFeedback.className = 'alert alert-warning';
-            uploadFeedback.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i> ${uploadStats.success} succeeded, ${uploadStats.failed} failed. Check console for errors.`;
+            // Refresh the book list
+            getBooks();
         }
-        
-        // Re-enable upload button
-        uploadButton.disabled = false;
-        
-        // Refresh the book list
-        getBooks();
     });
     
     async function uploadSingleFile(file, bookData) {
