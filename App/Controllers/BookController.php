@@ -339,4 +339,217 @@ class BookController {
             ResponseHandler::respond(false, 'No reviews found', 404);
         }
     }
+
+    /**
+     * Handle mass upload of PDF books
+     * Processes multiple PDF files at once with common metadata
+     */
+    public function massUploadBooks() {
+        // Verify authentication (session should already be checked by middleware)
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (empty($_SESSION['user_id'])) {
+            return $this->response->respond(false, 'Authentication required', 401);
+        }
+        
+        // Validate if files were uploaded
+        if (empty($_FILES['books']) || !is_array($_FILES['books']['name'])) {
+            return $this->response->respond(false, 'No PDF files submitted', 400);
+        }
+        
+        // Get default metadata that will apply to all books unless overridden
+        $defaultAuthor = $_POST['defaultAuthor'] ?? '';
+        $defaultCategories = !empty($_POST['defaultCategories']) ? json_decode($_POST['defaultCategories'], true) : [];
+        $defaultStatus = $_POST['defaultStatus'] ?? 'draft';
+        $defaultDownloadable = filter_var($_POST['defaultDownloadable'] ?? 'true', FILTER_VALIDATE_BOOLEAN);
+        echo $defaultDownloadable;
+        // Track upload results
+        $results = [
+            'success' => [],
+            'failed' => []
+        ];
+        
+        // Process each file
+        $fileCount = count($_FILES['books']['name']);
+        for ($i = 0; $i < $fileCount; $i++) {
+            // Extract individual file data
+            $file = [
+                'name' => $_FILES['books']['name'][$i],
+                'type' => $_FILES['books']['type'][$i],
+                'tmp_name' => $_FILES['books']['tmp_name'][$i],
+                'error' => $_FILES['books']['error'][$i],
+                'size' => $_FILES['books']['size'][$i],
+            ];
+            
+            // Skip invalid files
+            if ($file['error'] !== UPLOAD_ERR_OK || $file['type'] !== 'application/pdf') {
+                $results['failed'][] = [
+                    'filename' => $file['name'],
+                    'reason' => 'Invalid file or not a PDF'
+                ];
+                continue;
+            }
+            
+            // Get book-specific metadata if provided in the request
+            $metadataIndex = "metadata_$i";
+            $metadata = !empty($_POST[$metadataIndex]) ? json_decode($_POST[$metadataIndex], true) : [];
+            
+            // Extract title from filename if not provided in metadata
+            $title = $metadata['title'] ?? pathinfo($file['name'], PATHINFO_FILENAME);
+            $title = str_replace(['_', '-'], ' ', $title);
+            
+            // Apply metadata with fallbacks to defaults
+            $author = $metadata['author'] ?? $defaultAuthor;
+            $categories = $metadata['categories'] ?? $defaultCategories;
+            $status = $metadata['status'] ?? $defaultStatus;
+            $downloadable = isset($metadata['downloadable']) 
+                ? filter_var($metadata['downloadable'], FILTER_VALIDATE_BOOLEAN) 
+                : $defaultDownloadable;
+            $year = $metadata['year'] ?? '';
+            $description = $metadata['description'] ?? 'Uploaded via mass upload feature';
+            $isbn = $metadata['isbn'] ?? '';
+            
+            try {
+                // Process the PDF file
+                $pdfHelper = new PdfHelper($file['tmp_name']);
+                $pdfPath = $pdfHelper->storePdf($file);
+                
+                if (!$pdfPath) {
+                    $results['failed'][] = [
+                        'filename' => $file['name'],
+                        'reason' => 'Failed to store PDF'
+                    ];
+                    continue;
+                }
+                
+                // Generate thumbnail
+                $thumbnailPath = $pdfHelper->getPdfThumbnail();
+                
+                // Add the book to the database
+                $response = $this->bookService->addBook(
+                    $title, $author, $year, $description, $categories, $isbn,
+                    $pdfPath, $thumbnailPath, $downloadable
+                );
+                
+                if ($response) {
+                    // If book was added successfully, update its status
+                    if ($status !== 'draft') {
+                        // Extract the book ID from the response based on the actual format:
+                        // {"status":"success","data":{"insertedId":"681391ccee67d0f7440d8e5a"}}
+                        $bookId = null;
+                        
+                        // Log the exact response format for debugging
+                        error_log("Book creation response: " . (is_string($response) ? $response : json_encode($response)));
+                        
+                        // Handle specific response format with data.insertedId pattern
+                        if (is_array($response) && isset($response['data']) && isset($response['data']['insertedId'])) {
+                            $bookId = $response['data']['insertedId'];
+                            error_log("Found bookId in data.insertedId: $bookId");
+                        }
+                        // Handle direct string ID (as originally expected)
+                        elseif (is_string($response)) {
+                            $bookId = $response;
+                            error_log("Found bookId as direct string: $bookId");
+                        }
+                        // Handle _id object scenario
+                        elseif (is_array($response) && isset($response['_id'])) {
+                            if (is_object($response['_id']) && method_exists($response['_id'], '__toString')) {
+                                $bookId = $response['_id']->__toString();
+                            } elseif (is_string($response['_id'])) {
+                                $bookId = $response['_id'];
+                            }
+                            error_log("Found bookId in _id field: $bookId");
+                        }
+                        // Handle direct insertedId at the root level
+                        elseif (is_array($response) && isset($response['insertedId'])) {
+                            $bookId = $response['insertedId'];
+                            error_log("Found bookId in root insertedId: $bookId");
+                        }
+                        
+                        // Only attempt update if we successfully extracted an ID
+                        if ($bookId) {
+                            error_log("Updating book $bookId to status: $status");
+                            
+                            $updateResult = $this->bookService->updateBook(
+                                $bookId, $title, $author, $year, $description, 
+                                $categories, $status, false, $isbn, $downloadable
+                            );
+                            
+                            if ($updateResult) {
+                                error_log("Successfully updated book $bookId status to: $status");
+                            } else {
+                                error_log("Failed to update book $bookId status");
+                            }
+                        } else {
+                            error_log("ERROR: Could not extract book ID from response: " . print_r($response, true));
+                        }
+                    }
+                    
+                    // Use the same ID extraction logic for the results section
+                    $resultId = null;
+                    
+                    if (is_array($response) && isset($response['data']) && isset($response['data']['insertedId'])) {
+                        $resultId = $response['data']['insertedId'];
+                    } elseif (is_string($response)) {
+                        $resultId = $response;
+                    } elseif (is_array($response) && isset($response['_id'])) {
+                        $resultId = is_object($response['_id']) && method_exists($response['_id'], '__toString') 
+                            ? $response['_id']->__toString() 
+                            : (is_string($response['_id']) ? $response['_id'] : json_encode($response));
+                    } elseif (is_array($response) && isset($response['insertedId'])) {
+                        $resultId = $response['insertedId'];
+                    } else {
+                        $resultId = is_string($response) ? $response : json_encode($response);
+                    }
+                    
+                    $results['success'][] = [
+                        'filename' => $file['name'],
+                        'title' => $title,
+                        'id' => $resultId
+                    ];
+                } else {
+                    $results['failed'][] = [
+                        'filename' => $file['name'],
+                        'reason' => 'Database error while storing book information'
+                    ];
+                }
+            } catch (\Exception $e) {
+                error_log('Mass upload error: ' . $e->getMessage());
+                $results['failed'][] = [
+                    'filename' => $file['name'],
+                    'reason' => 'Processing error: ' . $e->getMessage()
+                ];
+            }
+        }
+        
+        // Log the upload activity
+        error_log(sprintf(
+            "User %s uploaded %d books (%d successful, %d failed)",
+            $_SESSION['user_id'],
+            $fileCount,
+            count($results['success']),
+            count($results['failed'])
+        ));
+        
+        // Return response with results
+        if (empty($results['failed'])) {
+            return $this->response->respond(true, [
+                'message' => 'All books uploaded successfully',
+                'results' => $results
+            ]);
+        } else {
+            return $this->response->respond(
+                count($results['success']) > 0,
+                [
+                    'message' => count($results['success']) > 0 
+                        ? 'Some books were uploaded with errors' 
+                        : 'Failed to upload books',
+                    'results' => $results
+                ],
+                count($results['success']) > 0 ? 207 : 400
+            );
+        }
+    }
 }
