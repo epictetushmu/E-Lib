@@ -37,7 +37,7 @@ if(sessionStorage.getItem('authToken') === null && localStorage.getItem('authTok
             }
             this.sessionStorage.setItem('hasScrolled', 'true');
         }
-});
+    });
 }
 </script>
 </body>

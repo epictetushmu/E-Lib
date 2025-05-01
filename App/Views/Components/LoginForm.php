@@ -131,12 +131,22 @@ document.addEventListener('DOMContentLoaded', function () {
                     console.log("Admin user detected, redirecting to dashboard");
                     window.location.href = '/dashboard';
                 } else {
-                    // Regular user - use the existing redirect logic
-                    console.log("Regular user, redirecting to:", redirect);
-                    const redirectUrl = redirect ? new URL(redirect, window.location.origin) : new URL('/', window.location.origin);
-                    window.location.href = redirectUrl.href;
+                    // Check for stored redirect in sessionStorage first (set from URL parameters)
+                    const storedRedirect = sessionStorage.getItem('redirectAfterLogin');
+                    if (storedRedirect) {
+                        console.log("Redirecting to stored URL:", storedRedirect);
+                        sessionStorage.removeItem('redirectAfterLogin'); // Clear it after use
+                        window.location.href = storedRedirect;
+                    } else {
+                        // Use the form's redirect value if no stored redirect
+                        console.log("Regular user, redirecting to:", redirect);
+                        const redirectUrl = redirect ? new URL(redirect, window.location.origin) : new URL('/', window.location.origin);
+                        window.location.href = redirectUrl.href;
+                    }
                 }
-            } else {                console.error("Login failed:", response);                errorMessage.textContent = response.data.message || 'Login failed. Please check your credentials.';
+            } else {                
+                console.error("Login failed:", response);                
+                errorMessage.textContent = response.data.message || 'Login failed. Please check your credentials.';
                 errorMessage.classList.remove('d-none');
             }
         })

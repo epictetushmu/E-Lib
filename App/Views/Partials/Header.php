@@ -169,4 +169,48 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 });
+
+// Check for URL parameters to show login popup
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    // Check if showLogin parameter exists
+    if (urlParams.has('showLogin')) {
+        openPopup('loginPopup');
+        const loginPopup = document.getElementById('loginPopup');
+        if (loginPopup) {
+            loginPopup.style.display = 'flex';
+            
+            // Store redirect URL if provided
+            const redirectUrl = urlParams.get('redirect');
+            if (redirectUrl) {
+                sessionStorage.setItem('redirectAfterLogin', redirectUrl);
+            }
+        }
+    }
+    
+    // Check if we have error messages to display
+    if (urlParams.has('error')) {
+        const errorMessage = urlParams.get('error');
+        // You can use a toast or alert library here, for simplicity we'll use alert
+        alert(decodeURIComponent(errorMessage));
+    }
+    
+    // Check for login success/failure messages
+    if (urlParams.has('login')) {
+        const loginStatus = urlParams.get('login');
+        if (loginStatus === 'success') {
+            alert('Login successful!');
+        } else if (loginStatus === 'failed') {
+            alert('Login failed. Please try again.');
+            // Show login popup again
+            const loginPopup = document.getElementById('loginPopup');
+            if (loginPopup) {
+                loginPopup.style.display = 'flex';
+            }
+        }
+    }
+});
+
 </script>

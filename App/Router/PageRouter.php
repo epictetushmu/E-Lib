@@ -33,7 +33,6 @@ class PageRouter {
             ['path' => '/search_results', 'handler' => [new PageController(), 'searchBooks']],
             ['path' => '/error', 'handler' => [new PageController(), 'error']],
             ['path' => '/dashboard', 'handler' => [new PageController(), 'dashboard']],
-            ['path' => '/login', 'handler' => [new PageController(), 'home', ['showLogin' => true]]],
             ['path' => '/signup', 'handler' => [new PageController(), 'home', ['showSignup' => true]]],
             ['path' => '/admin/logs', 'handler' => [new PageController(), 'viewLogs']],
         ];            
@@ -42,19 +41,21 @@ class PageRouter {
     public function handleRequest($path) {
         $pathOnly = parse_url($path, PHP_URL_PATH);
         
-        if ($path === '/login') {
+        // CAS login was previously handled on the /login path
+        // Now we'll handle it differently
+        if (strpos($pathOnly, '/cas-login') === 0) {
             $ticket = $_GET['ticket'] ?? null;
             // Use Environment to get the application URL
-            $serviceUrl = Environment::get('APP_URL', 'http://localhost:8080') . '/login';
+            $serviceUrl = Environment::get('APP_URL', 'http://localhost:8080') . '/cas-login';
 
             if ($ticket && $this->casService->authenticate($ticket, $serviceUrl)) {
-                ResponseHandler::renderView(__DIR__ . '/../Views/login_successful.php', [
-                    'message' => 'Login successful!'
-                ]);
+                // Redirect to home with a success parameter for the UI to handle
+                header('Location: /?login=success');
+                exit;
             } else {
-                ResponseHandler::renderView(__DIR__ . '/../Views/login.php', [
-                    'error' => 'Login failed or no ticket provided.'
-                ]);
+                // Redirect to home with error parameter
+                header('Location: /?login=failed');
+                exit;
             }
             return;
         }

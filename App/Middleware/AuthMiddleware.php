@@ -36,8 +36,8 @@ class AuthMiddleware implements MiddlewareInterface {
                         ResponseHandler::respond(false, 'Unauthorized access', 401);
                         return;
                     } else {
-                        // Web requests redirect to login
-                        header('Location: /login?redirect=' . urlencode($path));
+                        // Web requests redirect to home with parameter to show login popup
+                        header('Location: /?showLogin=1&redirect=' . urlencode($path));
                         exit;
                     }
                 }

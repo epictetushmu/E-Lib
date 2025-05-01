@@ -123,10 +123,9 @@ class PageController {
     public function profile(){
         // Check if the user is logged in
         if (!SessionManager::isLoggedIn()) {
-            $this->response->renderView(__DIR__ . '/../Views/login.php', [
-                'error' => 'You must be logged in to view this page.'
-            ]);
-            return;
+            // Redirect to home with parameter to show login popup
+            header('Location: /?showLogin=1');
+            exit;
         }
         $userId = SessionManager::getCurrentUserId();
         $user = new UserService();
@@ -180,15 +179,15 @@ class PageController {
         
         // Check if user is authenticated
         if (!SessionManager::isLoggedIn()) {
-            // Redirect to login page
-            header('Location: /login?redirect=' . urlencode('/admin/logs'));
+            // Redirect to home page with parameter to show login popup
+            header('Location: /?showLogin=1&redirect=' . urlencode('/admin/logs'));
             exit;
         }
         
         // Check if user is admin
         if (empty($_SESSION['isAdmin']) || $_SESSION['isAdmin'] !== true) {
             // Redirect to home page with unauthorized message
-            header('Location: /');
+            header('Location: /?error=' . urlencode('You do not have permission to access this page.'));
             exit;
         }
         
