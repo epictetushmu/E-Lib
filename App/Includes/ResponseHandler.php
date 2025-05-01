@@ -33,13 +33,17 @@ class ResponseHandler {
             $statusCode = $statusCode ?? 400;
         }
         
-        // Set appropriate HTTP status code
-        http_response_code($statusCode);
+        // Set appropriate HTTP status code if headers haven't been sent yet
+        if (!headers_sent()) {
+            http_response_code($statusCode);
+        }
         
         // Check if this is an API call that needs JSON response
         if (self::isApiRequest()) {
-            http_response_code($statusCode);
-            header('Content-Type: application/json');
+            if (!headers_sent()) {
+                http_response_code($statusCode);
+                header('Content-Type: application/json');
+            }
             echo json_encode($response);
             exit();
         }
@@ -59,8 +63,17 @@ class ResponseHandler {
             throw new \InvalidArgumentException("Invalid URL for redirection");
         }
         
-        header('Location: ' . $url, true, $statusCode);
-        exit();
+        // Only set headers if possible
+        if (!headers_sent()) {
+            header('Location: ' . $url, true, $statusCode);
+            exit();
+        } else {
+            // Fallback to JavaScript redirect if headers already sent
+            echo '<script>window.location.href = "' . htmlspecialchars($url) . '";</script>';
+            echo '<noscript><meta http-equiv="refresh" content="0;url=' . htmlspecialchars($url) . '"></noscript>';
+            echo '<p>If you are not redirected, <a href="' . htmlspecialchars($url) . '">click here</a>.</p>';
+            exit();
+        }
     }
     
     /**
@@ -94,11 +107,12 @@ class ResponseHandler {
      * @return void
      */
     public static function renderView($view, $data = [], $statusCode = 200) {
-        // Set HTTP status code
-        http_response_code($statusCode);
-        
-        // Set content type for HTML
-        header('Content-Type: text/html; charset=UTF-8');
+        // Set HTTP status code and content type if headers haven't been sent yet
+        if (!headers_sent()) {
+            http_response_code($statusCode);
+            // Set content type for HTML
+            header('Content-Type: text/html; charset=UTF-8');
+        }
         
         // Extract data to make variables available to the view
         if (!empty($data)) {

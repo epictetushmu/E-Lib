@@ -15,10 +15,9 @@ class PageRouter {
     private $casService;
 
     public function __construct() {
-
         $this->defineRoutes();
-        $this->setSecurityHeaders();
         $this->casService = new CasService();
+        // Remove the setSecurityHeaders call from constructor - will call it at the right time
     }
 
     private function defineRoutes() { 
@@ -39,6 +38,12 @@ class PageRouter {
     }
 
     public function handleRequest($path) {
+        // Set security headers at the beginning of request handling
+        // but only if no output has been sent yet
+        if (!headers_sent()) {
+            $this->setSecurityHeaders();
+        }
+        
         $pathOnly = parse_url($path, PHP_URL_PATH);
         
         // CAS login was previously handled on the /login path
@@ -50,12 +55,16 @@ class PageRouter {
 
             if ($ticket && $this->casService->authenticate($ticket, $serviceUrl)) {
                 // Redirect to home with a success parameter for the UI to handle
-                header('Location: /?login=success');
-                exit;
+                if (!headers_sent()) {
+                    header('Location: /?login=success');
+                    exit;
+                }
             } else {
                 // Redirect to home with error parameter
-                header('Location: /?login=failed');
-                exit;
+                if (!headers_sent()) {
+                    header('Location: /?login=failed');
+                    exit;
+                }
             }
             return;
         }
@@ -82,11 +91,13 @@ class PageRouter {
         // Updated CSP for icons, Bootstrap, SweetAlert2, etc.
         header("Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;");
     
-        // API-specific headers
+        // Remove content-type JSON header since this is for HTML pages
+        // Only set CORS headers
         header('Access-Control-Allow-Origin: *');
         header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
         header('Access-Control-Allow-Headers: Content-Type, Authorization');
-        header('Content-Type: application/json');
+        
+        // Don't set Content-Type header here as it should be different for HTML vs JSON responses
     }
     
 }
