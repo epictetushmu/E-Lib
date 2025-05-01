@@ -25,6 +25,25 @@
                 </ul>
             </div>
 
+            <!-- Support Section -->
+            <div class="row justify-content-center mt-3 mb-4">
+                <div class="col-md-8 text-center">
+                    <h5 class="text-warning mb-3">Support</h5>
+                    <p class="mb-3">Having trouble using the library? Our support team is here to help!</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="mailto:support@epictetuslibrary.org" class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-envelope me-2"></i>Email Support
+                        </a>
+                        <a href="#" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#supportModal">
+                            <i class="fas fa-question-circle me-2"></i>Help Center
+                        </a>
+                        <a href="https://github.com/epictetushmu/E-Lib/issues" target="_blank" class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-bug me-2"></i>Report an Issue
+                        </a>
+                    </div>
+                </div>
+            </div>
+
             <!-- Social Media -->
             <div class="col-md-4 mb-4">
                 <h5 class="text-warning">Follow Us</h5>
@@ -44,4 +63,4 @@
     </div>
 </footer>
 
-<?php include_once($_SERVER['DOCUMENT_ROOT'] . '/App/Views/Components/SupportModal.php'); ?>
+<?php include __DIR__ . '/../Components/SupportModal.php'; ?>
