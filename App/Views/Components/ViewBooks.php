@@ -609,6 +609,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (uploadStats.failed === 0) {
             uploadFeedback.className = 'alert alert-success';
             uploadFeedback.innerHTML = `<i class="bi bi-check-circle me-2"></i> All ${uploadStats.success} books were uploaded successfully!`;
+            
+            // Close the modal automatically after 2 seconds
+            setTimeout(() => {
+                const modalInstance = bootstrap.Modal.getInstance(document.getElementById('massUploadModal'));
+                modalInstance.hide();
+                
+                // Clear the form data
+                filesContainer.innerHTML = '';
+                updateFileCount();
+                uploadProgressContainer.style.display = 'none';
+                uploadFeedback.style.display = 'none';
+            }, 2000);
         } else {
             uploadFeedback.className = 'alert alert-warning';
             uploadFeedback.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i> ${uploadStats.success} succeeded, ${uploadStats.failed} failed. Check console for errors.`;
