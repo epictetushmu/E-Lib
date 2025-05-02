@@ -8,7 +8,7 @@
                     <li><a href="/" class="text-decoration-none link-light">Home</a></li>
                     <li><a href="/view-books" class="text-decoration-none link-light">Books</a></li>
                     <?php if (!isset($_SESSION['user_id'])): ?>
-                        <li><a href="/login" class="text-decoration-none link-light">Login</a></li>
+                        <li><a href="#" onclick="openPopup('loginPopup');" class="text-decoration-none link-light">Login</a></li>
                     <?php else: ?>
                         <li><a href="/profile" class="text-decoration-none link-light">My Profile</a></li>
                     <?php endif; ?>
