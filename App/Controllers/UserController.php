@@ -305,4 +305,69 @@ class UserController {
         fclose($handle);
         return array_reverse($text);
     }
+
+    /**
+     * Update user profile information
+     * Currently supports updating username
+     */
+    public function updateProfile() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (empty($_SESSION['user_id'])) {
+            ResponseHandler::respond(false, 'User not authenticated', 401);
+            return;
+        }
+        
+        // Get input data
+        $inputJSON = file_get_contents('php://input');
+        $input = json_decode($inputJSON, true);
+        
+        if (!$input) {
+            ResponseHandler::respond(false, 'No data received', 400);
+            return;
+        }
+        
+        $userId = $_SESSION['user_id'];
+        $updates = [];
+        
+        // Handle username update
+        if (isset($input['username'])) {
+            $newUsername = trim($input['username']);
+            
+            // Validate username
+            if (empty($newUsername)) {
+                ResponseHandler::respond(false, 'Username cannot be empty', 400);
+                return;
+            }
+            
+            if (strlen($newUsername) < 3) {
+                ResponseHandler::respond(false, 'Username must be at least 3 characters', 400);
+                return;
+            }
+            
+            $updates['username'] = $newUsername;
+        }
+        
+        // No updates to process
+        if (empty($updates)) {
+            ResponseHandler::respond(false, 'No valid updates provided', 400);
+            return;
+        }
+        
+        // Update the user profile
+        $result = $this->userService->updateUser($userId, $updates);
+        
+        if ($result) {
+            // Update session data if username was changed
+            if (isset($updates['username'])) {
+                $_SESSION['username'] = $updates['username'];
+            }
+            
+            ResponseHandler::respond(true, 'Profile updated successfully', 200);
+        } else {
+            ResponseHandler::respond(false, 'Failed to update profile', 500);
+        }
+    }
 }

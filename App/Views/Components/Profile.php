@@ -42,7 +42,25 @@ $firstLetter = substr($username, 0, 1);
                 </div>
             </div>
             <div class="col-md-9">
-                <h1 class="mb-3"><?= $username ?></h1>
+                <div class="d-flex align-items-center mb-3">
+                    <!-- Username with edit functionality -->
+                    <div id="username-display">
+                        <h1 id="current-username" class="mb-0 me-2"><?= $username ?></h1>
+                        <button id="edit-username-btn" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </div>
+                    
+                    <!-- Username edit form (initially hidden) -->
+                    <div id="username-edit-form" class="d-none">
+                        <div class="input-group">
+                            <input type="text" id="new-username" class="form-control" value="<?= $username ?>">
+                            <button id="save-username-btn" class="btn btn-primary">Save</button>
+                            <button id="cancel-edit-btn" class="btn btn-outline-secondary">Cancel</button>
+                        </div>
+                        <small id="username-error" class="text-danger d-none">Error message will appear here</small>
+                    </div>
+                </div>
                 <p class="text-muted mb-2">
                     <i class="fas fa-envelope me-2"></i><?= $email ?>
                 </p>
@@ -107,6 +125,148 @@ $firstLetter = substr($username, 0, 1);
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // Username edit functionality
+    const usernameDisplay = document.getElementById('username-display');
+    const usernameEditForm = document.getElementById('username-edit-form');
+    const currentUsername = document.getElementById('current-username');
+    const editUsernameBtn = document.getElementById('edit-username-btn');
+    const newUsernameInput = document.getElementById('new-username');
+    const saveUsernameBtn = document.getElementById('save-username-btn');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+    const usernameError = document.getElementById('username-error');
+    const profileAvatar = document.querySelector('.profile-avatar');
+    
+    // Edit button click handler
+    editUsernameBtn.addEventListener('click', function() {
+        usernameDisplay.classList.add('d-none');
+        usernameEditForm.classList.remove('d-none');
+        newUsernameInput.focus();
+        newUsernameInput.select();
+    });
+    
+    // Cancel button click handler
+    cancelEditBtn.addEventListener('click', function() {
+        usernameDisplay.classList.remove('d-none');
+        usernameEditForm.classList.add('d-none');
+        newUsernameInput.value = currentUsername.textContent;
+        usernameError.classList.add('d-none');
+    });
+    
+    // Save button click handler
+    saveUsernameBtn.addEventListener('click', updateUsername);
+    
+    // Enter key press handler for the input field
+    newUsernameInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            updateUsername();
+        }
+    });
+    
+    function updateUsername() {
+        const newUsername = newUsernameInput.value.trim();
+        
+        // Basic validation
+        if (!newUsername) {
+            showUsernameError('Username cannot be empty');
+            return;
+        }
+        
+        if (newUsername.length < 3) {
+            showUsernameError('Username must be at least 3 characters');
+            return;
+        }
+        
+        if (newUsername === currentUsername.textContent) {
+            // No change, just cancel the edit
+            cancelEditBtn.click();
+            return;
+        }
+        
+        // Show loading state
+        saveUsernameBtn.disabled = true;
+        saveUsernameBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+        
+        // Send request to update username
+        axios.post('/api/v1/update-profile', {
+            username: newUsername
+        }, {
+            headers: {
+                'Authorization': 'Bearer ' + (localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '')
+            }
+        })
+        .then(function(response) {
+            if (response.data.success || response.data.status === 'success') {
+                // Update the UI
+                currentUsername.textContent = newUsername;
+                profileAvatar.textContent = newUsername.charAt(0);
+                
+                // Exit edit mode
+                usernameDisplay.classList.remove('d-none');
+                usernameEditForm.classList.add('d-none');
+                
+                // Show success notification
+                showNotification('Username updated successfully', 'success');
+                
+                // Also update the session if needed
+                if (typeof updateSessionValue === 'function') {
+                    updateSessionValue('username', newUsername);
+                }
+            } else {
+                showUsernameError(response.data.message || 'Failed to update username');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error updating username:', error);
+            showUsernameError(error.response?.data?.message || 'An error occurred. Please try again.');
+        })
+        .finally(function() {
+            saveUsernameBtn.disabled = false;
+            saveUsernameBtn.innerHTML = 'Save';
+        });
+    }
+    
+    function showUsernameError(message) {
+        usernameError.textContent = message;
+        usernameError.classList.remove('d-none');
+    }
+    
+    function showNotification(message, type = 'info') {
+        // Create toast notification container if it doesn't exist
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create toast element
+        const toastId = 'toast-' + Date.now();
+        const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+        const toastHtml = `
+            <div id="${toastId}" class="toast align-items-center ${bgClass} text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        
+        // Initialize and show the toast
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+        toast.show();
+        
+        // Remove the toast element after it's hidden
+        toastElement.addEventListener('hidden.bs.toast', function () {
+            toastElement.remove();
+        });
+    }
+    
+    // Existing saved books functionality
     const savedTab = document.getElementById('saved-tab');
     const savedBooksContainer = document.getElementById('saved');
     loadSavedBooks();
@@ -341,3 +501,33 @@ document.addEventListener('DOMContentLoaded', function () {
     attachRemoveButtonListeners();
 });
 </script>
+
+<!-- Add styles for the profile avatar and edit functionality -->
+<style>
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        background-color: #007bff;
+        color: white;
+        font-size: 3rem;
+        font-weight: bold;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 50%;
+        margin: 0 auto;
+    }
+    
+    #username-display {
+        display: flex;
+        align-items: center;
+    }
+    
+    #edit-username-btn {
+        margin-left: 10px;
+    }
+    
+    #username-edit-form .input-group {
+        max-width: 400px;
+    }
+</style>

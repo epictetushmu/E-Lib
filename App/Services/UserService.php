@@ -44,4 +44,15 @@ class UserService {
     public function removeBook($userId, $bookId) {       
         return $this->user->removeBook($userId, $bookId);
     }
+
+    /**
+     * Update user profile information
+     * 
+     * @param string $userId The ID of the user to update
+     * @param array $updates Associative array of fields to update
+     * @return bool True on success, false on failure
+     */
+    public function updateUser($userId, array $updates) {
+        return $this->user->updateUser($userId, $updates);
+    }
 }

@@ -72,4 +72,29 @@ class Users {
         }
         return false;
     }
+
+    /**
+     * Update user profile information
+     * 
+     * @param string $userId The ID of the user to update
+     * @param array $updates Associative array of fields to update
+     * @return bool True on success, false on failure
+     */
+    public function updateUser($userId, array $updates) {
+        try {
+            // Make sure the user exists
+            $user = $this->getUserById($userId);
+            if (!$user) {
+                return false;
+            }
+            
+            // Update the user document with the provided fields
+            $result = $this->db->update($this->collection, ['_id' => $userId], ['$set' => $updates]);
+            
+            return $result !== false;
+        } catch (\Exception $e) {
+            error_log('Error updating user: ' . $e->getMessage());
+            return false;
+        }
+    }
 }
