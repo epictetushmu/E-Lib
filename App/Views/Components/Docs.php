@@ -9,6 +9,14 @@
             to authorized users. The application provides a comprehensive set of features for both users and 
             administrators to interact with the digital library content.
         </p>
+        <div class="text-center mb-4">
+            <a href="https://github.com/epictetushmu/E-Lib" class="btn btn-primary" target="_blank">
+                <i class="fab fa-github me-2"></i>View on GitHub
+            </a>
+            <p class="text-muted mt-2">
+                <small>Open source project maintained by Epictetus Hmu. Contributions welcome!</small>
+            </p>
+        </div>
     </section>
 
     <section class="mb-5">
