@@ -99,18 +99,8 @@ function handleLogout(event) {
     axios.get('/api/v1/logout')
         .then(response => {
             if (response.data.status === 'success') {
-                if(localStorage.getItem('isAdmin')) {
-                    localStorage.removeItem('isAdmin');
-                }
-                if (localStorage.getItem('authToken')) {
-                    localStorage.removeItem('authToken');
-                }
-                if (sessionStorage.getItem('authToken')) {
-                    sessionStorage.removeItem('authToken');
-                }
-                if (sessionStorage.getItem('isAdmin')) {
-                    sessionStorage.removeItem('isAdmin');                
-                }
+                sessionStorage.clear();
+                localStorage.clear();   
                 window.location.href = '/';
             }
         })
