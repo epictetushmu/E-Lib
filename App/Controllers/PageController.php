@@ -120,6 +120,10 @@ class PageController {
         ]);        
     }
 
+    public function docs() {
+        $this->response->renderView(__DIR__ . '/../Views/docs.php');
+    }
+
     public function profile(){
         // Check if the user is logged in
         if (!SessionManager::isLoggedIn()) {

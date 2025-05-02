@@ -34,6 +34,7 @@ class PageRouter {
             ['path' => '/dashboard', 'handler' => [new PageController(), 'dashboard']],
             ['path' => '/signup', 'handler' => [new PageController(), 'home', ['showSignup' => true]]],
             ['path' => '/admin/logs', 'handler' => [new PageController(), 'viewLogs']],
+            ['path' => '/docs', 'handler' => [new PageController(), 'docs']],
         ];            
     }
 

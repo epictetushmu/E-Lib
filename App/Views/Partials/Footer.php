@@ -19,9 +19,9 @@
             <div class="col-md-4 mb-4">
                 <h5 class="text-warning">Contact</h5>
                 <ul class="list-unstyled">
-                    <li><i class="fas fa-map-marker-alt me-2"></i>123 Knowledge Street</li>
+                    <li><i class="fas fa-map-marker-alt me-2"></i>Ρωμανού 3, Χαλέπα, 73133 Χανιά</li>
                     <li><i class="fas fa-envelope me-2"></i><a href="mailto:info@epictetuslibrary.org" class="text-decoration-none link-light">info@epictetuslibrary.org</a></li>
-                    <li><i class="fas fa-phone me-2"></i><a href="tel:+15551234567" class="text-decoration-none link-light">(555) 123-4567</a></li>
+                    <li class="mt-2"><i class="fas fa-university me-2"></i><a href="https://ee.hmu.gr" target="_blank" class="text-decoration-none link-light">ee.hmu.gr</a></li>
                 </ul>
             </div>
 
@@ -29,16 +29,38 @@
             <div class="col-md-4 mb-4">
                 <h5 class="text-warning">Follow Us</h5>
                 <div class="d-flex gap-3">
-                    <a href="#" class="text-light" aria-label="Facebook"><i class="fab fa-facebook fa-2x"></i></a>
-                    <a href="#" class="text-light" aria-label="Twitter"><i class="fab fa-twitter fa-2x"></i></a>
-                    <a href="#" class="text-light" aria-label="Instagram"><i class="fab fa-instagram fa-2x"></i></a>
+                    <a href="https://www.linkedin.com/company/epictetus-hmu" class="text-light" aria-label="LinkedIn"><i class="fab fa-linkedin fa-2x"></i></a>
+                    <a href="https://www.instagram.com/ee.epictetus_/" class="text-light" aria-label="Instagram"><i class="fab fa-instagram fa-2x"></i></a>
+                    <a href="https://github.com/epictetushmu" class="text-light" aria-label="Github"><i class="fab fa-github fa-2x"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Support Section -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-md-8 text-center">
+                <h5 class="text-warning mb-3">Support</h5>
+                <p class="mb-3">Having trouble using the library? Our support team is here to help!</p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="mailto:support@epictetuslibrary.org" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-envelope me-2"></i>Email Support
+                    </a>
+                    <a href="#" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#supportModal">
+                        <i class="fas fa-question-circle me-2"></i>Help Center
+                    </a>
+                    <a href="https://github.com/epictetushmu/E-Lib/issues" target="_blank" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-bug me-2"></i>Report an Issue
+                    </a>
                 </div>
             </div>
         </div>
 
         <!-- Footer Bottom -->
-        <div class="text-center mt-4 pt-3 border-top border-secondary">
+        <div class="text-center pt-3 border-top border-secondary">
             <small class="d-block mb-0">&copy; <?= date('Y') ?> Epictetus Library. All rights reserved.</small>
+            <small class="d-block text-muted mt-1">A project of <a href="https://ee.hmu.gr" target="_blank" class="text-decoration-none link-light">Department of Electrical & Computer Engineering, HMU</a></small>
         </div>
     </div>
 </footer>
+
+<?php include_once(__DIR__ . '/../Components/SupportModal.php'); ?>
