@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     openssl \
     libssl-dev \
+    imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
@@ -23,11 +24,26 @@ RUN docker-php-ext-install gd
 # OpenSSL is already built into PHP, just verify it's enabled
 RUN php -r 'if(!extension_loaded("openssl")) exit(1);'
 
-# Install Imagick
+# Install ImageMagick and Imagick PHP extension with improved retry mechanism
 RUN apt-get update && apt-get install -y \
+    imagemagick \
     libmagickwand-dev --no-install-recommends \
     && pecl install imagick \
     && docker-php-ext-enable imagick
+
+# Configure ImageMagick policy to allow PDF operations
+RUN set -x \
+    && find /etc -name policy.xml -type f | while read file; do \
+        echo "Modifying policy file: $file"; \
+        sed -i 's/<policy domain="coder" rights="none" pattern="PDF" \/>/<policy domain="coder" rights="read|write" pattern="PDF" \/>/' "$file" || true; \
+    done \
+    # Create additional policy files to ensure PDF processing is allowed
+    && mkdir -p /etc/ImageMagick-6 \
+    && echo '<?xml version="1.0" encoding="UTF-8"?><policymap><policy domain="coder" rights="read|write" pattern="PDF" /></policymap>' > /etc/ImageMagick-6/policy-pdf.xml \
+    && mkdir -p /usr/local/etc/ImageMagick-6 \
+    && echo '<?xml version="1.0" encoding="UTF-8"?><policymap><policy domain="coder" rights="read|write" pattern="PDF" /></policymap>' > /usr/local/etc/ImageMagick-6/policy.xml \
+    # Verify ImageMagick installation and policy
+    && convert -version || echo "ImageMagick convert not found"
 
 # Install MongoDB extension with SSL support
 RUN pecl install mongodb && docker-php-ext-enable mongodb
