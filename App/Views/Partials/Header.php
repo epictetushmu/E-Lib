@@ -124,7 +124,6 @@ function openPopup(popupId) {
         return;
     }
     popup.style.display = 'flex';
-    console.log(`Popup dimensions: width=${popup.offsetWidth}, height=${popup.offsetHeight}`);
 }
 document.addEventListener('DOMContentLoaded', function () {
     const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');

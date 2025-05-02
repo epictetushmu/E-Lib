@@ -1,83 +1,142 @@
-
 <div class="container mt-5">
-    <div class="col-md-6 offset-md-3">
-        <div class="popup-container p-4 border rounded shadow-sm bg-light position-relative">
-            <!-- Close Button -->
-            <button type="button" class="btn-close position-absolute top-0 end-0 m-3" 
-                        onclick="closePopup('signupPopup')" aria-label="Close"></button>
-            <h2 class="text-center mb-4">Sign Up</h2>
-            <div id="error-message" class="alert alert-danger d-none"></div>
-            <form id="signupForm">
-                <div class="mb-3">
-                    <label for="signup-username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="signup-username" required>
+    <div class="login-container">
+        <h2 class="text-center mb-3">Create an Account</h2>
+        <div id="signup-error-message" class="alert alert-danger d-none"></div>
+        
+        <form id="signupForm" action="/api/v1/signup" method="post">
+            <div class="form-group mb-2">
+                <label for="name" class="form-label">Username</label>
+                <input type="text" class="form-control" id="name" name="name" required autocomplete="name">
+            </div>
+            <div class="form-group mb-2">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" class="form-control" id="email" name="email" required autocomplete="email">
+            </div>
+            <div class="form-group mb-2">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" minlength="8" required autocomplete="new-password">
+                <small class="form-text text-muted">Min 8 chars with number and special char</small>
+            </div>
+            <div class="form-group mb-2">
+                <label for="confirm-password" class="form-label">Confirm Password</label>
+                <input type="password" class="form-control" id="confirm-password" name="confirm_password" required autocomplete="new-password">
+            </div>
+            <div class="form-group mb-3">
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" id="terms" name="terms" required>
+                    <label for="terms" class="form-check-label small">I agree to the <a href="/terms" target="_blank">Terms of Service</a></label>
                 </div>
-                <div class="mb-3">
-                    <label for="signup-email" class="form-label">Email</label>
-                    <input type="email" class="form-control" id="signup-email" required>
-                </div>
-                <div class="mb-3">
-                    <label for="signup-password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="signup-password" required>
-                    <div class="form-text">Password must be at least 8 characters long.</div>
-                </div>
-                <div class="mb-3">
-                    <label for="signup-confirm-password" class="form-label">Confirm Password</label>
-                    <input type="password" class="form-control" id="signup-confirm-password" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Sign Up</button>
-                <div class="mt-3 text-center">
-                    <p>Already have an account? <a href="#" onclick="closePopup('signupPopup'); openPopup('loginPopup');">Login</a></p>
-                </div>
-            </form>
-        </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Sign Up</button>
+            <div class="mt-2 text-center">
+                <small>Already have an account? <a href="#" onclick="closePopup('signupPopup'); openPopup('loginPopup');">Login</a></small>
+            </div>
+        </form>
     </div>
 </div>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script>
-        document.getElementById('signupForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-
-            const username = document.getElementById('signup-username').value;
-            const email = document.getElementById('signup-email').value;
-            const password = document.getElementById('signup-password').value;
-            const confirmPassword = document.getElementById('signup-confirm-password').value;
-            const errorMessage = document.getElementById('error-message');
-
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const signupForm = document.getElementById('signupForm');
+        const errorMessage = document.getElementById('signup-error-message');
+        
+        if (!signupForm || !errorMessage) {
+            console.error("Signup form or error message element not found!");
+            return;
+        }
+        
+        // Add event listener to the form for submission
+        signupForm.addEventListener('submit', function(e) {
+            e.preventDefault(); // Prevent traditional form submission
+            handleSignup();
+        });
+        
+        function handleSignup() {
+            console.log("Processing signup");
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const termsChecked = document.getElementById('terms').checked;
+            
             // Reset error message
             errorMessage.classList.add('d-none');
-
+            
+            // Basic form validation
+            if (!name || !email || !password || !confirmPassword) {
+                errorMessage.textContent = 'All fields are required!';
+                errorMessage.classList.remove('d-none');
+                return;
+            }
+            
             // Validate password match
             if (password !== confirmPassword) {
                 errorMessage.textContent = 'Passwords do not match!';
                 errorMessage.classList.remove('d-none');
                 return;
             }
-
+            
             // Validate password length
             if (password.length < 8) {
                 errorMessage.textContent = 'Password must be at least 8 characters long!';
                 errorMessage.classList.remove('d-none');
                 return;
             }
-
+            
+            // Check for at least one number
+            if (!/\d/.test(password)) {
+                errorMessage.textContent = 'Password must contain at least one number!';
+                errorMessage.classList.remove('d-none');
+                return;
+            }
+            
+            // Check for at least one special character
+            if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+                errorMessage.textContent = 'Password must contain at least one special character!';
+                errorMessage.classList.remove('d-none');
+                return;
+            }
+            
+            // Terms agreement check
+            if (!termsChecked) {
+                errorMessage.textContent = 'You must agree to the Terms of Service!';
+                errorMessage.classList.remove('d-none');
+                return;
+            }
+            
             axios.post('/api/v1/signup', {
-                username: username,
+                username: name,
                 email: email,
                 password: password
             })
             .then(response => {
+                console.log("Signup response received:", response);
+                
                 if (response.data.status === 'success') {
-                    window.location.href = '/login';
+                    console.log("Signup successful");
+                    
+                    // Show success message
+                    errorMessage.textContent = 'Account created successfully! Redirecting to login...';
+                    errorMessage.classList.remove('d-none');
+                    errorMessage.classList.remove('alert-danger');
+                    errorMessage.classList.add('alert-success');
+                    
+                    // Redirect to login page after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/?showLogin=1&redirect=';
+                    }, 1500);
                 } else {
-                    errorMessage.textContent = response.data.message || 'Signup failed!';
+                    // This handles the error case
+                    console.error("Signup failed:", response);
+                    errorMessage.textContent = response.message || 'Signup failed. Please check your information.';
                     errorMessage.classList.remove('d-none');
                 }
             })
             .catch(error => {
-                errorMessage.textContent = 'An error occurred. Please try again later.';
+                console.error("Signup error:", error);
+                errorMessage.textContent = 'An error occurred while trying to create your account. Please try again later.';
                 errorMessage.classList.remove('d-none');
-                console.error('Signup error:', error);
             });
-        });
-    </script>
+        }
+    });
+</script>
