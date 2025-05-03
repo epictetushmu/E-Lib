@@ -21,5 +21,28 @@
         "title": "Book 2",
         "author": "Author 2",
         "_id": "68162ee232c4f3.39396966"
+    },
+    {
+        "title": "Test Book",
+        "author": "Test Author",
+        "pages": 100,
+        "published": true,
+        "_id": "68163789401b40.50484352"
+    },
+    {
+        "title": "Updated Title",
+        "author": "Original Author",
+        "published": true,
+        "_id": "68163789404836.16811522"
+    },
+    {
+        "title": "Book 1",
+        "author": "Author 1",
+        "_id": "68163789415fb8.79806870"
+    },
+    {
+        "title": "Book 2",
+        "author": "Author 2",
+        "_id": "681637894163b9.32022043"
     }
 ]
