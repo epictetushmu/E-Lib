@@ -400,10 +400,10 @@ class UserController {
         }
 
         try {
-            // Process uploaded images (if any)
+            // Process uploaded embedded images (if any)
             $attachments = [];
             
-            if (!empty($_FILES['images']) && is_array($_FILES['images']['name'])) {
+            if (!empty($_FILES['embedded_images']) && is_array($_FILES['embedded_images']['name'])) {
                 $uploadDir = dirname(__DIR__, 2) . '/public/uploads/support/';
                 
                 // Create directory if it doesn't exist
@@ -412,50 +412,46 @@ class UserController {
                 }
                 
                 // Process each uploaded file
-                $fileCount = count($_FILES['images']['name']);
+                $fileCount = count($_FILES['embedded_images']['name']);
                 
-                // Limit to 3 files max
-                $fileCount = min($fileCount, 3);
+                // Limit to 5 files max
+                $fileCount = min($fileCount, 5);
                 
                 for ($i = 0; $i < $fileCount; $i++) {
                     // Skip files with errors
-                    if ($_FILES['images']['error'][$i] !== UPLOAD_ERR_OK) {
+                    if ($_FILES['embedded_images']['error'][$i] !== UPLOAD_ERR_OK) {
                         continue;
                     }
                     
                     // Validate file size (5MB max)
-                    if ($_FILES['images']['size'][$i] > 5 * 1024 * 1024) {
+                    if ($_FILES['embedded_images']['size'][$i] > 5 * 1024 * 1024) {
                         continue;
                     }
                     
                     // Validate mime type
                     $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
                     $finfo = new \finfo(FILEINFO_MIME_TYPE);
-                    $mimeType = $finfo->file($_FILES['images']['tmp_name'][$i]);
+                    $mimeType = $finfo->file($_FILES['embedded_images']['tmp_name'][$i]);
                     
                     if (!in_array($mimeType, $allowedTypes)) {
                         continue;
                     }
                     
                     // Generate unique filename
-                    $extension = pathinfo($_FILES['images']['name'][$i], PATHINFO_EXTENSION);
+                    $extension = pathinfo($_FILES['embedded_images']['name'][$i], PATHINFO_EXTENSION);
                     $filename = uniqid('support_', true) . '.' . $extension;
                     $filepath = $uploadDir . $filename;
                     
                     // Move the uploaded file to the destination
-                    if (move_uploaded_file($_FILES['images']['tmp_name'][$i], $filepath)) {
+                    if (move_uploaded_file($_FILES['embedded_images']['tmp_name'][$i], $filepath)) {
+                        // Add to attachments array
                         $attachments[] = [
                             'path' => $filepath,
-                            'filename' => $_FILES['images']['name'][$i],
+                            'filename' => $_FILES['embedded_images']['name'][$i],
                             'type' => $mimeType
                         ];
                     }
                 }
-            }
-            
-            // Add attachments information to the message for logging purposes
-            if (!empty($attachments)) {
-                $message .= "\n\n---\nAttachments: " . count($attachments) . " image(s)";
             }
             
             // Use the EmailService with PHPMailer to send email with attachments
