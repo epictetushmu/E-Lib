@@ -14,16 +14,16 @@ class JwtAuthMiddleware implements MiddlewareInterface {
     }
 
     public function process(array $request, callable $next) {
-        $path = $request['path'] ?? '/';
+        $path = isset($request['path']) ? $request['path'] : '/';
 
         // Check if the path requires authentication
         foreach ($this->protectedPaths as $protectedPath) {
             if (strpos($path, $protectedPath) === 0) {
                 // Validate the JWT token
                 $headers = getallheaders();
-                $authHeader = $headers['Authorization'] ?? null;
+                $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : null;
 
-                if (!$authHeader || !str_starts_with($authHeader, 'Bearer ')) {
+                if (!$authHeader || strpos($authHeader, 'Bearer ') !== 0) {
                     ResponseHandler::respond(false, 'Unauthorized access', 401);
                     exit();
                 }
@@ -32,12 +32,23 @@ class JwtAuthMiddleware implements MiddlewareInterface {
                 $decoded = JwtHelper::validateToken($token);
 
                 if (!$decoded) {
-                    ResponseHandler::respond(false, 'Invalid or expired token', 401);
+                    // For debugging, get detailed error information
+                    $tokenError = JwtHelper::getTokenValidationError($token);
+                    $errorMessage = 'Invalid or expired token';
+                    
+                    // Log the specific error for debugging
+                    if (isset($tokenError['error'])) {
+                        $errorMessage = isset($tokenError['message']) ? $tokenError['message'] : 'No details';
+                        error_log("JWT Validation Error: {$tokenError['error']} - {$errorMessage}");
+                    }
+                    
+                    ResponseHandler::respond(false, $errorMessage, 401);
                     exit();
                 }
 
                 // Add user info to the request for further processing
-                $request['user'] = (array) $decoded;
+                // Convert stdClass to array for more consistent use in the application
+                $request['user'] = json_decode(json_encode($decoded), true);
                 break;
             }
         }

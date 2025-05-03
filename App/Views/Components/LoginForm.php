@@ -80,15 +80,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // Add click event listener to the button
     loginButton.addEventListener('click', function(e) {
         console.log("Login button clicked!");
+        e.preventDefault(); 
         handleLogin();
     });
     
     // Also prevent form submission as a backup measure
-    loginForm.addEventListener('submit', function(e) {
-        console.log("Form submit prevented");
-        e.preventDefault();
-        return false;
-    });
 
     // Separated function for login handling
     function handleLogin() {
