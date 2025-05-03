@@ -190,15 +190,32 @@ function getBooks() {
                     <td class="text-center">${description}</td>
                     <td class="text-center">${isbn}</td>
                     <td class="text-center">
-                        <span class="badge ${status === 'public' ? 'bg-success' : 'bg-secondary'}">
-                            ${status.charAt(0).toUpperCase() + status.slice(1)}
-                        </span>
+                        <div class="dropdown">
+                            <button class="btn btn-sm ${status === 'public' ? 'btn-success' : 'btn-secondary'} dropdown-toggle" type="button" id="statusDropdown-${id}" data-bs-toggle="dropdown" aria-expanded="false">
+                                ${status.charAt(0).toUpperCase() + status.slice(1)}
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="statusDropdown-${id}">
+                                <li>
+                                    <a class="dropdown-item ${status === 'draft' ? 'active' : ''}" href="#" 
+                                       onclick="updateStatus('${id}', 'draft'); return false;">
+                                       <i class="bi bi-file-earmark me-2"></i>Draft
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item ${status === 'public' ? 'active' : ''}" href="#" 
+                                       onclick="updateStatus('${id}', 'public'); return false;">
+                                       <i class="bi bi-globe me-2"></i>Public
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </td>
                     <td class="text-center">
-                        <span class="badge ${featured ? 'bg-warning text-dark' : 'bg-light text-dark'}">
+                        <button class="btn btn-sm ${featured ? 'btn-warning' : 'btn-outline-warning'}" 
+                                onclick="toggleFeatured('${id}', ${!featured})">
                             <i class="bi bi-star${featured ? '-fill' : ''}"></i> 
                             ${featured ? 'Featured' : 'Regular'}
-                        </span>
+                        </button>
                     </td>
                     <td class="text-center">
                         <div class="btn-group btn-group-sm">
@@ -795,4 +812,143 @@ document.head.insertAdjacentHTML('beforeend', `
         }
     </style>
 `);
+
+// Function to update book status
+function updateStatus(bookId, newStatus) {
+    // Create spinner effect on the status dropdown button
+    const statusButton = document.getElementById(`statusDropdown-${bookId}`);
+    const originalButtonContent = statusButton.innerHTML;
+    statusButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...';
+    statusButton.disabled = true;
+
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    // Make a targeted PUT request just for the status change
+    axios.put(`/api/v1/books/${bookId}`, { status: newStatus }, {
+        headers: {
+            'Authorization': 'Bearer ' + authToken,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (response.data.status === 'success') {
+            // Update the button appearance based on the new status
+            statusButton.className = `btn btn-sm ${newStatus === 'public' ? 'btn-success' : 'btn-secondary'} dropdown-toggle`;
+            statusButton.innerHTML = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+            
+            // Show a non-intrusive toast notification
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed bottom-0 end-0 p-3';
+            toast.style.zIndex = '11';
+            toast.innerHTML = `
+                <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Status updated to ${newStatus}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast.querySelector('.toast'));
+            bsToast.show();
+            
+            // Remove toast after it's hidden
+            toast.addEventListener('hidden.bs.toast', function() {
+                toast.remove();
+            });
+        } else {
+            // Revert button to original state
+            statusButton.innerHTML = originalButtonContent;
+            Swal.fire('Error', response.data.message || 'Failed to update status', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating status:', error);
+        statusButton.innerHTML = originalButtonContent;
+        Swal.fire('Error', 'An error occurred while updating the status', 'error');
+    })
+    .finally(() => {
+        statusButton.disabled = false;
+        
+        // Update active state in dropdown menu
+        const dropdownItems = document.querySelectorAll(`[aria-labelledby="statusDropdown-${bookId}"] .dropdown-item`);
+        dropdownItems.forEach(item => {
+            if (item.textContent.trim().toLowerCase().includes(newStatus)) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    });
+}
+
+// Function to toggle featured status
+function toggleFeatured(bookId, setFeatured) {
+    // Get the button and set loading state
+    const featuredBtn = document.querySelector(`#bookRow-${bookId} td:nth-child(6) button`);
+    const originalBtnContent = featuredBtn.innerHTML;
+    featuredBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+    featuredBtn.disabled = true;
+
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    // Make a targeted PUT request just for the featured flag
+    axios.put(`/api/v1/books/${bookId}`, { featured: setFeatured }, {
+        headers: {
+            'Authorization': 'Bearer ' + authToken,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (response.data.status === 'success') {
+            // Update the button appearance based on the new featured state
+            if (setFeatured) {
+                featuredBtn.className = 'btn btn-sm btn-warning';
+                featuredBtn.innerHTML = '<i class="bi bi-star-fill"></i> Featured';
+            } else {
+                featuredBtn.className = 'btn btn-sm btn-outline-warning';
+                featuredBtn.innerHTML = '<i class="bi bi-star"></i> Regular';
+            }
+            
+            // Show a non-intrusive toast notification
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed bottom-0 end-0 p-3';
+            toast.style.zIndex = '11';
+            toast.innerHTML = `
+                <div class="toast align-items-center text-white ${setFeatured ? 'bg-warning' : 'bg-secondary'} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-${setFeatured ? 'star-fill' : 'star'} me-2"></i>
+                            Book ${setFeatured ? 'added to' : 'removed from'} featured books
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast.querySelector('.toast'));
+            bsToast.show();
+            
+            // Remove toast after it's hidden
+            toast.addEventListener('hidden.bs.toast', function() {
+                toast.remove();
+            });
+        } else {
+            // Revert button to original state
+            featuredBtn.innerHTML = originalBtnContent;
+            Swal.fire('Error', response.data.message || 'Failed to update featured status', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating featured status:', error);
+        featuredBtn.innerHTML = originalBtnContent;
+        Swal.fire('Error', 'An error occurred while updating the featured status', 'error');
+    })
+    .finally(() => {
+        featuredBtn.disabled = false;
+    });
+}
 </script>
