@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Send the request to the API
             axios.post('/api/v1/support', supportData)
                 .then(response => {
-                    if (response.data && response.data.success) {
+                    if (response.data && response.data.status === 'success') {
                         // Show success message
                         showFormStatus('Your message has been sent successfully. We will contact you soon.', 'success');
                         supportForm.reset();
