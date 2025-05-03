@@ -98,7 +98,7 @@
                             <h5 class="border-bottom pb-2">Contact Support</h5>
                             <p>Our support team is available Monday through Friday, 9AM to 5PM (UTC+2).</p>
                             <ul class="list-unstyled">
-                                <li><i class="fas fa-envelope me-2"></i>Email: <a href="mailto:support@epictetuslibrary.org">support@epictetuslibrary.org</a></li>
+                                <li><i class="fas fa-envelope me-2"></i>Email: <a href="menounosnikitas@gmail.com">support@epictetuslibrary.org</a></li>
                                 <li><i class="fas fa-comment-alt me-2"></i>Response time: Usually within 24 hours</li>
                             </ul>
                         </div>
@@ -107,17 +107,18 @@
                         <div class="col-md-6">
                             <h5 class="border-bottom pb-2">Quick Support Request</h5>
                             <form id="quickSupportForm">
+                                <div id="supportFormStatus" class="alert d-none mb-3"></div>
                                 <div class="mb-3">
                                     <label for="supportName" class="form-label">Name</label>
-                                    <input type="text" class="form-control" id="supportName" required>
+                                    <input type="text" class="form-control" id="supportName" name="name" required>
                                 </div>
                                 <div class="mb-3">
                                     <label for="supportEmail" class="form-label">Email</label>
-                                    <input type="email" class="form-control" id="supportEmail" required>
+                                    <input type="email" class="form-control" id="supportEmail" name="email" required>
                                 </div>
                                 <div class="mb-3">
                                     <label for="supportMessage" class="form-label">Message</label>
-                                    <textarea class="form-control" id="supportMessage" rows="3" required></textarea>
+                                    <textarea class="form-control" id="supportMessage" name="message" rows="3" required></textarea>
                                 </div>
                                 <button type="submit" class="btn btn-warning">Submit Request</button>
                             </form>
@@ -136,27 +137,71 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const supportForm = document.getElementById('quickSupportForm');
+    const statusAlert = document.getElementById('supportFormStatus');
+    
     if (supportForm) {
         supportForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
-            // In a real implementation, you would send this data to your server
+            // Get form data
             const supportData = {
-                name: document.getElementById('supportName').value,
-                email: document.getElementById('supportEmail').value,
-                message: document.getElementById('supportMessage').value
+                name: document.getElementById('supportName').value.trim(),
+                email: document.getElementById('supportEmail').value.trim(),
+                message: document.getElementById('supportMessage').value.trim()
             };
             
-            // For now, we'll just show a success message
-            alert('Thank you for your message. Our support team will contact you shortly!');
-            supportForm.reset();
-            
-            // Close the modal
-            const supportModal = bootstrap.Modal.getInstance(document.getElementById('supportModal'));
-            if (supportModal) {
-                supportModal.hide();
+            // Validate inputs
+            if (!supportData.name || !supportData.email || !supportData.message) {
+                showFormStatus('Please fill in all fields.', 'danger');
+                return;
             }
+            
+            // Show loading state
+            const submitBtn = supportForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+            
+            // Clear previous status
+            statusAlert.classList.add('d-none');
+            
+            // Send the request to the API
+            axios.post('/api/v1/support', supportData)
+                .then(response => {
+                    if (response.data && response.data.status === 'success') {
+                        // Show success message
+                        showFormStatus('Your message has been sent successfully. We will contact you soon.', 'success');
+                        supportForm.reset();
+                        
+                        // Close modal after 2 seconds
+                        setTimeout(() => {
+                            const supportModal = bootstrap.Modal.getInstance(document.getElementById('supportModal'));
+                            if (supportModal) {
+                                supportModal.hide();
+                            }
+                        }, 2000);
+                    } else {
+                        // Handle server-side validation errors
+                        showFormStatus(response.data.message || 'An error occurred while sending your message.', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error submitting support request:', error);
+                    showFormStatus('There was an error sending your message. Please try again later.', 'danger');
+                })
+                .finally(() => {
+                    // Restore button state
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                });
         });
+    }
+    
+    // Helper function to display status messages
+    function showFormStatus(message, type) {
+        statusAlert.textContent = message;
+        statusAlert.classList.remove('d-none', 'alert-success', 'alert-danger', 'alert-warning');
+        statusAlert.classList.add('alert-' + type);
     }
 });
 </script>

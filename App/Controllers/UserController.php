@@ -1,18 +1,22 @@
 <?php
 namespace App\Controllers;
 
+use App\Includes\Environment;
 use App\Services\UserService; 
 use App\Services\BookService;
+use App\Services\EmailService;
 use App\Includes\ResponseHandler;
 use App\Includes\JwtHelper;
 
 class UserController {
     private $userService;
     private $bookService;
+    private $emailService;
     
     public function __construct() {
         $this->userService = new UserService();
         $this->bookService = new BookService();
+        $this->emailService = new EmailService();
     }
 
     public function handleLogin() {
@@ -368,6 +372,45 @@ class UserController {
             ResponseHandler::respond(true, 'Profile updated successfully', 200);
         } else {
             ResponseHandler::respond(false, 'Failed to update profile', 500);
+        }
+    }
+
+    public function support() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        if (empty($_POST)) {
+            $inputJSON = file_get_contents('php://input');
+            $input = json_decode($inputJSON, true);
+            $name = $input['name'] ?? 'Anonymous';
+            $email = $input['email'] ?? 'no-reply@example.com';
+            $message = $input['message'] ?? null;
+        } else {
+            $name = $_POST['name'] ?? 'Anonymous';
+            $email = $_POST['email'] ?? 'no-reply@example.com';
+            $message = $_POST['message'] ?? null;
+        }
+
+        if (empty($message)) {
+            ResponseHandler::respond(false, 'Message is required', 400);
+            return;
+        }
+
+        try {
+            // Use the new EmailService with PHPMailer
+            $result = $this->emailService->sendSupportEmail($email, $name, $message);
+            
+            if ($result) {
+                ResponseHandler::respond(true, 'Support request sent successfully', 200);
+            } else {
+                throw new \Exception('Email sending failed');
+            }
+            
+        } catch (\Exception $e) {
+            // Log the error
+            error_log('Error sending support email: ' . $e->getMessage());
+            ResponseHandler::respond(false, 'Failed to send support request. Please try again later.', 500);
         }
     }
 }

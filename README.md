@@ -18,6 +18,7 @@ The application features a modular architecture with separate routes for web pag
 - **Responsive Design**: Works on desktop and mobile devices
 - **MongoDB Integration**: Primary storage with JSON fallback
 - **Security Features**: JWT authentication, secure file handling, and more
+- **Email System**: PHPMailer integration for email notifications and support
 
 ## Project Structure
 
@@ -105,6 +106,14 @@ To get started with the E-Lib project:
    - `MONGO_PASSWORD`: MongoDB password
    - `MONGO_CERT_FILE`: Path to MongoDB certificate file
    - `DATABASE_NAME`: Name of the MongoDB database
+   - `MAIL_HOST`: SMTP server host for sending emails
+   - `MAIL_PORT`: SMTP server port (typically 587 for TLS)
+   - `MAIL_USERNAME`: SMTP account username
+   - `MAIL_PASSWORD`: SMTP account password
+   - `MAIL_ENCRYPTION`: Email encryption method (tls/ssl)
+   - `MAIL_FROM_ADDRESS`: Default sender email address
+   - `MAIL_FROM_NAME`: Default sender name
+   - `SUPPORT_EMAIL`: Email address for receiving support requests
 
 ### Local Development with Docker
 
@@ -186,6 +195,27 @@ Comprehensive documentation is available within the application at `/docs`. This
 - Database structure
 - Authentication flows
 - File management
+
+## Email Configuration
+
+The application uses PHPMailer to handle all email functionality. To configure email:
+
+1. Set up your SMTP server information in the `.env` file:
+   ```
+   MAIL_HOST=smtp.example.com
+   MAIL_PORT=587
+   MAIL_USERNAME=your_username
+   MAIL_PASSWORD=your_password
+   MAIL_ENCRYPTION=tls
+   MAIL_FROM_ADDRESS=support@epictetuslibrary.org
+   MAIL_FROM_NAME="Epictetus Library"
+   SUPPORT_EMAIL=support@epictetuslibrary.org
+   ```
+
+2. Email functionality is available through the `EmailService` class which provides:
+   - Support request emails
+   - General email sending capability
+   - HTML-formatted emails
 
 ## Support
 
