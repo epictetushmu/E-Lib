@@ -380,16 +380,18 @@ class UserController {
             session_start();
         }
         
-        if (empty($_POST)) {
+        // Process form data
+        $name = $_POST['name'] ?? 'Anonymous';
+        $email = $_POST['email'] ?? 'no-reply@example.com';
+        $message = $_POST['message'] ?? null;
+        
+        // For regular JSON requests (backward compatibility)
+        if (empty($_POST) && empty($_FILES)) {
             $inputJSON = file_get_contents('php://input');
             $input = json_decode($inputJSON, true);
-            $name = $input['name'] ?? 'Anonymous';
-            $email = $input['email'] ?? 'no-reply@example.com';
-            $message = $input['message'] ?? null;
-        } else {
-            $name = $_POST['name'] ?? 'Anonymous';
-            $email = $_POST['email'] ?? 'no-reply@example.com';
-            $message = $_POST['message'] ?? null;
+            $name = $input['name'] ?? $name;
+            $email = $input['email'] ?? $email;
+            $message = $input['message'] ?? $message;
         }
 
         if (empty($message)) {
@@ -398,8 +400,66 @@ class UserController {
         }
 
         try {
-            // Use the new EmailService with PHPMailer
-            $result = $this->emailService->sendSupportEmail($email, $name, $message);
+            // Process uploaded images (if any)
+            $attachments = [];
+            
+            if (!empty($_FILES['images']) && is_array($_FILES['images']['name'])) {
+                $uploadDir = dirname(__DIR__, 2) . '/public/uploads/support/';
+                
+                // Create directory if it doesn't exist
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                
+                // Process each uploaded file
+                $fileCount = count($_FILES['images']['name']);
+                
+                // Limit to 3 files max
+                $fileCount = min($fileCount, 3);
+                
+                for ($i = 0; $i < $fileCount; $i++) {
+                    // Skip files with errors
+                    if ($_FILES['images']['error'][$i] !== UPLOAD_ERR_OK) {
+                        continue;
+                    }
+                    
+                    // Validate file size (5MB max)
+                    if ($_FILES['images']['size'][$i] > 5 * 1024 * 1024) {
+                        continue;
+                    }
+                    
+                    // Validate mime type
+                    $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $mimeType = $finfo->file($_FILES['images']['tmp_name'][$i]);
+                    
+                    if (!in_array($mimeType, $allowedTypes)) {
+                        continue;
+                    }
+                    
+                    // Generate unique filename
+                    $extension = pathinfo($_FILES['images']['name'][$i], PATHINFO_EXTENSION);
+                    $filename = uniqid('support_', true) . '.' . $extension;
+                    $filepath = $uploadDir . $filename;
+                    
+                    // Move the uploaded file to the destination
+                    if (move_uploaded_file($_FILES['images']['tmp_name'][$i], $filepath)) {
+                        $attachments[] = [
+                            'path' => $filepath,
+                            'filename' => $_FILES['images']['name'][$i],
+                            'type' => $mimeType
+                        ];
+                    }
+                }
+            }
+            
+            // Add attachments information to the message for logging purposes
+            if (!empty($attachments)) {
+                $message .= "\n\n---\nAttachments: " . count($attachments) . " image(s)";
+            }
+            
+            // Use the EmailService with PHPMailer to send email with attachments
+            $result = $this->emailService->sendSupportEmail($email, $name, $message, $attachments);
             
             if ($result) {
                 ResponseHandler::respond(true, 'Support request sent successfully', 200);

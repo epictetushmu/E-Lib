@@ -32,11 +32,16 @@ class EmailService {
      * @param string $fromEmail Sender email
      * @param string $fromName Sender name
      * @param string $message Email message content
+     * @param array $attachments Optional array of file attachments
      * @param string $subject Email subject
      * @return bool True if email was sent successfully, false otherwise
      */
-    public function sendSupportEmail($fromEmail, $fromName, $message, $subject = 'Support Request') {
+    public function sendSupportEmail($fromEmail, $fromName, $message, $attachments = [], $subject = 'Support Request') {
         try {
+            // Reset all recipients and attachments
+            $this->mailer->clearAllRecipients();
+            $this->mailer->clearAttachments();
+            
             // Set reply-to as the sender's email
             $this->mailer->addReplyTo($fromEmail, $fromName);
             
@@ -44,10 +49,25 @@ class EmailService {
             $supportEmail = Environment::get('SUPPORT_EMAIL') ?: 'support@epictetuslibrary.org';
             $this->mailer->addAddress($supportEmail);
             
+            // Add any attachments
+            if (!empty($attachments) && is_array($attachments)) {
+                foreach ($attachments as $attachment) {
+                    if (isset($attachment['path']) && file_exists($attachment['path'])) {
+                        $filename = $attachment['filename'] ?? basename($attachment['path']);
+                        $this->mailer->addAttachment(
+                            $attachment['path'],
+                            $filename,
+                            'base64',
+                            $attachment['type'] ?? ''
+                        );
+                    }
+                }
+            }
+            
             // Email content
             $this->mailer->isHTML(true);
             $this->mailer->Subject = $subject;
-            $this->mailer->Body = $this->formatSupportEmail($fromName, $fromEmail, $message);
+            $this->mailer->Body = $this->formatSupportEmail($fromName, $fromEmail, $message, count($attachments));
             $this->mailer->AltBody = "Support request from $fromName ($fromEmail): $message";
             
             // Send email
@@ -98,9 +118,10 @@ class EmailService {
      * @param string $name Sender name
      * @param string $email Sender email
      * @param string $message Support message
+     * @param int $attachmentCount Number of attachments
      * @return string Formatted HTML email
      */
-    private function formatSupportEmail($name, $email, $message) {
+    private function formatSupportEmail($name, $email, $message, $attachmentCount) {
         return '
         <!DOCTYPE html>
         <html>
@@ -122,6 +143,7 @@ class EmailService {
                     <p><strong>From:</strong> ' . htmlspecialchars($name) . ' (' . htmlspecialchars($email) . ')</p>
                     <p><strong>Message:</strong></p>
                     <p>' . nl2br(htmlspecialchars($message)) . '</p>
+                    <p><strong>Attachments:</strong> ' . $attachmentCount . '</p>
                 </div>
                 <div class="footer">
                     <p>This email was sent from the Epictetus Library support form.</p>
