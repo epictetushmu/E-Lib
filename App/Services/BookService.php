@@ -27,10 +27,14 @@ class BookService {
         return $this->book->getPublicBooks();
     }
 
-    public function updateBook($id, string $title, string $author, string $year, string $description, array $categories, string $status, string $featured, string $isbn, bool $downloadable = true) {
+    public function updateBook($id, string $title, string $author, string $year, string $description, array $categories, string $status, $featured, string $isbn, bool $downloadable = true) {
         // Add validation here
   
-        //add books the non empty fields 
+        // Properly handle featured parameter conversion to boolean
+        $featuredBool = false;
+        if ($featured === true || $featured === 'true' || $featured === 1 || $featured === '1') {
+            $featuredBool = true;
+        }
     
         $book = [
             'title' => $title,
@@ -40,7 +44,7 @@ class BookService {
             'categories' => $categories,
             'isbn' => $isbn,
             'downloadable' => $downloadable,
-            'featured' => (bool)$featured?? false,
+            'featured' => $featuredBool,
             'status' => $status,
             'updated_at' => new UTCDateTime()
         ];
