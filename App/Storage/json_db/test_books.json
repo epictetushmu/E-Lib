@@ -1,0 +1,25 @@
+[
+    {
+        "title": "Test Book",
+        "author": "Test Author",
+        "pages": 100,
+        "published": true,
+        "_id": "68162ee23146d9.76608385"
+    },
+    {
+        "title": "Updated Title",
+        "author": "Original Author",
+        "published": true,
+        "_id": "68162ee23166e7.23565501"
+    },
+    {
+        "title": "Book 1",
+        "author": "Author 1",
+        "_id": "68162ee232be25.30994226"
+    },
+    {
+        "title": "Book 2",
+        "author": "Author 2",
+        "_id": "68162ee232c4f3.39396966"
+    }
+]
