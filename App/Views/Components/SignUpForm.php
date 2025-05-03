@@ -134,7 +134,18 @@
             })
             .catch(error => {
                 console.error("Signup error:", error);
-                errorMessage.textContent = 'An error occurred while trying to create your account. Please try again later.';
+                submitBtn.textContent = originalBtnText;
+                submitBtn.disabled = false;
+                
+                // More detailed error handling
+                let errorText = 'An error occurred while trying to create your account. Please try again later.';
+                if (error.response && error.response.data && error.response.data.message) {
+                    errorText = error.response.data.message;
+                } else if (error.message) {
+                    errorText = error.message;
+                }
+                
+                errorMessage.textContent = errorText;
                 errorMessage.classList.remove('d-none');
             });
         }
