@@ -4,20 +4,19 @@ namespace App\Controllers;
 use App\Includes\Environment;
 use App\Services\UserService; 
 use App\Services\BookService;
+use App\Services\EmailService;
 use App\Includes\ResponseHandler;
 use App\Includes\JwtHelper;
-use MailerSend\MailerSend;
-use MailerSend\Helpers\Builder\Recipient;
-use MailerSend\Helpers\Builder\EmailParams;
-
 
 class UserController {
     private $userService;
     private $bookService;
+    private $emailService;
     
     public function __construct() {
         $this->userService = new UserService();
         $this->bookService = new BookService();
+        $this->emailService = new EmailService();
     }
 
     public function handleLogin() {
@@ -399,26 +398,14 @@ class UserController {
         }
 
         try {
-            // Create a new instance of MailerSend with your API key
-            $apiKey = Environment::get('MAILERSEND_API_KEY') ?: 'YOUR_API_KEY_HERE';
-            $mailersend = new MailerSend(['api_key' => $apiKey]);
-
-            $recipients = [
-                new Recipient('recipient@email.com', 'Recipient'),
-            ];
-
-            $emailParams = (new EmailParams())
-                ->setFrom($email)
-                ->setFromName($name)
-                ->setRecipients($recipients)
-                ->setSubject('Support Request')
-                ->setHtml('<p>' . htmlspecialchars($message) . '</p>')
-                ->setText($message);
-
-            // Send the email
-            $response = $mailersend->email->send($emailParams);
+            // Use the new EmailService with PHPMailer
+            $result = $this->emailService->sendSupportEmail($email, $name, $message);
             
-            ResponseHandler::respond(true, 'Support request sent successfully', 200);
+            if ($result) {
+                ResponseHandler::respond(true, 'Support request sent successfully', 200);
+            } else {
+                throw new \Exception('Email sending failed');
+            }
             
         } catch (\Exception $e) {
             // Log the error
