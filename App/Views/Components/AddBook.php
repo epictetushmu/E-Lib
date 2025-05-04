@@ -54,9 +54,12 @@
             </div>            
 
             <div class="mb-3">
-                <label for="bookPdf" class="form-label">Book</label>
-                <input type="file" class="form-control" id="bookPdf" name="bookPdf" accept="application/pdf" required>
-                <small class="form-text text-muted">Upload a PDF file.</small>
+                <label for="bookPdf" class="form-label">Book File</label>
+                <input type="file" class="form-control" id="bookPdf" name="bookPdf" 
+                       accept=".pdf,.pptx,.ppt,.epub,.mobi,.azw,.azw3,.djvu,.doc,.docx" required>
+                <small class="form-text text-muted">
+                    Supported formats: PDF, PowerPoint (PPT/PPTX), E-books (EPUB, MOBI, AZW), DJVU, and Word documents (DOC/DOCX)
+                </small>
             </div>
             
             <!-- Downloadable option -->

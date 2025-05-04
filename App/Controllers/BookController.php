@@ -3,12 +3,10 @@ namespace App\Controllers;
 
 use App\Services\BookService; 
 use App\Includes\ResponseHandler;
-use App\Helpers\PdfHelper;
-
+use App\Helpers\FileHelper;
 
 class BookController {
     private $bookService;
-
     private $response; 
 
     public function __construct() {
@@ -167,11 +165,11 @@ class BookController {
             return $this->response->respond(false, 'PDF file upload error', 400);
         }
 
-        // Initialize PdfHelper with temporary path
-        $pdfHelper = new PdfHelper($_FILES['bookPdf']['tmp_name']);
+        // Initialize FileHelper with temporary path
+        $fileHelper = new FileHelper($_FILES['bookPdf']['tmp_name']);
         
         // Store the PDF
-        $pdfPath = $pdfHelper->storePdf($_FILES['bookPdf']);
+        $pdfPath = $fileHelper->storeFile($_FILES['bookPdf']);
         
         if (!$pdfPath) {
             error_log("Failed to store PDF");
@@ -181,7 +179,7 @@ class BookController {
         error_log("PDF stored successfully at: $pdfPath");
         
         // Generate thumbnail
-        $thumbnailPath = $pdfHelper->getPdfThumbnail();
+        $thumbnailPath = $fileHelper->generateThumbnail();
         
         // Add the book to the database
         $response = $this->bookService->addBook(
@@ -414,8 +412,8 @@ class BookController {
             
             try {
                 // Process the PDF file
-                $pdfHelper = new PdfHelper($file['tmp_name']);
-                $pdfPath = $pdfHelper->storePdf($file);
+                $fileHelper = new FileHelper($file['tmp_name']);
+                $pdfPath = $fileHelper->storeFile($file);
                 
                 if (!$pdfPath) {
                     $results['failed'][] = [
@@ -426,7 +424,7 @@ class BookController {
                 }
                 
                 // Generate thumbnail
-                $thumbnailPath = $pdfHelper->getPdfThumbnail();
+                $thumbnailPath = $fileHelper->getFileThumbnail();
                 
                 // Add the book to the database
                 $response = $this->bookService->addBook(
