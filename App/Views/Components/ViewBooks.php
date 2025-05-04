@@ -114,29 +114,16 @@ function getBooks() {
                     <td class="text-center">${description}</td>
                     <td class="text-center">${isbn}</td>
                     <td class="text-center">
-                        <div class="dropdown">
-                            <button class="btn btn-sm ${status === 'public' ? 'btn-success' : 'btn-secondary'} dropdown-toggle" type="button" id="statusDropdown-${id}" data-bs-toggle="dropdown" aria-expanded="false">
-                                ${status.charAt(0).toUpperCase() + status.slice(1)}
-                            </button>
-                            <ul class="dropdown-menu" aria-labelledby="statusDropdown-${id}">
-                                <li>
-                                    <a class="dropdown-item ${status === 'draft' ? 'active' : ''}" href="#" 
-                                       onclick="updateStatus('${id}', 'draft'); return false;">
-                                       <i class="bi bi-file-earmark me-2"></i>Draft
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item ${status === 'public' ? 'active' : ''}" href="#" 
-                                       onclick="updateStatus('${id}', 'public'); return false;">
-                                       <i class="bi bi-globe me-2"></i>Public
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
+                        <!-- Single status toggle button -->
+                        <button type="button" class="btn btn-sm ${status === 'public' ? 'btn-success' : 'btn-secondary'}"
+                                onclick="simpleStatusChange('${id}', '${status === 'public' ? 'draft' : 'public'}')">
+                            <i class="bi bi-${status === 'public' ? 'globe' : 'file-earmark'}"></i> 
+                            ${status === 'public' ? 'Public' : 'Draft'}
+                        </button>
                     </td>
                     <td class="text-center">
-                        <button class="btn btn-sm ${featured ? 'btn-warning' : 'btn-outline-warning'}" 
-                                onclick="toggleFeatured('${id}', ${!featured})">
+                        <button class="btn btn-sm ${featured ? 'btn-warning' : 'btn-outline-warning'} featured-toggle" 
+                                onclick="simpleFeatureToggle('${id}', ${!featured})">
                             <i class="bi bi-star${featured ? '-fill' : ''}"></i> 
                             ${featured ? 'Featured' : 'Regular'}
                         </button>
@@ -509,6 +496,137 @@ function toggleFeatured(bookId, setFeatured) {
     })
     .finally(() => {
         featuredBtn.disabled = false;
+    });
+}
+
+// Simple direct function for changing status
+function simpleStatusChange(bookId, newStatus) {
+    // Get the status button
+    const statusButton = document.querySelector(`#bookRow-${bookId} td:nth-child(5) button`);
+    
+    // Show loading state
+    const originalText = statusButton.innerHTML;
+    statusButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+    statusButton.disabled = true;
+    
+    // Get auth token
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    // Use the browser's fetch API for simplicity
+    fetch(`/api/v1/books/${bookId}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Status update response:", data);
+        
+        if (data.status === 'success') {
+            // Update button appearance based on the new status
+            if (newStatus === 'public') {
+                statusButton.className = 'btn btn-sm btn-success';
+                statusButton.innerHTML = '<i class="bi bi-globe"></i> Public';
+                // Update onclick for next click
+                statusButton.setAttribute('onclick', `simpleStatusChange('${bookId}', 'draft')`);
+            } else {
+                statusButton.className = 'btn btn-sm btn-secondary';
+                statusButton.innerHTML = '<i class="bi bi-file-earmark"></i> Draft';
+                // Update onclick for next click
+                statusButton.setAttribute('onclick', `simpleStatusChange('${bookId}', 'public')`);
+            }
+            
+            // Show toast notification
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed bottom-0 end-0 p-3';
+            toast.style.zIndex = '11';
+            toast.innerHTML = `
+                <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Status updated to ${newStatus}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast.querySelector('.toast'));
+            bsToast.show();
+            
+            // Remove toast after it's hidden
+            toast.addEventListener('hidden.bs.toast', function() {
+                toast.remove();
+            });
+        } else {
+            // Restore original button text
+            statusButton.innerHTML = originalText;
+            Swal.fire('Error', data.message || 'Failed to update status', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        statusButton.innerHTML = originalText;
+        Swal.fire('Error', `Error updating status: ${error.message}`, 'error');
+    })
+    .finally(() => {
+        statusButton.disabled = false;
+    });
+}
+
+// Simple direct function for toggling featured status
+function simpleFeatureToggle(bookId, setFeatured) {
+    // Get the featured button
+    const button = document.querySelector(`#bookRow-${bookId} td:nth-child(6) button`);
+    
+    // Show loading state
+    const originalText = button.innerHTML;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+    button.disabled = true;
+    
+    // Get auth token
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    // Use fetch API for simplicity
+    fetch(`/api/v1/books/${bookId}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ featured: setFeatured })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Update button appearance
+            if (setFeatured) {
+                button.className = 'btn btn-sm btn-warning featured-toggle';
+                button.innerHTML = '<i class="bi bi-star-fill"></i> Featured';
+                // Update onclick for next click
+                button.setAttribute('onclick', `simpleFeatureToggle('${bookId}', false)`);
+            } else {
+                button.className = 'btn btn-sm btn-outline-warning featured-toggle';
+                button.innerHTML = '<i class="bi bi-star"></i> Regular';
+                // Update onclick for next click
+                button.setAttribute('onclick', `simpleFeatureToggle('${bookId}', true)`);
+            }
+        } else {
+            button.innerHTML = originalText;
+            alert(`Error: ${data.message || 'Failed to update featured status'}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        button.innerHTML = originalText;
+        alert(`Error: ${error.message}`);
+    })
+    .finally(() => {
+        button.disabled = false;
     });
 }
 </script>
