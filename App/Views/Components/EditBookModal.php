@@ -1,0 +1,185 @@
+<!-- Edit Book Modal Component -->
+<div class="modal fade" id="editBookModal" tabindex="-1" aria-labelledby="editBookModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="editBookModalLabel">Edit Book</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="editBookFormContainer">
+                <!-- Form will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editBook(bookId) {
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    axios.get(`/api/v1/books/${bookId}`, {
+        headers: { Authorization: 'Bearer ' + authToken }
+    })
+    .then(response => {
+        const book = response.data.data;
+        if (book) {
+            const id = book._id?.$oid || book._id;
+            const title = escapeHtml(book.title);
+            const author = escapeHtml(book.author);
+            const description = escapeHtml(book.description);
+            const status = book.status || 'available';
+            const categories = book.categories ? (Array.isArray(book.categories) ? book.categories.join(', ') : book.categories) : '';
+            const featured = book.featured || false;
+            const isbn = book.isbn || '';
+            const downloadable = book.downloadable !== false; // Default to true if not set
+
+            const editForm = `
+                <form id="editForm-${id}" onsubmit="submitEdit(event, '${id}')">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="title-${id}" class="form-label">Title</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-book"></i></span>
+                                <input type="text" class="form-control" id="title-${id}" name="title" value="${title}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="author-${id}" class="form-label">Author</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                                <input type="text" class="form-control" id="author-${id}" name="author" value="${author}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <label for="description-${id}" class="form-label">Description</label>
+                            <textarea class="form-control" id="description-${id}" name="description" rows="2">${description}</textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="status-${id}" class="form-label">Status</label>
+                            <select class="form-select" id="status-${id}" name="status">
+                                <option value="draft" ${status === 'draft' ? 'selected' : ''}>Draft</option>
+                                <option value="public" ${status === 'public' ? 'selected' : ''}>Public</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="featured-${id}" class="form-label">Featured</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="featured-${id}" name="featured" value="true" ${book.featured ? 'checked' : ''}>
+                                <label class="form-check-label" for="featured-${id}">
+                                    Mark as Featured
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="isbn-${id}" class="form-label">ISBN</label>
+                            <input type="text" class="form-control" id="isbn-${id}" name="isbn" value="${isbn}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Downloadable</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="downloadable" id="downloadableYes-${id}" value="true" ${downloadable ? 'checked' : ''}>
+                                <label class="form-check-label" for="downloadableYes-${id}">Yes</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="downloadable" id="downloadableNo-${id}" value="false" ${!downloadable ? 'checked' : ''}>
+                                <label class="form-check-label" for="downloadableNo-${id}">No</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label for="categories-${id}" class="form-label">Categories</label>
+                            <input type="text" class="form-control" id="categories-${id}" name="categories"
+                                value="${categories}" placeholder="Ex: Fiction, Fantasy, Adventure">
+                            <div class="form-text">Separate categories with commas.</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end mt-4">
+                        <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Save Changes</button>
+                    </div>
+                </form>
+            `;
+
+            document.getElementById('editBookFormContainer').innerHTML = editForm;
+            const editBookModal = new bootstrap.Modal(document.getElementById('editBookModal'));
+            editBookModal.show();
+        } else {
+            Swal.fire('Error', 'Book not found.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching book details:', error);
+        Swal.fire('Error', 'Failed to fetch book details.', 'error');
+    });
+}
+
+function submitEdit(event, bookId) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    const bookData = {};
+
+    formData.forEach((value, key) => {
+        bookData[key] = key === 'categories' ? value.split(',').map(v => v.trim()) : value;
+    });
+
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    axios.put(`/api/v1/books/${bookId}`, bookData, {
+        headers: {
+            'Authorization': 'Bearer ' + authToken,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (response.data.status === 'success') {
+            Swal.fire('Success', 'Book updated successfully.', 'success').then(() => {
+                // Check if getBooks function exists (from parent component)
+                if (typeof getBooks === 'function') {
+                    getBooks();
+                } else {
+                    window.location.reload(); // Fallback to page reload if getBooks isn't available
+                }
+                const editBookModal = bootstrap.Modal.getInstance(document.getElementById('editBookModal'));
+                editBookModal.hide();
+            });
+        } else {
+            Swal.fire('Error', response.data.message || 'Update failed', 'error');
+        }
+    })
+    .catch(err => {
+        console.error('Error updating book:', err);
+        Swal.fire('Error', 'An error occurred during update.', 'error');
+    });
+}
+
+// Helper function for HTML escaping
+if (typeof escapeHtml !== 'function') {
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/[&<>"']/g, m => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+        }[m]));
+    }
+}
+</script>
+
+<style>
+/* Additional styling for the modal */
+.modal-content {
+    border-radius: 0.5rem;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+/* Animation for the modal */
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out;
+    transform: translateY(-50px);
+}
+
+.modal.show .modal-dialog {
+    transform: translateY(0);
+}
+</style>
