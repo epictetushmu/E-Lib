@@ -28,99 +28,11 @@
     </div>
 </div>
 
-<!-- Edit Book Modal -->
-<div class="modal fade" id="editBookModal" tabindex="-1" aria-labelledby="editBookModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="editBookModalLabel">Edit Book</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="editBookFormContainer">
-                <!-- Form will be dynamically inserted here -->
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Include the EditBookModal component -->
+<?php include __DIR__ . '/EditBookModal.php'; ?>
 
-<!-- Mass Upload Modal -->
-<div class="modal fade" id="massUploadModal" tabindex="-1" aria-labelledby="massUploadModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="massUploadModalLabel">Mass Upload PDFs</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="massUploadForm">
-                    <!-- Drag and drop area -->
-                    <div class="mb-4" id="dropZone">
-                        <div class="border border-dashed border-2 rounded p-5 text-center" 
-                             id="dropArea" 
-                             style="border-style: dashed !important; min-height: 200px; background-color: #f8f9fa;">
-                            <i class="bi bi-cloud-arrow-up fs-1 mb-3 text-muted"></i>
-                            <h5>Drag & Drop PDF Files Here</h5>
-                            <p class="text-muted">or</p>
-                            <input type="file" id="pdfFiles" name="pdfFiles[]" accept="application/pdf" multiple style="display: none;">
-                            <button type="button" id="browseButton" class="btn btn-outline-primary">Browse Files</button>
-                        </div>
-                    </div>
-
-                    <!-- Selected files list -->
-                    <div id="filesList" class="mb-4">
-                        <h6>Selected Files <span id="fileCount" class="badge bg-secondary">0</span></h6>
-                        <div id="filesContainer" class="list-group">
-                            <!-- Selected files will be displayed here -->
-                        </div>
-                    </div>
-
-                    <!-- Default values for all uploaded books -->
-                    <div class="mb-4">
-                        <h6 class="mb-3">Default Values for All Books</h6>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="defaultAuthor" class="form-label">Default Author</label>
-                                <input type="text" class="form-control" id="defaultAuthor" name="defaultAuthor" placeholder="Optional">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="defaultCategories" class="form-label">Default Categories</label>
-                                <input type="text" class="form-control" id="defaultCategories" name="defaultCategories" placeholder="Comma-separated categories">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Downloadable</label>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="defaultDownloadable" name="defaultDownloadable" checked>
-                                    <label class="form-check-label" for="defaultDownloadable">Allow download</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="defaultStatus" class="form-label">Default Status</label>
-                                <select class="form-select" id="defaultStatus" name="defaultStatus">
-                                    <option value="draft" selected>Draft</option>
-                                    <option value="public">Public</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Progress and feedback -->
-                    <div class="progress mb-3" style="display: none;" id="uploadProgressContainer">
-                        <div id="uploadProgress" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <div id="uploadFeedback" class="alert alert-info" style="display: none;"></div>
-
-                    <!-- Action buttons -->
-                    <div class="d-flex justify-content-end mt-4">
-                        <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" id="uploadButton" class="btn btn-success">
-                            <i class="bi bi-cloud-arrow-up me-1"></i> Upload All Files
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Include the MassUpload component -->
+<?php include __DIR__ . '/MassUpload.php'; ?>
 
 <!-- Include additional libraries -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -132,16 +44,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <style>
-    /* Additional styling for the modal */
-    .modal-content {
-        border-radius: 0.5rem;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    }
-    
-    .modal-header {
-        border-radius: 0.5rem 0.5rem 0 0;
-    }
-    
     /* Animation for the modal */
     .modal.fade .modal-dialog {
         transition: transform 0.3s ease-out;
@@ -190,15 +92,21 @@ function getBooks() {
                     <td class="text-center">${description}</td>
                     <td class="text-center">${isbn}</td>
                     <td class="text-center">
-                        <span class="badge ${status === 'public' ? 'bg-success' : 'bg-secondary'}">
-                            ${status.charAt(0).toUpperCase() + status.slice(1)}
-                        </span>
+                        <!-- Single status toggle button with fixed width -->
+                        <button type="button" class="btn btn-sm ${status === 'public' ? 'btn-success' : 'btn-secondary'}" 
+                                style="min-width: 100px;"
+                                onclick="simpleStatusChange('${id}', '${status === 'public' ? 'draft' : 'public'}')">
+                            <i class="bi bi-${status === 'public' ? 'globe' : 'file-earmark'}"></i> 
+                            ${status === 'public' ? 'Public' : 'Draft'}
+                        </button>
                     </td>
                     <td class="text-center">
-                        <span class="badge ${featured ? 'bg-warning text-dark' : 'bg-light text-dark'}">
+                        <button class="btn btn-sm ${featured ? 'btn-warning' : 'btn-outline-warning'} featured-toggle"
+                                style="min-width: 100px;"
+                                onclick="simpleFeatureToggle('${id}', ${!featured})">
                             <i class="bi bi-star${featured ? '-fill' : ''}"></i> 
                             ${featured ? 'Featured' : 'Regular'}
-                        </span>
+                        </button>
                     </td>
                     <td class="text-center">
                         <div class="btn-group btn-group-sm">
@@ -222,138 +130,6 @@ function getBooks() {
     .catch(error => {
         console.error('Error fetching books:', error);
         Swal.fire('Error', 'Failed to fetch books.', 'error');
-    });
-}
-
-function editBook(bookId) {
-    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-    axios.get(`/api/v1/books/${bookId}`, {
-        headers: { Authorization: 'Bearer ' + authToken }
-    })
-    .then(response => {
-        const book = response.data.data;
-        if (book) {
-            const id = book._id?.$oid || book._id;
-            const title = escapeHtml(book.title);
-            const author = escapeHtml(book.author);
-            const description = escapeHtml(book.description);
-            const status = book.status || 'available';
-            const categories = book.categories ? (Array.isArray(book.categories) ? book.categories.join(', ') : book.categories) : '';
-            const featured = book.featured || false;
-            const isbn = book.isbn || '';
-            const downloadable = book.downloadable !== false; // Default to true if not set
-
-            const editForm = `
-                <form id="editForm-${id}" onsubmit="submitEdit(event, '${id}')">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="title-${id}" class="form-label">Title</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-book"></i></span>
-                                <input type="text" class="form-control" id="title-${id}" name="title" value="${title}" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="author-${id}" class="form-label">Author</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-person"></i></span>
-                                <input type="text" class="form-control" id="author-${id}" name="author" value="${author}" required>
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <label for="description-${id}" class="form-label">Description</label>
-                            <textarea class="form-control" id="description-${id}" name="description" rows="2">${description}</textarea>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="status-${id}" class="form-label">Status</label>
-                            <select class="form-select" id="status-${id}" name="status">
-                                <option value="draft" ${status === 'draft' ? 'selected' : ''}>Draft</option>
-                                <option value="public" ${status === 'public' ? 'selected' : ''}>Public</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="featured-${id}" class="form-label">Featured</label>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="featured-${id}" name="featured" value="true" ${book.featured ? 'checked' : ''}>
-                                <label class="form-check-label" for="featured-${id}">
-                                    Mark as Featured
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <label for="isbn-${id}" class="form-label">ISBN</label>
-                            <input type="text" class="form-control" id="isbn-${id}" name="isbn" value="${isbn}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Downloadable</label>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="downloadable" id="downloadableYes-${id}" value="true" ${downloadable ? 'checked' : ''}>
-                                <label class="form-check-label" for="downloadableYes-${id}">Yes</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="downloadable" id="downloadableNo-${id}" value="false" ${!downloadable ? 'checked' : ''}>
-                                <label class="form-check-label" for="downloadableNo-${id}">No</label>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <label for="categories-${id}" class="form-label">Categories</label>
-                            <input type="text" class="form-control" id="categories-${id}" name="categories"
-                                value="${categories}" placeholder="Ex: Fiction, Fantasy, Adventure">
-                            <div class="form-text">Separate categories with commas.</div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-end mt-4">
-                        <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success">Save Changes</button>
-                    </div>
-                </form>
-            `;
-
-            document.getElementById('editBookFormContainer').innerHTML = editForm;
-            const editBookModal = new bootstrap.Modal(document.getElementById('editBookModal'));
-            editBookModal.show();
-        } else {
-            Swal.fire('Error', 'Book not found.', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error fetching book details:', error);
-        Swal.fire('Error', 'Failed to fetch book details.', 'error');
-    });
-}
-
-function submitEdit(event, bookId) {
-    event.preventDefault();
-    const form = event.target;
-    const formData = new FormData(form);
-    const bookData = {};
-
-    formData.forEach((value, key) => {
-        bookData[key] = key === 'categories' ? value.split(',').map(v => v.trim()) : value;
-    });
-
-    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-    axios.put(`/api/v1/books/${bookId}`, bookData, {
-        headers: {
-            'Authorization': 'Bearer ' + authToken,
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => {
-        if (response.data.status === 'success') {
-            Swal.fire('Success', 'Book updated successfully.', 'success').then(() => {
-                getBooks();
-                const editBookModal = bootstrap.Modal.getInstance(document.getElementById('editBookModal'));
-                editBookModal.hide();
-            });
-        } else {
-            Swal.fire('Error', response.data.message || 'Update failed', 'error');
-        }
-    })
-    .catch(err => {
-        console.error('Error updating book:', err);
-        Swal.fire('Error', 'An error occurred during update.', 'error');
     });
 }
 
@@ -390,370 +166,6 @@ function previewBook(bookId) {
     const previewUrl = `/read/${bookId}`;
     window.open(previewUrl, '_blank');
 }
-
-// Mass Upload Feature
-document.addEventListener('DOMContentLoaded', function() {
-    const dropArea = document.getElementById('dropArea');
-    const fileInput = document.getElementById('pdfFiles');
-    const browseButton = document.getElementById('browseButton');
-    const uploadButton = document.getElementById('uploadButton');
-    const filesContainer = document.getElementById('filesContainer');
-    const fileCountBadge = document.getElementById('fileCount');
-    const uploadProgress = document.getElementById('uploadProgress');
-    const uploadProgressContainer = document.getElementById('uploadProgressContainer');
-    const uploadFeedback = document.getElementById('uploadFeedback');
-    
-    // Counter for successful and failed uploads
-    let uploadStats = {
-        success: 0,
-        failed: 0,
-        total: 0
-    };
-    
-    // File selection through button
-    browseButton.addEventListener('click', () => {
-        fileInput.click();
-    });
-    
-    // Handle file selection changes
-    fileInput.addEventListener('change', handleFileSelection);
-    
-    // Drag and Drop Event Listeners
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropArea.addEventListener(eventName, preventDefaults, false);
-    });
-    
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-    
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropArea.addEventListener(eventName, highlight, false);
-    });
-    
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropArea.addEventListener(eventName, unhighlight, false);
-    });
-    
-    function highlight() {
-        dropArea.classList.add('bg-light');
-        dropArea.classList.add('border-primary');
-    }
-    
-    function unhighlight() {
-        dropArea.classList.remove('bg-light');
-        dropArea.classList.remove('border-primary');
-    }
-    
-    // Handle file drop
-    dropArea.addEventListener('drop', handleDrop, false);
-    
-    function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = [...dt.files].filter(file => file.type === 'application/pdf');
-        
-        if (files.length === 0) {
-            Swal.fire('Invalid Files', 'Please select PDF files only.', 'warning');
-            return;
-        }
-        
-        addFilesToList(files);
-    }
-    
-    function handleFileSelection(e) {
-        const files = [...e.target.files];
-        if (files.length === 0) return;
-        
-        addFilesToList(files);
-    }
-    
-    function addFilesToList(files) {
-        // Add files to the list with title input fields
-        files.forEach(file => {
-            // Generate filename without extension to use as default title
-            const fileName = file.name;
-            const defaultTitle = fileName.replace(/\.pdf$/i, '').replace(/[_-]/g, ' ');
-            
-            const fileItem = document.createElement('div');
-            fileItem.className = 'list-group-item animate__animated animate__fadeIn';
-            fileItem.dataset.fileName = fileName;
-            
-            fileItem.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h6 class="mb-0">
-                        <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
-                        ${escapeHtml(fileName)}
-                    </h6>
-                    <button type="button" class="btn btn-sm btn-outline-danger remove-file">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-                <div class="row g-2">
-                    <div class="col-md-8">
-                        <input type="text" class="form-control form-control-sm file-title" 
-                               placeholder="Book Title" value="${escapeHtml(defaultTitle)}" required>
-                    </div>
-                    <div class="col-md-4">
-                        <input type="text" class="form-control form-control-sm file-author" 
-                               placeholder="Author (optional)">
-                    </div>
-                </div>
-            `;
-            
-            // Store the File object in the DOM element
-            fileItem._file = file;
-            
-            filesContainer.appendChild(fileItem);
-            
-            // Add event listener to remove button
-            fileItem.querySelector('.remove-file').addEventListener('click', () => {
-                fileItem.classList.add('animate__fadeOut');
-                setTimeout(() => {
-                    filesContainer.removeChild(fileItem);
-                    updateFileCount();
-                }, 300);
-            });
-        });
-        
-        updateFileCount();
-    }
-    
-    function updateFileCount() {
-        const count = filesContainer.children.length;
-        fileCountBadge.textContent = count;
-        
-        // Toggle upload button state
-        uploadButton.disabled = count === 0;
-    }
-    
-    // Handle upload process
-    uploadButton.addEventListener('click', async () => {
-        const fileItems = [...filesContainer.children];
-        if (fileItems.length === 0) {
-            Swal.fire('No Files', 'Please select at least one PDF file to upload.', 'warning');
-            return;
-        }
-        
-        // Validate that all files have titles
-        const invalidFiles = fileItems.filter(item => !item.querySelector('.file-title').value.trim());
-        if (invalidFiles.length > 0) {
-            Swal.fire('Missing Titles', 'Please provide titles for all files.', 'warning');
-            invalidFiles.forEach(item => item.querySelector('.file-title').classList.add('is-invalid'));
-            return;
-        }
-        
-        // Get default values
-        const defaultValues = {
-            author: document.getElementById('defaultAuthor').value,
-            categories: document.getElementById('defaultCategories').value.split(',').map(c => c.trim()).filter(c => c),
-            downloadable: document.getElementById('defaultDownloadable').checked,
-            status: document.getElementById('defaultStatus').value
-        };
-        
-        // Reset upload statistics
-        uploadStats = {
-            success: 0,
-            failed: 0,
-            total: fileItems.length
-        };
-        
-        // Show progress bar
-        uploadProgressContainer.style.display = 'block';
-        uploadProgress.style.width = '0%';
-        uploadProgress.textContent = '0%';
-        uploadFeedback.style.display = 'block';
-        uploadFeedback.className = 'alert alert-info';
-        uploadFeedback.innerHTML = '<i class="bi bi-arrow-repeat spin me-2"></i> Preparing files for upload...';
-        
-        // Disable upload button during operation
-        uploadButton.disabled = true;
-        
-        try {
-            // Create FormData for mass upload
-            const formData = new FormData();
-            
-            // Add default values
-            formData.append('defaultAuthor', defaultValues.author);
-            formData.append('defaultCategories', JSON.stringify(defaultValues.categories));
-            formData.append('defaultStatus', defaultValues.status);
-            formData.append('defaultDownloadable', defaultValues.downloadable ? 'true' : 'false');
-            
-            // Add each file and its metadata
-            fileItems.forEach((item, index) => {
-                const file = item._file;
-                const title = item.querySelector('.file-title').value.trim();
-                const author = item.querySelector('.file-author').value.trim();
-                
-                // Add file to FormData with indexed name
-                formData.append(`books[name][]`, file.name);
-                formData.append(`books[type][]`, file.type);
-                formData.append(`books[tmp_name][]`, file.tmp_name);
-                formData.append(`books[error][]`, '0');
-                formData.append(`books[size][]`, file.size);
-                
-                // Append the actual file
-                formData.append(`books[]`, file);
-                
-                // Add metadata for this specific file
-                if (title || author) {
-                    const metadata = {
-                        title: title,
-                        author: author || defaultValues.author
-                    };
-                    
-                    formData.append(`metadata_${index}`, JSON.stringify(metadata));
-                }
-            });
-            
-            // Update progress
-            uploadFeedback.innerHTML = '<i class="bi bi-arrow-repeat spin me-2"></i> Uploading files...';
-            
-            // Get auth token
-            const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-            
-            // Send request to the mass upload endpoint
-            const response = await axios.post('/api/v1/books/mass-upload', formData, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'multipart/form-data'
-                },
-                onUploadProgress: progressEvent => {
-                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-                    uploadProgress.style.width = `${percentCompleted}%`;
-                    uploadProgress.textContent = `${percentCompleted}%`;
-                }
-            });
-            
-            // Process response
-            if (response.data.status === "success") {
-                const results = response.data.data?.results || {};
-                
-                // Update statistics
-                uploadStats.success = results.success?.length || 0;
-                uploadStats.failed = results.failed?.length || 0;
-                
-                // Mark UI items as success or failure
-                if (results.success) {
-                    results.success.forEach(item => {
-                        const element = Array.from(fileItems).find(el => 
-                            el._file.name === item.filename || 
-                            el.querySelector('.file-title').value === item.title
-                        );
-                        if (element) element.classList.add('list-group-item-success');
-                    });
-                }
-                
-                if (results.failed) {
-                    results.failed.forEach(item => {
-                        const element = Array.from(fileItems).find(el => el._file.name === item.filename);
-                        if (element) {
-                            element.classList.add('list-group-item-danger');
-                            const reasonDiv = document.createElement('div');
-                            reasonDiv.className = 'small text-danger mt-1';
-                            reasonDiv.textContent = item.reason;
-                            element.appendChild(reasonDiv);
-                        }
-                    });
-                }
-                
-                // Show final status
-                uploadProgress.style.width = '100%';
-                uploadProgress.textContent = '100%';
-                
-                if (uploadStats.failed === 0) {
-                    uploadFeedback.className = 'alert alert-success';
-                    uploadFeedback.innerHTML = `<i class="bi bi-check-circle me-2"></i> All ${uploadStats.success} books were uploaded successfully!`;
-                    
-                    // Close the modal automatically after 2 seconds
-                    setTimeout(() => {
-                        const modalElement = document.getElementById('massUploadModal');
-                        const modalInstance = bootstrap.Modal.getInstance(modalElement);
-                        
-                        if (modalInstance) {
-                            // Properly hide and dispose of the modal
-                            modalInstance.hide();
-                            
-                            // Remove backdrop and reset body styles after the modal transition
-                            modalElement.addEventListener('hidden.bs.modal', function () {
-                                // Remove any lingering backdrop
-                                const backdrop = document.querySelector('.modal-backdrop');
-                                if (backdrop) {
-                                    backdrop.remove();
-                                }
-                                
-                                // Reset body styles
-                                document.body.classList.remove('modal-open');
-                                document.body.style.paddingRight = '';
-                                document.body.style.overflow = '';
-                                
-                                // Clear the form data
-                                filesContainer.innerHTML = '';
-                                updateFileCount();
-                                uploadProgressContainer.style.display = 'none';
-                                uploadFeedback.style.display = 'none';
-                            }, { once: true });
-                        }
-                    }, 2000);
-                } else {
-                    uploadFeedback.className = 'alert alert-warning';
-                    uploadFeedback.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i> ${uploadStats.success} succeeded, ${uploadStats.failed} failed.`;
-                }
-            } else {
-                uploadFeedback.className = 'alert alert-danger';
-                uploadFeedback.innerHTML = `<i class="bi bi-x-circle me-2"></i> Upload failed: ${response.data.message || 'Unknown error'}`;
-            }
-        } catch (error) {
-            console.error('Mass upload error:', error);
-            uploadFeedback.className = 'alert alert-danger';
-            uploadFeedback.innerHTML = `<i class="bi bi-x-circle me-2"></i> Upload failed: ${error.response?.data?.message || error.message || 'Network error'}`;
-        } finally {
-            // Re-enable upload button
-            uploadButton.disabled = false;
-            
-            // Refresh the book list
-            getBooks();
-        }
-    });
-    
-    async function uploadSingleFile(file, bookData) {
-        return new Promise((resolve, reject) => {
-            const formData = new FormData();
-            
-            // Add book metadata
-            formData.append('title', bookData.title);
-            formData.append('author', bookData.author || '');
-            formData.append('categories', JSON.stringify(bookData.categories || []));
-            formData.append('description', `Uploaded via mass upload feature`);
-            formData.append('downloadable', bookData.downloadable ? 'true' : 'false');
-            formData.append('status', bookData.status || 'draft');
-            
-            // Add the PDF file
-            formData.append('bookPdf', file);
-            
-            // Get auth token
-            const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-            
-            // Send the request
-            axios.post('/api/v1/books', formData, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`,
-                    'Content-Type': 'multipart/form-data'
-                }
-            })
-            .then(response => {
-                if (response.data.status === 'success') {
-                    resolve(response.data);
-                } else {
-                    reject(new Error(response.data.message || 'Upload failed'));
-                }
-            })
-            .catch(error => {
-                reject(error);
-            });
-        });
-    }
-});
 
 // CSS for spinning animation
 document.head.insertAdjacentHTML('beforeend', `
@@ -795,4 +207,135 @@ document.head.insertAdjacentHTML('beforeend', `
         }
     </style>
 `);
+
+// Simple direct function for changing status
+function simpleStatusChange(bookId, newStatus) {
+    // Get the status button
+    const statusButton = document.querySelector(`#bookRow-${bookId} td:nth-child(5) button`);
+    
+    // Show loading state
+    const originalText = statusButton.innerHTML;
+    statusButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+    statusButton.disabled = true;
+    
+    // Get auth token
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    // Use the browser's fetch API for simplicity
+    fetch(`/api/v1/books/${bookId}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Status update response:", data);
+        
+        if (data.status === 'success') {
+            // Update button appearance based on the new status
+            if (newStatus === 'public') {
+                statusButton.className = 'btn btn-sm btn-success';
+                statusButton.innerHTML = '<i class="bi bi-globe"></i> Public';
+                // Update onclick for next click
+                statusButton.setAttribute('onclick', `simpleStatusChange('${bookId}', 'draft')`);
+            } else {
+                statusButton.className = 'btn btn-sm btn-secondary';
+                statusButton.innerHTML = '<i class="bi bi-file-earmark"></i> Draft';
+                // Update onclick for next click
+                statusButton.setAttribute('onclick', `simpleStatusChange('${bookId}', 'public')`);
+            }
+            
+            // Show toast notification
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed bottom-0 end-0 p-3';
+            toast.style.zIndex = '11';
+            toast.innerHTML = `
+                <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Status updated to ${newStatus}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast.querySelector('.toast'));
+            bsToast.show();
+            
+            // Remove toast after it's hidden
+            toast.addEventListener('hidden.bs.toast', function() {
+                toast.remove();
+            });
+        } else {
+            // Restore original button text
+            statusButton.innerHTML = originalText;
+            Swal.fire('Error', data.message || 'Failed to update status', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        statusButton.innerHTML = originalText;
+        Swal.fire('Error', `Error updating status: ${error.message}`, 'error');
+    })
+    .finally(() => {
+        statusButton.disabled = false;
+    });
+}
+
+// Simple direct function for toggling featured status
+function simpleFeatureToggle(bookId, setFeatured) {
+    // Get the featured button
+    const button = document.querySelector(`#bookRow-${bookId} td:nth-child(6) button`);
+    
+    // Show loading state
+    const originalText = button.innerHTML;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+    button.disabled = true;
+    
+    // Get auth token
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    // Use fetch API for simplicity
+    fetch(`/api/v1/books/${bookId}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ featured: setFeatured })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            // Update button appearance
+            if (setFeatured) {
+                button.className = 'btn btn-sm btn-warning featured-toggle';
+                button.innerHTML = '<i class="bi bi-star-fill"></i> Featured';
+                // Update onclick for next click
+                button.setAttribute('onclick', `simpleFeatureToggle('${bookId}', false)`);
+            } else {
+                button.className = 'btn btn-sm btn-outline-warning featured-toggle';
+                button.innerHTML = '<i class="bi bi-star"></i> Regular';
+                // Update onclick for next click
+                button.setAttribute('onclick', `simpleFeatureToggle('${bookId}', true)`);
+            }
+        } else {
+            button.innerHTML = originalText;
+            alert(`Error: ${data.message || 'Failed to update featured status'}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        button.innerHTML = originalText;
+        alert(`Error: ${error.message}`);
+    })
+    .finally(() => {
+        button.disabled = false;
+    });
+}
 </script>
