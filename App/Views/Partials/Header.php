@@ -12,11 +12,11 @@ $searchUrl = $searchUrl ?? '/search_results';
 
 // Initialize username from session if available
 $username = '';
-if (!empty($_SESSION['user_id']) && !empty($_SESSION['user_name'])) {
-    $username = $_SESSION['user_name'];
-} else if (!empty($_SESSION['user_id']) && !empty($_SESSION['user_email'])) {
+if (!empty($_SESSION['user_id']) && !empty($_SESSION['username'])) {
+    $username = $_SESSION['username'];
+} else if (!empty($_SESSION['user_id']) && !empty($_SESSION['email'])) {
     // Fallback to email if name isn't available
-    $username = $_SESSION['user_email'];
+    $username = $_SESSION['email'];
 }
 ?>
 <link rel="stylesheet" href="/styles/userForm.css">
@@ -58,7 +58,7 @@ if (!empty($_SESSION['user_id']) && !empty($_SESSION['user_name'])) {
                         <div class="user-avatar me-2"><?= !empty($username) ? htmlspecialchars(substr($username, 0, 1)) : '?' ?></div>
                         <span class="d-none d-md-inline"><?= htmlspecialchars($username ?: 'User') ?></span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                    <ul class="dropdown-menu dropdown-menu-lg-end" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="/profile"><i class="fas fa-user me-2"></i>Profile</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
@@ -128,6 +128,7 @@ function openPopup(popupId) {
 document.addEventListener('DOMContentLoaded', function () {
     const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
     const isAdmin = localStorage.getItem('isAdmin') || sessionStorage.getItem('isAdmin');
+    const username = localStorage.getItem('username') || sessionStorage.getItem('username');
 
     const loginButtons = document.querySelectorAll('#userAction');
     const userDropdown = document.querySelector('#profileDropdown');
@@ -139,6 +140,20 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         if (userDropdown) {
             userDropdown.style.display = 'block';
+            
+            // Update the username in the dropdown if available in client storage
+            if (username) {
+                const avatarDiv = userDropdown.querySelector('.user-avatar');
+                const nameSpan = userDropdown.querySelector('.d-none.d-md-inline');
+                
+                if (avatarDiv) {
+                    avatarDiv.textContent = username.substring(0, 1).toUpperCase();
+                }
+                
+                if (nameSpan) {
+                    nameSpan.textContent = username;
+                }
+            }
         }
 
         // Check if user is admin
