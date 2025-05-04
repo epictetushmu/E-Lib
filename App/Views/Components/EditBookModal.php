@@ -31,6 +31,9 @@ function editBook(bookId) {
             const featured = book.featured || false;
             const isbn = book.isbn || '';
             const downloadable = book.downloadable !== false; // Default to true if not set
+            
+            // Format ISBN for display with hyphens
+            const formattedIsbn = formatISBN(isbn);
 
             const editForm = `
                 <form id="editForm-${id}" onsubmit="submitEdit(event, '${id}')">
@@ -46,7 +49,7 @@ function editBook(bookId) {
                             <label for="author-${id}" class="form-label">Author</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-person"></i></span>
-                                <input type="text" class="form-control" id="author-${id}" name="author" value="${author}" required>
+                                <input type="text" class="form-control" id="author-${id}" name="author" value="${author}">
                             </div>
                         </div>
                         <div class="col-md-8">
@@ -71,7 +74,10 @@ function editBook(bookId) {
                         </div>
                         <div class="col-md-4">
                             <label for="isbn-${id}" class="form-label">ISBN</label>
-                            <input type="text" class="form-control" id="isbn-${id}" name="isbn" value="${isbn}">
+                            <input type="text" class="form-control" id="isbn-${id}" name="isbn" value="${formattedIsbn}" placeholder="Enter ISBN-10 or ISBN-13">
+                            <div id="isbnHelp-${id}" class="form-text">
+                                <span id="isbnValidation-${id}" class="text-${validateISBN(isbn).startsWith('Valid') ? 'success' : 'danger'}">${validateISBN(isbn)}</span>
+                            </div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Downloadable</label>
@@ -102,6 +108,9 @@ function editBook(bookId) {
             document.getElementById('editBookFormContainer').innerHTML = editForm;
             const editBookModal = new bootstrap.Modal(document.getElementById('editBookModal'));
             editBookModal.show();
+            
+            // Add ISBN validation event listeners after the form is created
+            setupIsbnValidation(id, isbn);
         } else {
             Swal.fire('Error', 'Book not found.', 'error');
         }
@@ -112,14 +121,87 @@ function editBook(bookId) {
     });
 }
 
+// Set up ISBN validation for the form
+function setupIsbnValidation(id, initialIsbn) {
+    const isbnField = document.getElementById(`isbn-${id}`);
+    const isbnValidation = document.getElementById(`isbnValidation-${id}`);
+    
+    // Store raw ISBN value (without hyphens) to use for validation
+    let rawIsbn = initialIsbn || "";
+    
+    isbnField.addEventListener("input", function(e) {
+        const cursorPosition = this.selectionStart;
+        
+        // Get input value and clean it
+        let value = this.value.replace(/[^0-9X]/gi, '');
+        
+        // Force uppercase X (for ISBN-10)
+        value = value.replace(/x/g, 'X');
+        
+        // Update raw ISBN for validation
+        rawIsbn = value;
+        
+        // Limit length
+        if (value.length > 13) {
+            value = value.slice(0, 13);
+            rawIsbn = value;
+        }
+        
+        // Format for display
+        let formatted = formatISBN(value);
+        
+        // Only update the field value if it's different (to avoid cursor issues)
+        if (this.value !== formatted) {
+            this.value = formatted;
+            
+            // Try to maintain cursor position after formatting
+            // This is approximate since formatting changes the string length
+            let newPosition = cursorPosition;
+            // Add adjustment for hyphen positions
+            if (value.length >= 1 && cursorPosition > 1) newPosition++;
+            if (value.length >= 4 && cursorPosition > 4) newPosition++;
+            if (value.length >= 7 && cursorPosition > 7) newPosition++;
+            if (value.length >= 12 && cursorPosition > 12) newPosition++;
+            
+            this.setSelectionRange(newPosition, newPosition);
+        }
+        
+        // Validate ISBN
+        let validationMessage = validateISBN(rawIsbn);
+        isbnValidation.textContent = validationMessage;
+        isbnValidation.className = validationMessage.startsWith('Valid') ? 'text-success' : 'text-danger';
+        
+        // Update hidden field with raw ISBN for submission
+        document.getElementById(`isbn-${id}`).setAttribute('data-raw-isbn', rawIsbn);
+    });
+}
+
 function submitEdit(event, bookId) {
     event.preventDefault();
     const form = event.target;
     const formData = new FormData(form);
     const bookData = {};
 
+    // Process form data
     formData.forEach((value, key) => {
-        bookData[key] = key === 'categories' ? value.split(',').map(v => v.trim()) : value;
+        if (key === 'isbn') {
+            // Get the raw ISBN without formatting
+            const isbnField = document.getElementById(`isbn-${bookId}`);
+            const rawIsbn = isbnField.getAttribute('data-raw-isbn') || value.replace(/[^0-9X]/gi, '');
+            
+            // Validate ISBN before submission
+            const isbnError = validateISBN(rawIsbn);
+            if (rawIsbn && !isbnError.startsWith('Valid')) {
+                Swal.fire('Validation Error', 'Please enter a valid ISBN.', 'error');
+                return;
+            }
+            
+            bookData[key] = rawIsbn;
+        } else if (key === 'categories') {
+            bookData[key] = value.split(',').map(v => v.trim());
+        } else {
+            bookData[key] = value;
+        }
     });
 
     const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
@@ -149,6 +231,118 @@ function submitEdit(event, bookId) {
         console.error('Error updating book:', err);
         Swal.fire('Error', 'An error occurred during update.', 'error');
     });
+}
+
+// Format ISBN with hyphens based on standard rules
+function formatISBN(isbn) {
+    if (!isbn) return '';
+    
+    if (isbn.length <= 1) return isbn;
+    
+    if (isbn.length <= 4) {
+        // Partial ISBN-10/13: X-...
+        return isbn.substring(0, 1) + 
+                (isbn.length > 1 ? '-' + isbn.substring(1) : '');
+    }
+    
+    if (isbn.length <= 7) {
+        // Partial ISBN-10/13: X-XXX-...
+        return isbn.substring(0, 1) + '-' + 
+                isbn.substring(1, 4) + 
+                (isbn.length > 4 ? '-' + isbn.substring(4) : '');
+    }
+    
+    if (isbn.length <= 10) {
+        if (isbn.length === 10) {
+            // Complete ISBN-10: X-XXX-XXXXX-X
+            return isbn.substring(0, 1) + '-' + 
+                    isbn.substring(1, 4) + '-' + 
+                    isbn.substring(4, 9) + '-' + 
+                    isbn.substring(9, 10);
+        } else {
+            // Partial ISBN-10: X-XXX-XXXXX...
+            return isbn.substring(0, 1) + '-' + 
+                    isbn.substring(1, 4) + '-' + 
+                    isbn.substring(4);
+        }
+    } else {
+        if (isbn.length === 13) {
+            // Complete ISBN-13: XXX-X-XXX-XXXXX-X
+            return isbn.substring(0, 3) + '-' + 
+                    isbn.substring(3, 4) + '-' + 
+                    isbn.substring(4, 7) + '-' + 
+                    isbn.substring(7, 12) + '-' + 
+                    isbn.substring(12, 13);
+        } else {
+            // Partial ISBN-13: XXX-X-XXX-XXXXX...
+            return isbn.substring(0, 3) + '-' + 
+                    isbn.substring(3, 4) + '-' + 
+                    isbn.substring(4, 7) + '-' + 
+                    isbn.substring(7);
+        }
+    }
+}
+
+// Basic ISBN validation
+function validateISBN(isbn) {
+    if (!isbn) return '';
+    
+    // For incomplete ISBNs, just show a message about expected length
+    if (isbn.length < 10) {
+        return 'Continue entering digits (ISBN-10: 10 digits, ISBN-13: 13 digits)';
+    }
+    
+    if (isbn.length !== 10 && isbn.length !== 13) {
+        return 'ISBN must be 10 or 13 characters long';
+    }
+    
+    if (isbn.length === 10) {
+        // Only last character can be 'X' in ISBN-10
+        if (/[X]/i.test(isbn.substring(0, 9))) {
+            return 'Only the last character of ISBN-10 can be X';
+        }
+        
+        // Validate ISBN-10 checksum
+        let sum = 0;
+        for (let i = 0; i < 9; i++) {
+            sum += parseInt(isbn.charAt(i)) * (10 - i);
+        }
+        
+        let checkDigit = 11 - (sum % 11);
+        if (checkDigit === 11) checkDigit = 0;
+        if (checkDigit === 10) checkDigit = 'X';
+        
+        const lastChar = isbn.charAt(9).toUpperCase();
+        if (lastChar !== checkDigit.toString()) {
+            return 'Invalid ISBN-10 checksum';
+        }
+        
+        return 'Valid ISBN-10';
+    }
+    
+    if (isbn.length === 13) {
+        // ISBN-13 cannot have 'X'
+        if (/[X]/i.test(isbn)) {
+            return 'ISBN-13 cannot contain X';
+        }
+        
+        // Validate ISBN-13 checksum
+        let sum = 0;
+        for (let i = 0; i < 12; i++) {
+            sum += parseInt(isbn.charAt(i)) * (i % 2 === 0 ? 1 : 3);
+        }
+        
+        let checkDigit = 10 - (sum % 10);
+        if (checkDigit === 10) checkDigit = 0;
+        
+        if (parseInt(isbn.charAt(12)) !== checkDigit) {
+            return 'Invalid ISBN-13 checksum';
+        }
+        
+        return 'Valid ISBN-13';
+    }
+    
+    return '';
 }
 
 // Helper function for HTML escaping
