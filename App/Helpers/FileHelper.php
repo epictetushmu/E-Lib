@@ -480,6 +480,14 @@ class FileHelper {
     }
     
     /**
+     * Generate a thumbnail for the document
+     * This is used by BookController and serves as a wrapper for getThumbnail
+     */
+    public function generateThumbnail() {
+        return $this->getThumbnail();
+    }
+    
+    /**
      * Legacy alias for storePdf to maintain backward compatibility
      */
     public function storePdf($file) {

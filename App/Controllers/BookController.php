@@ -551,4 +551,149 @@ class BookController {
             );
         }
     }
+
+    /**
+     * API endpoint to get secure book file URL for viewer
+     * 
+     * @param string $bookId MongoDB ID of the book to view
+     */
+    public function viewBookFile($bookId = null) {
+        // Validate book ID
+        if (!$bookId || !preg_match('/^[0-9a-f]{24}$/', $bookId)) {
+            return $this->response->respond(false, 'Invalid book ID', 400);
+        }
+        
+        // Get book details from database
+        $book = $this->bookService->getBookDetails($bookId);
+        
+        if (!$book || empty($book['pdf_path'])) {
+            return $this->response->respond(false, 'Book not found or has no file', 404);
+        }
+        
+        // Generate a secure URL with a timed token
+        $timestamp = time();
+        $expiry = $timestamp + 3600; // URL valid for 1 hour
+        
+        // Create a signature that will expire
+        $signatureData = [
+            'book_id' => $bookId,
+            'timestamp' => $timestamp,
+            'expiry' => $expiry
+        ];
+        
+        // Create signature with JWT
+        $jwt = new \App\Includes\JwtHelper();
+        $token = $jwt->generateToken($signatureData);
+        
+        // Build secure URL
+        $fileUrl = '/api/v1/books/' . $bookId . '/file?token=' . urlencode($token);
+        
+        return $this->response->respond(true, [
+            'file_url' => $fileUrl,
+            'expiry' => $expiry
+        ]);
+    }
+    
+    /**
+     * Stream book file with secure token
+     * 
+     * @param string $bookId MongoDB ID of the book to stream
+     */
+    public function streamBookFile($bookId = null) {
+        // Validate book ID
+        if (!$bookId || !preg_match('/^[0-9a-f]{24}$/', $bookId)) {
+            header('HTTP/1.0 400 Bad Request');
+            echo "Invalid book ID";
+            exit;
+        }
+        
+        // Verify token
+        $token = $_GET['token'] ?? '';
+        if (empty($token)) {
+            header('HTTP/1.0 401 Unauthorized');
+            echo "Missing access token";
+            exit;
+        }
+        
+        // Decode JWT token
+        $jwt = new \App\Includes\JwtHelper();
+        $decoded = $jwt->decodeToken($token);
+        
+        if (!$decoded) {
+            header('HTTP/1.0 401 Unauthorized');
+            echo "Invalid access token";
+            exit;
+        }
+        
+        // Check token expiry
+        if (time() > ($decoded['expiry'] ?? 0)) {
+            header('HTTP/1.0 401 Unauthorized');
+            echo "Token expired";
+            exit;
+        }
+        
+        // Verify book ID matches the one in token
+        if ($bookId !== ($decoded['book_id'] ?? '')) {
+            header('HTTP/1.0 401 Unauthorized');
+            echo "Token mismatch";
+            exit;
+        }
+        
+        // Get book details from database
+        $book = $this->bookService->getBookDetails($bookId);
+        
+        if (!$book || empty($book['pdf_path'])) {
+            header('HTTP/1.0 404 Not Found');
+            echo "Book not found or has no file";
+            exit;
+        }
+        
+        // Get the absolute path to the file
+        $filePath = $_SERVER['DOCUMENT_ROOT'] . $book['pdf_path'];
+        
+        // Check if file exists and is readable
+        if (!file_exists($filePath) || !is_readable($filePath)) {
+            header('HTTP/1.0 404 Not Found');
+            echo "File not found or not readable";
+            exit;
+        }
+        
+        // Set headers for inline viewing
+        $contentType = 'application/pdf';
+        
+        // Determine content type based on file extension
+        if (isset($book['file_extension'])) {
+            switch(strtolower($book['file_extension'])) {
+                case 'pdf':
+                    $contentType = 'application/pdf';
+                    break;
+                case 'epub':
+                    $contentType = 'application/epub+zip';
+                    break;
+                case 'ppt':
+                    $contentType = 'application/vnd.ms-powerpoint';
+                    break;
+                case 'pptx':
+                    $contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+                    break;
+                case 'doc':
+                    $contentType = 'application/msword';
+                    break;
+                case 'docx':
+                    $contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                    break;
+            }
+        }
+        
+        // Set appropriate headers for streaming
+        header("Content-Type: $contentType");
+        header('Content-Length: ' . filesize($filePath));
+        header('Accept-Ranges: bytes');
+        header('Cache-Control: private, max-age=300, must-revalidate');
+        header('Pragma: public');
+        
+        // Output file content
+        readfile($filePath);
+        exit;
+    }
 }
