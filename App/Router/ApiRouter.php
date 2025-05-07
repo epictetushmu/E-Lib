@@ -24,7 +24,6 @@ class ApiRouter {
             ['method' => 'DELETE', 'path' => '/api/v1/books/([0-9a-f]{24})', 'handler' => [new BookController(), 'deleteBook']],
             
             // New API routes for secure PDF viewing
-            ['method' => 'GET', 'path' => '/api/v1/books/([0-9a-f]{24})/view', 'handler' => [new BookController(), 'viewBookFile']],
             ['method' => 'GET', 'path' => '/api/v1/books/([0-9a-f]{24})/file', 'handler' => [new BookController(), 'streamBookFile']],
             
             ['method' => 'GET', 'path' => '/api/v1/search/(\w+)', 'handler' => [new BookController(), 'searchBooks']],

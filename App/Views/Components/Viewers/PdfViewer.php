@@ -28,7 +28,7 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
     
     // Use Axios to fetch the PDF URL from the API
-    axios.get(`/api/v1/books/${bookId}/view`, {
+    axios.get(`/api/v1/books/${bookId}/file`, {
             headers: {
                 "Authorization": `Bearer ${(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '')}`
             }

@@ -181,7 +181,7 @@ class BookController {
         error_log("PDF stored successfully at: {${$storedPdf['path']}}");
         
         // Generate thumbnail
-        $thumbnailPath = $fileHelper->generateThumbnail();
+        $thumbnailPath = $fileHelper->getThumbnail();
         
         // Add the book to the database
         $response = $this->bookService->addBook(
@@ -426,7 +426,7 @@ class BookController {
                 }
                 
                 // Generate thumbnail
-                $thumbnailPath = $fileHelper->generateThumbnail();
+                $thumbnailPath = $fileHelper->getThumbnail();
                 
                 // Add the book to the database
                 $response = $this->bookService->addBook(
@@ -554,47 +554,6 @@ class BookController {
         }
     }
 
-    /**
-     * API endpoint to get secure book file URL for viewer
-     * 
-     * @param string $bookId MongoDB ID of the book to view
-     */
-    public function viewBookFile($bookId = null) {
-        // Validate book ID
-        if (!$bookId || !preg_match('/^[0-9a-f]{24}$/', $bookId)) {
-            return $this->response->respond(false, 'Invalid book ID', 400);
-        }
-        
-        // Get book details from database
-        $book = $this->bookService->getBookDetails($bookId);
-        
-        if (!$book || empty($book['pdf_path'])) {
-            return $this->response->respond(false, 'Book not found or has no file', 404);
-        }
-        
-        // Generate a secure URL with a timed token
-        $timestamp = time();
-        $expiry = $timestamp + 3600; // URL valid for 1 hour
-        
-        // Create a signature that will expire
-        $signatureData = [
-            'book_id' => $bookId,
-            'timestamp' => $timestamp,
-            'expiry' => $expiry
-        ];
-        
-        // Create signature with JWT
-        $jwt = new \App\Includes\JwtHelper();
-        $token = $jwt->generateToken($signatureData);
-        
-        // Build secure URL
-        $fileUrl = '/api/v1/books/' . $bookId . '/file?token=' . urlencode($token);
-        
-        return $this->response->respond(true, [
-            'file_url' => $fileUrl,
-            'expiry' => $expiry
-        ]);
-    }
     
     /**
      * Stream book file with secure token

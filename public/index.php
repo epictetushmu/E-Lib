@@ -132,6 +132,7 @@ $router->addMiddleware(new JwtAuthMiddleware([
     'api/v1/save-book',
     'api/v1/remove-book',
     'api/v1/saved-books',
+    '/api/v1/books/([0-9a-f]{24})/file', // Fixed path pattern to match actual route with book ID
 ]));
 
 // Handle the request
