@@ -568,31 +568,6 @@ class BookController {
             exit;
         }
         
-        // Verify token
-        $token = $_GET['token'] ?? '';
-        if (empty($token)) {
-            header('HTTP/1.0 401 Unauthorized');
-            echo "Missing access token";
-            exit;
-        }
-        
-        // Decode JWT token
-        $jwt = new \App\Includes\JwtHelper();
-        $decoded = $jwt->decodeToken($token);
-        
-        if (!$decoded) {
-            header('HTTP/1.0 401 Unauthorized');
-            echo "Invalid access token";
-            exit;
-        }
-        
-        // Check token expiry
-        if (time() > ($decoded['expiry'] ?? 0)) {
-            header('HTTP/1.0 401 Unauthorized');
-            echo "Token expired";
-            exit;
-        }
-        
         // Verify book ID matches the one in token
         if ($bookId !== ($decoded['book_id'] ?? '')) {
             header('HTTP/1.0 401 Unauthorized');
