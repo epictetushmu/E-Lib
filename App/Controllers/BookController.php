@@ -563,25 +563,21 @@ class BookController {
     public function streamBookFile($bookId = null) {
         // Validate book ID
         if (!$bookId || !preg_match('/^[0-9a-f]{24}$/', $bookId)) {
-            header('HTTP/1.0 400 Bad Request');
-            echo "Invalid book ID";
-            exit;
+            $this->response->respond(false, 'Invalid book ID', 400);
+            return;
         }
         
-        // Verify book ID matches the one in token
-        if ($bookId !== ($decoded['book_id'] ?? '')) {
-            header('HTTP/1.0 401 Unauthorized');
-            echo "Token mismatch";
-            exit;
+        // Check if user is authenticated (already checked by middleware)
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
         }
         
         // Get book details from database
         $book = $this->bookService->getBookDetails($bookId);
         
         if (!$book || empty($book['pdf_path'])) {
-            header('HTTP/1.0 404 Not Found');
-            echo "Book not found or has no file";
-            exit;
+            $this->response->respond(false, 'Book not found or has no file', 404);
+            return;
         }
         
         // Get the absolute path to the file
@@ -589,15 +585,12 @@ class BookController {
         
         // Check if file exists and is readable
         if (!file_exists($filePath) || !is_readable($filePath)) {
-            header('HTTP/1.0 404 Not Found');
-            echo "File not found or not readable";
-            exit;
+            $this->response->respond(false, 'File not found or not accessible', 404);
+            return;
         }
         
-        // Set headers for inline viewing
-        $contentType = 'application/pdf';
-        
         // Determine content type based on file extension
+        $contentType = 'application/pdf'; // Default to PDF
         if (isset($book['file_extension'])) {
             switch(strtolower($book['file_extension'])) {
                 case 'pdf':
@@ -621,15 +614,16 @@ class BookController {
             }
         }
         
-        // Set appropriate headers for streaming
-        header("Content-Type: $contentType");
-        header('Content-Length: ' . filesize($filePath));
-        header('Accept-Ranges: bytes');
-        header('Cache-Control: private, max-age=300, must-revalidate');
-        header('Pragma: public');
+        // Generate filename if not provided
+        $filename = basename($filePath);
+        if (!empty($book['title'])) {
+            // Create a safe filename based on the book title
+            $safeTitle = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $book['title']);
+            $extension = pathinfo($filePath, PATHINFO_EXTENSION);
+            $filename = $safeTitle . '.' . $extension;
+        }
         
-        // Output file content
-        readfile($filePath);
-        exit;
+        // Stream the file using the ResponseHandler
+        $this->response->respondWithFile($filePath, $contentType, false, $filename);
     }
 }

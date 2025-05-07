@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (previewBtn) {
         previewBtn.addEventListener('click', function() {
             const bookId = document.getElementById('bookId').value;
-            window.open(`/read/${bookId}`, '_blank');
+            window.location.href = `/read/${bookId}`; // Navigate in the same tab
         });
     }
 });
