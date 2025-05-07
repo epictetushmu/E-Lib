@@ -11,6 +11,7 @@ $book = $book ?? [];
 $filePath = $book['file_path'] ?? $book['pdf_path'] ?? '';
 $fileType = $book['file_type'] ?? 'pdf';
 $fileExtension = $book['file_extension'] ?? 'pdf';
+$bookId = $book['_id'] ?? '';
 
 // Fall back to inferring file type from path if not provided in the book data
 if (empty($fileType) && !empty($filePath)) {
@@ -57,7 +58,7 @@ if (empty($fileType) && !empty($filePath)) {
             
             <div class="document-controls">
                 <?php if (isset($book['downloadable']) && $book['downloadable']): ?>
-                <a href="/download/<?php echo $book['_id']; ?>" class="btn btn-sm btn-outline-light me-2">
+                <a href="#" class="btn btn-sm btn-outline-light me-2" id="downloadDocument">
                     <i class="fas fa-download"></i> Download
                 </a>
                 <?php endif; ?>
@@ -74,6 +75,12 @@ if (empty($fileType) && !empty($filePath)) {
                 <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
                 <div class="mt-3">Loading <?php echo strtoupper($fileType); ?>...</div>
             </div>
+
+            <!-- Pass bookId to viewers -->
+            <script>
+                const bookId = "<?php echo htmlspecialchars($bookId); ?>";
+                const fileType = "<?php echo htmlspecialchars($fileType); ?>";
+            </script>
 
             <?php 
             // Load the appropriate viewer based on file type
@@ -113,6 +120,33 @@ if (empty($fileType) && !empty($filePath)) {
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    // Document download handler
+    document.getElementById('downloadDocument')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        axios({
+            method: 'get',
+            url: `/api/v1/books/${bookId}/download`,
+            responseType: 'blob'
+        })
+        .then(response => {
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `${document.querySelector('h5').textContent.trim()}.${fileType}`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        })
+        .catch(error => {
+            console.error("Download error:", error);
+            alert("Failed to download document. Please try again later.");
+        });
+    });
+</script>
 
 <?php
 // Helper function to get appropriate icon for file type

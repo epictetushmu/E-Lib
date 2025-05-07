@@ -13,7 +13,7 @@
 <body class="d-flex flex-column min-vh-100">
     <?php 
         include 'Partials/Header.php';
-        include 'Components/PdfViewer.php'; 
+        include 'Components/DocumentViewer.php'; 
         include 'Partials/Footer.php'; 
     ?>
 

@@ -53,7 +53,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.min.js"></script>
 <script>
-    const url = "<?= htmlspecialchars($book['pdf_path'] ?? '/path/to/default.pdf') ?>";
+    const url = "<?= htmlspecialchars($book['pdf_path']) ?>";
 
     let pdfDoc = null;
     let scale = 1.5;
