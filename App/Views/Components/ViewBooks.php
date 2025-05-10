@@ -164,7 +164,7 @@ function deleteBook(bookId) {
 
 function previewBook(bookId) {
     const previewUrl = `/read/${bookId}`;
-    window.open(previewUrl, '_blank');
+    window.location.href = previewUrl; // Navigate in the same tab
 }
 
 // CSS for spinning animation

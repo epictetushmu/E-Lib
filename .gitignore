@@ -22,3 +22,6 @@ logs/
 #Ignore assets folder 
 *.pdf
 *.jpg
+*.pptx
+*.png
+/uploads/

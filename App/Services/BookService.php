@@ -56,7 +56,7 @@ class BookService {
         return $this->book->getBookDetails($id);
     }
 
-    public function addBook(string $title, string $author, string $year, string $description, array $categories, string $isbn, $pdfPath = null, $thumbnailPath = null, bool $downloadable = true) {
+    public function addBook(string $title, string $author, string $year, string $description, array $categories, string $isbn, $filePath = null, $thumbnailPath = null, bool $downloadable = true, string $fileType = 'pdf', string $fileExtension = 'pdf') {
         // Add validation here
         
         $book = [
@@ -65,31 +65,22 @@ class BookService {
             'year' => (int)$year?? null,
             'description' => $description,
             'categories' => $categories,
-            'pdf_path' => $pdfPath,
-            'isbn' =>  $isbn,
-            'thumbnail_path' => $thumbnailPath,
-            'downloadable' => (bool)$downloadable,
-            'featured' => false, 
-            'status'=> 'draft', 
+            'isbn' => $isbn,
+            'file_path' => $filePath,          // Renamed from pdf_path for clarity
+            'file_type' => $fileType,          // New field to store the file format type
+            'file_extension' => $fileExtension, // New field to store the file extension
+            'thumbnail' => $thumbnailPath,
             'created_at' => new UTCDateTime(),
-            'updated_at' => new UTCDateTime()
+            'updated_at' => new UTCDateTime(),
+            'status' => 'draft',
+            'views' => 0,
+            'downloads' => 0,
+            'featured' => false,
+            'downloadable' => $downloadable,
+            'reviews' => []
         ];
         
-        // Add PDF paths if available
-        if ($pdfPath) {
-            $book['pdf_path'] = $pdfPath;
-        }
-        
-        if ($thumbnailPath) {
-            $book['thumbnail_path'] = $thumbnailPath;
-        }
-        
-        try {
-            return $this->book->addBook($book);
-        } catch (\Exception $e) {
-            echo("Error adding book: " . $e->getMessage());
-            return null;
-        }
+        return $this->book->addBook($book);
     }
 
     /**

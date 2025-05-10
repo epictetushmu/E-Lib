@@ -213,8 +213,10 @@ class PdfHelper {
             // Set the full server path for internal use
             $this->pdfPath = $dest_path;
             
-            // Return web-accessible path
-            return $webPath . '/' . $newFileName;
+            // Return web-accessible path as string
+            $webFilePath = $webPath . '/' . $newFileName;
+            error_log("PDF stored successfully at: $webFilePath");
+            return $webFilePath;
         } catch (\Exception $e) {
             error_log("Error storing PDF: " . $e->getMessage());
             return false;

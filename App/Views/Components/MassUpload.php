@@ -175,12 +175,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle file drop
     dropArea.addEventListener('drop', handleDrop, false);
     
+
     function handleDrop(e) {
         const dt = e.dataTransfer;
-        const files = [...dt.files].filter(file => file.type === 'application/pdf');
+        // Accept multiple file types (PDF, PowerPoint, EPUB, etc.)
+        const acceptedFileTypes = [
+            'application/pdf',                          // PDF
+            'application/vnd.ms-powerpoint',            // PPT
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PPTX
+            'application/epub+zip',                     // EPUB
+            'application/x-mobipocket-ebook',           // MOBI
+            'application/vnd.amazon.ebook',             // AZW/AZW3
+            'image/vnd.djvu',                           // DJVU
+            'application/msword',                       // DOC
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // DOCX
+        ];
+        const files = [...dt.files].filter(file => acceptedFileTypes.includes(file.type) || 
+            /\.(pdf|pptx?|epub|mobi|azw3?|djvu|docx?)$/i.test(file.name));
         
         if (files.length === 0) {
-            Swal.fire('Invalid Files', 'Please select PDF files only.', 'warning');
+            Swal.fire('Invalid Files', 'Please select supported document files only.', 'warning');
             return;
         }
         
