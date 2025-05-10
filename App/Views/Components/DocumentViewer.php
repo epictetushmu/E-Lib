@@ -129,7 +129,7 @@ if (empty($fileType) && !empty($filePath)) {
         
         axios({
             method: 'get',
-            url: `/api/v1/books/${bookId}/download`,
+            url: `/api/v1/download/${bookId}`,
             responseType: 'blob'
         })
         .then(response => {

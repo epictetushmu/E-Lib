@@ -593,27 +593,27 @@ class BookController {
         
         // Determine content type based on file extension
         $contentType = 'application/pdf'; // Default to PDF
-        if (isset($book['file_extension'])) {
-            switch(strtolower($book['file_extension'])) {
-                case 'pdf':
-                    $contentType = 'application/pdf';
-                    break;
-                case 'epub':
-                    $contentType = 'application/epub+zip';
-                    break;
-                case 'ppt':
-                    $contentType = 'application/vnd.ms-powerpoint';
-                    break;
-                case 'pptx':
-                    $contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-                    break;
-                case 'doc':
-                    $contentType = 'application/msword';
-                    break;
-                case 'docx':
-                    $contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-                    break;
-            }
+        $fileExtension = isset($book['file_extension']) ? strtolower($book['file_extension']) : 'pdf';
+        
+        switch($fileExtension) {
+            case 'pdf':
+                $contentType = 'application/pdf';
+                break;
+            case 'epub':
+                $contentType = 'application/epub+zip';
+                break;
+            case 'ppt':
+                $contentType = 'application/vnd.ms-powerpoint';
+                break;
+            case 'pptx':
+                $contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+                break;
+            case 'doc':
+                $contentType = 'application/msword';
+                break;
+            case 'docx':
+                $contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                break;
         }
         
         // Generate filename if not provided
@@ -621,11 +621,18 @@ class BookController {
         if (!empty($book['title'])) {
             // Create a safe filename based on the book title
             $safeTitle = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $book['title']);
-            $extension = pathinfo($filePath, PATHINFO_EXTENSION);
-            $filename = $safeTitle . '.' . $extension;
+            $filename = $safeTitle . '.' . $fileExtension;
         }
         
-        // Stream the file using the ResponseHandler
-        $this->response->respondWithFile($filePath, $contentType, false, $filename);
+        // Set appropriate headers for streaming
+        header('Content-Type: ' . $contentType);
+        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0, no-cache, must-revalidate, proxy-revalidate');
+        header('Expires: 0');
+        header('Pragma: public');
+        
+        // Send file content and exit
+        readfile($filePath);
+        exit;
     }
 }

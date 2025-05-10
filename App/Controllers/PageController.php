@@ -26,23 +26,21 @@ class PageController {
         $this->response->renderView(__DIR__ . '/../Views/admin.php');
     }
 
+    /**
+     * Modified viewBook method to serve the book detail page without book data
+     * The book data will be fetched client-side using Axios
+     */
     public function viewBook($path = null, $id = null) {
         try {
-            // Remove debug echo statements that cause output before headers
-            if (is_null($id)) {
-                echo "Invalid book ID. id is null.";
+            // Check if ID is valid but don't fetch the book data here
+            if (is_null($id) || !preg_match('/^[0-9a-f]{24}$/', $id)) {
                 $this->error();
                 return;
             }
             
-            $bookService = new BookService();
-            $book = $bookService->getBookDetails($id);
+            // Just render the page shell, client will fetch the data
+            $this->response->renderView(__DIR__ . '/../Views/book_detail.php');
             
-            if ($book) {
-                $this->response->renderView(__DIR__ . '/../Views/book_detail.php', ['book' => $book]);
-            } else {
-                $this->error();
-            }
         } catch(Exception $e) {
             // Log the error but don't echo it (causes header issues)
             error_log("Book View Error: " . $e->getMessage());
