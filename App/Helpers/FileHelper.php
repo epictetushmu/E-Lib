@@ -93,8 +93,8 @@ class FileHelper {
      * Extract thumbnail from PDF file
      */
     private function extractPdfThumbnail($pdfPath, $outputPath, $format = 'jpg') {
-        // Check if Imagick is installed
-        if (!extension_loaded('imagick')) {
+        // Check if Imagick is installed and available
+        if (!extension_loaded('imagick') || !class_exists('\\Imagick')) {
             error_log("Imagick extension not available - using fallback image");
             return $this->useTypePlaceholder($outputPath, 'pdf');
         }
@@ -112,16 +112,42 @@ class FileHelper {
             $imagick = new \Imagick();
             
             // Set resolution for better quality
-            $imagick->setResolution(300, 300);
+            $imagick->setResolution(150, 150); // Reduced resolution for better performance
             
-            // Read only the first page of the PDF
-            $imagick->readImage($pdfPath . '[0]');
+            try {
+                // Try to read the first page of the PDF with error handling
+                $readResult = $imagick->readImage($pdfPath . '[0]');
+                if (!$readResult) {
+                    throw new \Exception("Failed to read the file");
+                }
+            } catch (\Exception $e) {
+                error_log("Initial PDF read failed: " . $e->getMessage() . ". Trying alternative method...");
+                
+                // Try alternative approach with lower resolution
+                $imagick->clear();
+                $imagick->setResolution(72, 72);
+                
+                try {
+                    if (!$imagick->readImage($pdfPath . '[0]')) {
+                        throw new \Exception("Failed to read with alternative method");
+                    }
+                } catch (\Exception $e2) {
+                    error_log("Alternative PDF read failed: " . $e2->getMessage());
+                    return $this->useTypePlaceholder($outputPath, 'pdf');
+                }
+            }
             
             // Convert to the desired format
             $imagick->setImageFormat($format);
             
             // Optimize the image
-            $imagick->setImageCompressionQuality(90);
+            $imagick->setImageCompressionQuality(85);
+            
+            // Resize if necessary to avoid huge thumbnails
+            $width = $imagick->getImageWidth();
+            if ($width > 800) {
+                $imagick->resizeImage(800, 0, \Imagick::FILTER_LANCZOS, 1);
+            }
             
             // Make sure output directory exists
             $outputDir = dirname($outputPath);
@@ -472,12 +498,4 @@ class FileHelper {
         }
     }
 
-    
-    /**
-     * Legacy alias for storePdf to maintain backward compatibility
-     */
-    public function storePdf($file) {
-        $result = $this->storeFile($file);
-        return $result ? $result['path'] : false;
-    }
 }

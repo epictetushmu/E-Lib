@@ -169,24 +169,26 @@ class BookController {
         $fileHelper = new FileHelper($_FILES['bookPdf']['tmp_name']);
         
         // Store the PDF
-        $storedPdf = $fileHelper->storeFile($_FILES['bookPdf']);
+        $storedFile = $fileHelper->storeFile($_FILES['bookPdf']);
         
-        if (!$storedPdf) {
-            error_log("Failed to store PDF");
-            return $this->response->respond(false, 'Error storing PDF', 500);
+        if (!$storedFile) {
+            error_log("Failed to store file");
+            return $this->response->respond(false, 'Error storing file', 500);
         }
         
-        // Extract the path from the result if it's an array
+        error_log("PDF stored successfully at: " . $storedFile['path']);
         
-        error_log("PDF stored successfully at: {${$storedPdf['path']}}");
+        // Update the FileHelper with the new stored file path
+        $fileHelper = new FileHelper($_SERVER['DOCUMENT_ROOT'] . $storedFile['path']);
         
         // Generate thumbnail
         $thumbnailPath = $fileHelper->getThumbnail();
         
-        // Add the book to the database
+        // Add the book to the database with file details
         $response = $this->bookService->addBook(
             $title, $author, $year, $description, $categories, $isbn,
-            $storedPdf['path'], $thumbnailPath, $downloadable
+            $storedFile['path'], $thumbnailPath, $downloadable,
+            $storedFile['type'], $storedFile['extension']
         );
         
         if ($response) {
