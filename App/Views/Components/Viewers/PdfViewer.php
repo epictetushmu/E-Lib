@@ -23,44 +23,45 @@
     const pdfPagesContainer = document.getElementById('pdfPages');
     const spinner = document.getElementById('loadingSpinner');
     const pdfContainer = document.getElementById('pdfContainer');
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
     
     // The workerSrc property needs to be specified
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
     
-    // Use Axios to fetch the PDF URL from the API
-    axios.get(`/api/v1/books/${bookId}/file`, {
-            headers: {
-                "Authorization": `Bearer ${(localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '')}`
-            }
-        })
-        .then(response => {
-            if (response.data && response.data.success && response.data.file_url) {
-                loadPDF(response.data.file_url);
-            } else {
-                throw new Error('Invalid API response format');
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching PDF URL:', error);
-            handleError(error);
-        });
+    // Load the PDF directly using authentication headers
+    const pdfUrl = `/api/v1/books/${bookId}/file`;
+    loadPDFWithAuth(pdfUrl, authToken);
     
-    // Load the PDF with the URL from the API
-    function loadPDF(url) {
-        pdfjsLib.getDocument(url).promise.then(pdf => {
-            pdfDoc = pdf;
-            spinner.style.display = 'none';
-            pdfContainer.style.display = 'block';
-            
-            // Load first page
-            renderPage(1);
-            
-            // Add an intersection observer to lazy load PDF pages
-            setupIntersectionObserver();
-        }).catch(error => {
-            console.error('Error loading PDF:', error);
-            handleError(error);
+    // Load PDF with authentication headers
+    function loadPDFWithAuth(url, token) {
+        console.log(`Loading PDF from: ${url} with auth token present: ${!!token}`);
+        
+        // Configure the loading task with authentication headers
+        const loadingTask = pdfjsLib.getDocument({
+            url: url,
+            httpHeaders: {
+                "Authorization": `Bearer ${token}`
+            },
+            withCredentials: true
         });
+        
+        loadingTask.promise
+            .then(pdf => {
+                console.log(`PDF loaded successfully with ${pdf.numPages} pages`);
+                pdfDoc = pdf;
+                spinner.style.display = 'none';
+                pdfContainer.style.display = 'block';
+                
+                // Load first page
+                renderPage(1);
+                
+                // Add an intersection observer to lazy load PDF pages
+                setupIntersectionObserver();
+            })
+            .catch(error => {
+                console.error('Error loading PDF:', error);
+                handleError(error);
+            });
     }
     
     // Handle errors when loading the PDF
@@ -70,6 +71,10 @@
                 <i class="fas fa-exclamation-circle fa-2x mb-3"></i>
                 <p>Error loading PDF. The file might be corrupted or incompatible.</p>
                 <p class="small text-muted mt-2">${error.message || 'Unknown error'}</p>
+                <div class="mt-3">
+                    <button onclick="location.reload()" class="btn btn-sm btn-outline-danger me-2">Try Again</button>
+                    <a href="/book/${bookId}" class="btn btn-sm btn-outline-secondary">View Book Details</a>
+                </div>
             </div>
         `;
     }

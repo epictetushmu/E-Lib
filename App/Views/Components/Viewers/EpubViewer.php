@@ -4,11 +4,8 @@
  * Uses ePubJS to display EPUB e-books in the browser
  * 
  * This component is expected to be included by the DocumentViewer.php component
- * which provides the $book and $filePath variables
+ * which provides the bookId variable via JavaScript
  */
-
-// Ensure we have the file path
-$epubUrl = htmlspecialchars($filePath ?? $book['pdf_path'] ?? $book['file_path'] ?? '');
 ?>
 
 <!-- EPUB Viewer Container -->
@@ -29,13 +26,22 @@ $epubUrl = htmlspecialchars($filePath ?? $book['pdf_path'] ?? $book['file_path']
 
 <script>
     // EPUB.js initialization
-    const url = "<?= $epubUrl ?>";
     const spinner = document.getElementById('loadingSpinner');
     const epubContainer = document.getElementById('epubContainer');
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
     let book, rendition;
     
-    // Initialize the book
-    book = ePub(url);
+    // Use the API endpoint to get the EPUB file
+    const epubUrl = `/api/v1/books/${bookId}/file`;
+    
+    // Create a book object with specific request credentials
+    book = ePub(epubUrl, {
+        requestHeaders: {
+            'Authorization': `Bearer ${authToken}`
+        },
+        requestCredentials: 'include',
+        requestWithCredentials: true
+    });
     
     // Initialize the rendition
     rendition = book.renderTo("epubViewer", {
@@ -58,6 +64,11 @@ $epubUrl = htmlspecialchars($filePath ?? $book['pdf_path'] ?? $book['file_path']
             <div class="alert alert-danger">
                 <i class="fas fa-exclamation-circle fa-2x mb-3"></i>
                 <p>Error loading EPUB. The file might be corrupted or incompatible.</p>
+                <p class="small text-muted mt-2">${error.message || 'Unknown error'}</p>
+                <div class="mt-3">
+                    <button onclick="location.reload()" class="btn btn-sm btn-outline-danger me-2">Try Again</button>
+                    <a href="/book/${bookId}" class="btn btn-sm btn-outline-secondary">View Book Details</a>
+                </div>
             </div>
         `;
     });
