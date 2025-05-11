@@ -170,7 +170,12 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const response = await axios.post('/api/v1/save-book', {
                     book_id: bookId
-                });
+                
+                }, {headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`  ;
+                    
+                }}
+            );
                 
                 if (response.data.status === 'success') {
                     saveBtn.textContent = 'Saved to List';
@@ -186,16 +191,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const downloadBtn = document.getElementById('downloadBtn');
+    const bookId = document.getElementById('bookId').value;
     if (downloadBtn) {
         downloadBtn.addEventListener('click', async function() {
             const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-            if (!token) {
-                alert('You must be logged in to download this file.');
-                return;
-            }
 
             try {
-                const response = await axios.get('/api/v1/download/<?= htmlspecialchars($book['_id']) ?>', {
+                const response = await axios.get('/api/v1/download/'+ bookId, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     },
