@@ -45,7 +45,7 @@
         async function fetchBooks() {
             try {
                 const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
-                const response = await axios.get('/api/v1/books', {
+                const response = await axios.get('/api/v1/books/list', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }

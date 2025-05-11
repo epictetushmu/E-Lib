@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
 
             try {
-                const response = await axios.get('/api/v1/download/'+ bookId, {
+                const response = await axios.get('/api/v1/books/'+ bookId + '/download', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     },

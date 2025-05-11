@@ -36,7 +36,6 @@
         
         // Load PDF with authentication headers
         function loadPDFWithAuth(url, token) {
-            console.log(`Loading PDF from: ${url} with auth token present: ${!!token}`);
             
             // Configure the loading task with authentication headers
             const loadingTask = pdfjsLib.getDocument({

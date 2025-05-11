@@ -22,7 +22,7 @@
         const loadFeaturedBooks = async () => {
             try {
                 loader.style.display = 'block';
-                const { data } = await axios.get('/api/v1/featured-books');
+                const { data } = await axios.get('/api/v1/books/featured');
 
                 if (data?.status === 'success' && Array.isArray(data.data)) {
                     renderBooks(data.data);

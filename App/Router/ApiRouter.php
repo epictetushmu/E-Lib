@@ -14,13 +14,13 @@ class ApiRouter {
 
     private function defineRequests() {
         $this->routes = [
-            ['method' => 'GET', 'path' => '/api/v1/featured-books', 'handler' => [new BookController(), 'featuredBooks']],
             ['method' => 'GET', 'path' => '/api/v1/books', 'handler' => [new BookController(), 'getAllBooks']],
-            ['method' => 'GET', 'path' => '/api/v1/list-books', 'handler' => [new BookController(), 'listBooks']],
             ['method' => 'POST', 'path' => '/api/v1/books', 'handler' => [new BookController(), 'addBook']],
+            ['method' => 'GET', 'path' => '/api/v1/books/list', 'handler' => [new BookController(), 'listBooks']],
+            ['method' => 'GET', 'path' => '/api/v1/books/featured', 'handler' => [new BookController(), 'featuredBooks']],
             ['method' => 'POST', 'path' => '/api/v1/books/mass-upload', 'handler' => [new BookController(), 'massUploadBooks']],
-            ['method' => 'PUT', 'path' => '/api/v1/books/([0-9a-f]{24})', 'handler' => [new BookController(), 'updateBook']],
             ['method' => 'GET', 'path' => '/api/v1/books/([0-9a-f]{24})', 'handler' => [new BookController(), 'viewBook']],
+            ['method' => 'PUT', 'path' => '/api/v1/books/([0-9a-f]{24})', 'handler' => [new BookController(), 'updateBook']],
             ['method' => 'DELETE', 'path' => '/api/v1/books/([0-9a-f]{24})', 'handler' => [new BookController(), 'deleteBook']],
             
             // New API routes for secure PDF viewing
@@ -31,7 +31,7 @@ class ApiRouter {
             ['method' => 'POST', 'path' => '/api/v1/reviews', 'handler' => [new BookController(), 'addReview']],
             ['method' => 'GET', 'path' => '/api/v1/reviews/([0-9a-f]{24})', 'handler' => [new BookController(), 'getReviews']],
             
-            ['method' => 'GET', 'path' => '/api/v1/download/([0-9a-f]{24})', 'handler' => [new BookController(), 'downloadBook']],
+            ['method' => 'GET', 'path' => '/api/v1/books/([0-9a-f]{24})/download', 'handler' => [new BookController(), 'downloadBook']],
             
             ['method' => 'POST', 'path' => '/api/v1/signup', 'handler' => [new UserController(), 'handleSignup']],
             ['method' => 'POST', 'path' => '/api/v1/login', 'handler' => [new UserController(), 'handleLogin']],

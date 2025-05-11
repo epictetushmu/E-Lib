@@ -365,7 +365,7 @@ public function addBook() {
                                     <td>Add a new book</td>
                                 </tr>
                                 <tr>
-                                    <td>/api/v1/featured-books</td>
+                                    <td>/api/v1/books/featured</td>
                                     <td>GET</td>
                                     <td>Get featured books</td>
                                 </tr>

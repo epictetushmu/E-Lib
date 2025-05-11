@@ -210,31 +210,12 @@ $bookId = $bookId ?? end($pathParts);
     // Function to download document
     function downloadDocument(book) {
         // Make sure we're using the book ID string, not the entire book object or ObjectId
-        let downloadId;
+        let downloadId = book._id.$oid;
         
-        if (typeof book === 'object') {
-            if (book._id) {
-                // Handle case where _id could be a string or an object with $oid property (MongoDB format)
-                if (typeof book._id === 'string') {
-                    downloadId = book._id;
-                } else if (typeof book._id === 'object' && book._id.$oid) {
-                    downloadId = book._id.$oid;
-                } else {
-                    downloadId = String(book._id); // Force conversion to string
-                }
-            } else {
-                downloadId = bookId;
-            }
-        } else {
-            downloadId = bookId;
-        }
-        
-        // For debugging
-        console.log("Download ID:", downloadId);
-        
+      
         axios({
             method: 'get',
-            url: `/api/v1/download/${downloadId}`,
+            url: `/api/v1/books${downloadId}`,
             responseType: 'blob',
             headers: {
                 'Authorization': `Bearer ${authToken}`

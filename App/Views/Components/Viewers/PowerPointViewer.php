@@ -78,11 +78,11 @@
                     downloadBtn.onclick = function(e) {
                         e.preventDefault();
                         // Make sure we're using the book ID string, not the entire object
-                        const downloadId = typeof book === 'object' && book._id ? book._id : bookId;
+                        const downloadId = bookId || book.id.$oid;
                         
                         axios({
                             method: 'get',
-                            url: `/api/v1/download/${downloadId}`,
+                            url: `/api/v1/books/${downloadId}/download`,
                             responseType: 'blob',
                             headers: {
                                 'Authorization': `Bearer ${authToken}`
