@@ -215,7 +215,7 @@ $bookId = $bookId ?? end($pathParts);
       
         axios({
             method: 'get',
-            url: `/api/v1/books${downloadId}`,
+            url: `/api/v1/books/${downloadId}/download`,
             responseType: 'blob',
             headers: {
                 'Authorization': `Bearer ${authToken}`
