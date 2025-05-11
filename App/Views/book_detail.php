@@ -23,16 +23,12 @@
                 <p class="mt-2">Loading book details...</p>
             </div>
             
-            <!-- Book not found message - shown when API returns error -->
-            <div class="text-center py-5" id="book-not-found" style="display: none;">
-                <i class="fas fa-book fa-5x mb-3 text-muted"></i>
-                <h3>Book not found</h3>
-                <p class="text-muted">The book you are looking for does not exist or has been removed.</p>
-                <a href="/" class="btn btn-primary mt-3">Return to Home</a>
-            </div>
-            
             <!-- Book details will be rendered here -->
             <div id="book-details" style="display: none;"></div>
+            <?php
+                // Include the book reviews section
+                include 'Components/BookReview.php';
+            ?>
         </div>
     </div>     
     <?php
@@ -304,8 +300,6 @@
                 
                 if (response.data && response.data.status === 'success' && response.data.data) {
                     renderBookDetails(response.data.data);
-                    // Load book reviews after book is loaded
-                    loadBookReviews(bookId);
                 } else {
                     throw new Error('Book data not found');
                 }
@@ -313,76 +307,6 @@
                 console.error('Error fetching book data:', error);
                 document.getElementById('loading-indicator').style.display = 'none';
                 document.getElementById('book-not-found').style.display = 'block';
-            }
-        }
-        
-        // Load book reviews using AJAX
-        async function loadBookReviews(bookId) {
-            try {
-                const response = await axios.get(`/api/v1/reviews/${bookId}`);
-                if (response.data && response.data.status === 'success') {
-                    // Get or create the reviews container
-                    let reviewsContainer = document.getElementById('reviews-container');
-                    if (!reviewsContainer) {
-                        reviewsContainer = document.createElement('div');
-                        reviewsContainer.id = 'reviews-container';
-                        reviewsContainer.className = 'mt-5';
-                        document.getElementById('book-container').appendChild(reviewsContainer);
-                    }
-                    
-                    // Load reviews component via AJAX
-                    const reviewsResponse = await axios.get(`/components/book_reviews?id=${bookId}`);
-                    reviewsContainer.innerHTML = reviewsResponse.data;
-                    
-                    // Initialize review form event listeners
-                    initReviewForm();
-                }
-            } catch (error) {
-                console.error('Error loading reviews:', error);
-            }
-        }
-        
-        // Initialize review form
-        function initReviewForm() {
-            const reviewForm = document.getElementById('review-form');
-            if (reviewForm) {
-                reviewForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const rating = document.querySelector('input[name="rating"]:checked')?.value;
-                    const comment = document.getElementById('review-comment').value;
-                    
-                    if (!rating) {
-                        alert('Please select a rating');
-                        return;
-                    }
-                    
-                    if (!comment.trim()) {
-                        alert('Please enter a review comment');
-                        return;
-                    }
-                    
-                    try {
-                        const response = await axios.post('/api/v1/reviews', {
-                            book_id: bookId,
-                            rating: parseInt(rating),
-                            comment: comment
-                        });
-                        
-                        if (response.data.status === 'success') {
-                            // Reload the reviews
-                            loadBookReviews(bookId);
-                            // Reset the form
-                            document.getElementById('review-comment').value = '';
-                            document.querySelector('input[name="rating"]:checked').checked = false;
-                        } else {
-                            alert(response.data.message || 'Failed to submit review');
-                        }
-                    } catch (error) {
-                        console.error('Error submitting review:', error);
-                        alert('An error occurred while submitting your review');
-                    }
-                });
             }
         }
         

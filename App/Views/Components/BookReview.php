@@ -4,61 +4,66 @@
 
         <!-- Display Reviews -->
         <div id="reviewsContainer">
-            <?php if (!empty($reviews)): ?>
-                <?php foreach ($reviews as $review): ?>
-                    <div class="card review-card mb-3">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="card-subtitle mb-0"><?= htmlspecialchars($review['username']) ?></h6>
-                                <div class="text-warning">
-                                    <?php for ($i = 1; $i <= 5; $i++): ?>
-                                        <i class="fa<?= $i <= $review['rating'] ? 's' : 'r' ?> fa-star"></i>
-                                    <?php endfor; ?>
-                                </div>
-                            </div>
-                            <p class="card-text"><?= htmlspecialchars($review['comment']) ?></p>
-                            <div class="text-muted small">
-                                <?= htmlspecialchars(date("F j, Y", strtotime($review['created_at']))) ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div class="alert alert-info">
-                    No reviews yet. Be the first to review this book!
+            <div class="text-center py-3" id="reviews-loading">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading reviews...</span>
                 </div>
-            <?php endif; ?>
+                <p class="mt-2">Loading reviews...</p>
+            </div>
         </div>
 
-        <?php if (isset($_SESSION['user_id'])): ?>
-            <!-- Add Review Form -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <h5 class="card-title">Add Your Review</h5>
-                    <form id="reviewForm">
-                        <input type="hidden" id="bookId" value="<?= htmlspecialchars($book['_id']) ?>">
-                        <div class="mb-3">
-                            <label class="form-label">Rating</label>
-                            <div class="star-rating" id="ratingStars">
-                                <?php for ($i = 1; $i <= 5; $i++): ?>
-                                    <i class="far fa-star" data-rating="<?= $i ?>"></i>
-                                <?php endfor; ?>
-                            </div>
-                            <input type="hidden" id="rating" value="0">
+        <!-- Review Form - Will be shown/hidden via JavaScript based on auth token -->
+        <div class="card mb-4" id="reviewFormContainer" style="display: none;">
+            <div class="card-body">
+                <h5 class="card-title">Add Your Review</h5>
+                <form id="reviewForm">
+                    <!-- The bookId will be set by JavaScript -->
+                    <input type="hidden" id="bookId" value="">
+                    <div class="mb-3">
+                        <label class="form-label">Rating</label>
+                        <div class="star-rating" id="ratingStars">
+                            <?php for ($i = 1; $i <= 5; $i++): ?>
+                                <i class="far fa-star" data-rating="<?= $i ?>"></i>
+                            <?php endfor; ?>
                         </div>
-                        <div class="mb-3">
-                            <label for="comment" class="form-label">Comment</label>
-                            <textarea class="form-control" id="comment" rows="3" required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Submit Review</button>
-                    </form>
-                </div>
+                        <input type="hidden" id="rating" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">Comment</label>
+                        <textarea class="form-control" id="comment" rows="3" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Review</button>
+                </form>
             </div>
-        <?php endif; ?>
+        </div>
+
+        <!-- Message for guests -->
+        <div id="guestReviewMessage" class="alert alert-info" style="display: none;">
+            <i class="fas fa-info-circle me-2"></i>
+            Please <a href="/login" class="alert-link">login</a> to leave a review.
+        </div>
     </div>
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Check if user is logged in
+    const pathParts = window.location.pathname.split('/');
+    const bookId = pathParts[pathParts.length - 1];
+
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    const reviewFormContainer = document.getElementById('reviewFormContainer');
+    const guestReviewMessage = document.getElementById('guestReviewMessage');
+    
+    if (token) {
+        // Show form for logged-in users
+        reviewFormContainer.style.display = 'block';
+        if (guestReviewMessage) guestReviewMessage.style.display = 'none';
+    } else {
+        // Show message for guests
+        reviewFormContainer.style.display = 'none';
+        if (guestReviewMessage) guestReviewMessage.style.display = 'block';
+    }
+
     // Setup star rating system
     const stars = document.querySelectorAll('#ratingStars i');
     const ratingInput = document.getElementById('rating');
@@ -106,7 +111,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             // Get form data
-            const bookId = document.getElementById('bookId').value;
             const rating = document.getElementById('rating').value;
             const comment = document.getElementById('comment').value;
             const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
@@ -178,7 +182,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to fetch and update reviews
-    const bookId = document.getElementById('bookId')?.value;
     if (bookId) {
         fetchReviews(bookId);
     }
@@ -195,7 +198,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     const container = document.getElementById('reviewsContainer');
                     
-                    if (!reviews || reviews.length === 0) {
+                    // Check specifically for empty arrays, including JSON representation of empty array
+                    if (!reviews || reviews.length === 0 || JSON.stringify(reviews) === '[]') {
                         container.innerHTML = '<div class="alert alert-info">No reviews yet. Be the first to review this book!</div>';
                         return;
                     }
