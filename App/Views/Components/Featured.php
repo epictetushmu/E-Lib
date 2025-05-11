@@ -45,7 +45,7 @@
                 return `
                     <div class="col-md-4 mb-4">
                         <div class="card h-100 shadow-sm">
-                            <img src="${book.thumbnail_path || '/assets/uploads/thumbnails/placeholder-book.jpg'}" 
+                            <img src="${book.thumbnail || '/assets/uploads/thumbnails/placeholder-book.jpg'}" 
                                  class="card-img-top" style="height: 200px; object-fit: cover;"
                                  alt="${book.title || 'Book cover'}"
                                  onerror="this.src='/assets/uploads/thumbnails/placeholder-book.jpg'">

@@ -366,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const title = book.title || 'Unknown Title';
         const author = book.author || 'Unknown Author';
         const bookId = book._id.$oid || book._id || '';
-        const thumbnailPath = book.thumbnail_path || '/assets/uploads/thumbnails/placeholder-book.jpg';
+        const thumbnailPath = book.thumbnail || '/assets/uploads/thumbnails/placeholder-book.jpg';
         const year = book.year || '';
         const categories = book.categories || [];
         const averageRating = book.average_rating || 0;

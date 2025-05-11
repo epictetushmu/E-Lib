@@ -101,7 +101,7 @@
                 <div class="row">
                     <!-- Book Cover + Actions Column -->
                     <div class="col-md-4">
-                        <img src="${book.thumbnail_path || '/assets/uploads/thumbnails/placeholder-book.jpg'}"
+                        <img src="${book.thumbnail || '/assets/uploads/thumbnails/placeholder-book.jpg'}"
                              alt="${book.title} cover"
                              class="img-fluid rounded shadow-sm"
                              onerror="this.src='/assets/uploads/thumbnails/placeholder-book.jpg'">

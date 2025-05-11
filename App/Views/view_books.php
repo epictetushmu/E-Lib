@@ -86,7 +86,7 @@
                     <div class="col animate__animated animate__fadeIn">
                         <div class="card h-100 book-card">
                             <div class="card-img-top book-cover-container">
-                                <img src="${book.thumbnail_path || '/assets/uploads/thumbnails/placeholder-book.jpg'}" 
+                                <img src="${book.thumbnail || '/assets/uploads/thumbnails/placeholder-book.jpg'}" 
                                      class="card-img-top book-cover" 
                                      alt="${book.title} cover"
                                      onerror="this.src='/assets/uploads/thumbnails/placeholder-book.jpg'">

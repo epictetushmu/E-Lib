@@ -2,7 +2,7 @@
     <a href="/book/<?= htmlspecialchars($book['_id'] ?? '') ?>" class="text-decoration-none text-dark">
         <div class="card h-100 shadow-sm position-relative">
             <!-- Book thumbnail -->
-            <img src="<?= htmlspecialchars($book['thumbnail_path'] ?? '/assets/uploads/thumbnails/placeholder-book.jpg') ?>" 
+            <img src="<?= htmlspecialchars($book['thumbnail'] ?? '/assets/uploads/thumbnails/placeholder-book.jpg') ?>" 
                  class="card-img-top" style="height: 200px; object-fit: cover;"
                  alt="<?= htmlspecialchars($book['title'] ?? 'Book cover') ?>"
                  onerror="this.src='/assets/uploads/thumbnails/placeholder-book.jpg'">

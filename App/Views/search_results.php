@@ -124,7 +124,7 @@
                 const id = book._id;
                 const title = book.title || 'Untitled';
                 const author = book.author || 'Unknown author';
-                const thumbnailPath = book.thumbnail_path || '/assets/uploads/thumbnails/placeholder-book.jpg';
+                const thumbnailPath = book.thumbnail || '/assets/uploads/thumbnails/placeholder-book.jpg';
                 const description = book.description || 'No description available';
                 const truncatedDescription = description.length > 150 ? description.substring(0, 150) + '...' : description;
                 
