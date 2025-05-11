@@ -74,7 +74,7 @@ COPY composer.json composer.lock* ./
 RUN composer install
 
 # Create directories for runtime files with proper permissions
-RUN mkdir -p /var/www/html/certificates /var/www/html/storage/logs /var/www/html/public/uploads /var/www/html/public/assets/uploads/pdfs /var/www/html/public/assets/uploads/thumbnails /var/www/html/cache \
+RUN mkdir -p /var/www/html/certificates /var/www/html/storage/logs /var/www/html/public/uploads /var/www/html/public/assets/uploads/documents /var/www/html/public/assets/uploads/thumbnails /var/www/html/cache \
     && chmod -R 777 /var/www/html/certificates /var/www/html/storage /var/www/html/public/uploads /var/www/html/public/assets /var/www/html/cache
 
 # Copy the MongoDB certificate setup script and entrypoint

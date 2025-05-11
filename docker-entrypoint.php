@@ -26,7 +26,7 @@ if (file_exists(__DIR__ . '/.env')) {
 $directories = [
     __DIR__ . '/storage/logs',
     __DIR__ . '/public/uploads',
-    __DIR__ . '/public/assets/uploads/pdfs',
+    __DIR__ . '/public/assets/uploads/documents',
     __DIR__ . '/public/assets/uploads/thumbnails',
     __DIR__ . '/certificates',
     __DIR__ . '/cache'
