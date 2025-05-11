@@ -256,7 +256,7 @@ class BookController {
         if (!empty($book['title'])) {
             // Create a safe filename based on the book title
             $safeTitle = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $book['title']);
-            $filename = $safeTitle . '.pdf';
+            $filename = $safeTitle . $book['file_extension'];
         }
         
         // Set appropriate headers for file download
