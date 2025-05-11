@@ -1,35 +1,9 @@
 <?php
 /**
  * User Profile Component
- * 
- * @param array $profile User profile data (username, email, created_at)
- * @param array $userBooks Books associated with the user (borrowed and saved)
- * @param string $searchUrl Optional - URL for the browse books link (default: '/search')
+ * This component now uses client-side API calls for data fetching
+ * instead of relying on server-side variables passed from the controller
  */
-
-// Set default values for parameters
-$profile = $profile ?? [];
-$userBooks = $userBooks ?? ['borrowed' => [], 'saved' => []];
-$searchUrl = $searchUrl ?? '/search';
-
-// Parse MongoDB date format - handles both string format and MongoDB UTCDateTime object
-function parseMongoDate($dateValue) {
-    if (is_object($dateValue) && method_exists($dateValue, 'toDateTime')) {
-        // Handle MongoDB UTCDateTime object
-        return $dateValue->toDateTime()->format('F j, Y');
-    } elseif (is_string($dateValue)) {
-        // Handle ISO string format "2025-04-26T00:40:57.019+00:00"
-        $date = new DateTime($dateValue);
-        return $date->format('F j, Y');
-    }
-    return 'N/A';
-}
-
-// Make sure session data is available as fallback
-$username = htmlspecialchars($profile['username'] ?? $_SESSION['username'] ?? 'User');
-$email = htmlspecialchars($profile['email'] ?? $_SESSION['email'] ?? '');
-$memberSince = isset($profile['createdAt']) ? parseMongoDate($profile['createdAt']) : 'N/A';
-$firstLetter = substr($username, 0, 1);
 ?>
 
 <div class="container my-5">
@@ -37,15 +11,15 @@ $firstLetter = substr($username, 0, 1);
     <div class="profile-header shadow-sm p-4 mb-4 bg-light rounded">
         <div class="row align-items-center">
             <div class="col-md-3 text-center">
-                <div class="profile-avatar">
-                    <?= $firstLetter ?>
+                <div class="profile-avatar" id="profile-avatar">
+                    <!-- Will be set via JavaScript -->
                 </div>
             </div>
             <div class="col-md-9">
                 <div class="d-flex align-items-center mb-3">
                     <!-- Username with edit functionality -->
                     <div id="username-display">
-                        <h1 id="current-username" class="mb-0 me-2"><?= $username ?></h1>
+                        <h1 id="current-username" class="mb-0 me-2">Loading...</h1>
                         <button id="edit-username-btn" class="btn btn-sm btn-outline-secondary">
                             <i class="fas fa-edit"></i> Edit
                         </button>
@@ -54,7 +28,7 @@ $firstLetter = substr($username, 0, 1);
                     <!-- Username edit form (initially hidden) -->
                     <div id="username-edit-form" class="d-none">
                         <div class="input-group">
-                            <input type="text" id="new-username" class="form-control" value="<?= $username ?>">
+                            <input type="text" id="new-username" class="form-control" value="">
                             <button id="save-username-btn" class="btn btn-primary">Save</button>
                             <button id="cancel-edit-btn" class="btn btn-outline-secondary">Cancel</button>
                         </div>
@@ -62,10 +36,10 @@ $firstLetter = substr($username, 0, 1);
                     </div>
                 </div>
                 <p class="text-muted mb-2">
-                    <i class="fas fa-envelope me-2"></i><?= $email ?>
+                    <i class="fas fa-envelope me-2"></i><span id="user-email">Loading...</span>
                 </p>
                 <p class="text-muted">
-                    <i class="fas fa-clock me-2"></i>Member since: <?= $memberSince ?>
+                    <i class="fas fa-clock me-2"></i>Member since: <span id="member-since">Loading...</span>
                 </p>
             </div>
         </div>
@@ -83,39 +57,13 @@ $firstLetter = substr($username, 0, 1);
     <div class="tab-content" id="booksTabContent">
         <!-- Saved Books Tab -->
         <div class="tab-pane fade show active" id="saved" role="tabpanel" aria-labelledby="saved-tab">
-            <?php if (!empty($userBooks['saved'])): ?>
-                <div class="row g-4">
-                    <?php foreach($userBooks['saved'] as $book): ?>
-                        <div class="col-md-4 col-lg-3">
-                            <div class="card book-card h-100">
-                                <img src="<?= htmlspecialchars($book['bookPdf'] ?? '/assets/uploads/thumbnails/placeholder-book.jpg') ?>" 
-                                     class="card-img-top book-bookPdf" 
-                                     alt="<?= htmlspecialchars($book['title']) ?>"
-                                     onerror="this.src='/assets/uploads/thumbnails/placeholder-book.jpg'">
-                                <div class="card-body">
-                                    <h5 class="card-title"><?= htmlspecialchars($book['title']) ?></h5>
-                                    <p class="card-text text-muted"><?= htmlspecialchars($book['author']) ?></p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <?php if (isset($book['copies']) && $book['copies'] > 0): ?>
-                                            <span class="badge bg-success">Available</span>
-                                        <?php else: ?>
-                                            <span class="badge bg-danger">Unavailable</span>
-                                        <?php endif; ?>
-                                        <a href="/book/<?= $book['id'] ?>" class="btn btn-sm btn-outline-primary">Details</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
+            <!-- Content will be loaded via API -->
+            <div class="text-center py-5" id="saved-books-loading">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
-            <?php else: ?>
-                <div class="text-center py-5" id="no-saved-books-message">
-                    <i class="fas fa-bookmark fa-3x text-muted mb-3"></i>
-                    <h4>No saved books</h4>
-                    <p class="text-muted">You haven't saved any books to your list yet.</p>
-                    <a href="<?= htmlspecialchars($searchUrl) ?>" class="btn btn-primary">Browse Books</a>
-                </div>
-            <?php endif; ?>
+                <p class="mt-3">Loading your saved books...</p>
+            </div>
         </div>    
     </div>
 </div>
@@ -135,6 +83,71 @@ document.addEventListener('DOMContentLoaded', function () {
     const cancelEditBtn = document.getElementById('cancel-edit-btn');
     const usernameError = document.getElementById('username-error');
     const profileAvatar = document.querySelector('.profile-avatar');
+    const userEmail = document.getElementById('user-email');
+    const memberSince = document.getElementById('member-since');
+    
+    // Load user profile data
+    loadUserProfile();
+    
+    function loadUserProfile() {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken') || '';
+        
+        axios.get('/api/v1/user/profile', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(function(response) {
+            if (response.data && (response.data.success || response.data.status === 'success')) {
+                const user = response.data.data;
+                
+                // Update profile information
+                currentUsername.textContent = user.username || 'User';
+                userEmail.textContent = user.email || '';
+                
+                // Format the date
+                if (user.createdAt) {
+                    const date = new Date(user.createdAt);
+                    memberSince.textContent = date.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                } else {
+                    memberSince.textContent = 'N/A';
+                }
+                
+                // Update avatar
+                profileAvatar.textContent = (user.username ? user.username.charAt(0).toUpperCase() : 'U');
+                
+                // Update form field
+                newUsernameInput.value = user.username || '';
+                
+                // Also update any session value if needed
+                if (typeof updateSessionValue === 'function') {
+                    updateSessionValue('username', user.username);
+                    updateSessionValue('email', user.email);
+                }
+            } else {
+                console.error('Failed to load profile:', response.data);
+                showError('Failed to load profile information. Please try refreshing the page.');
+            }
+        })
+        .catch(function(error) {
+            console.error('Error loading profile:', error);
+            showError('An error occurred while loading your profile information.');
+            
+            // Redirect if unauthorized
+            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                window.location.href = '/?showLogin=1&redirect=' + encodeURIComponent(window.location.pathname);
+            }
+        });
+    }
+    
+    function showError(message) {
+        // You could add a more sophisticated error display here
+        alert(message);
+    }
     
     // Edit button click handler
     editUsernameBtn.addEventListener('click', function() {
@@ -332,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .catch(function(error) {
            
             console.error('Error loading saved books:', error);
-            if (error.response.data.status === "success") {
+            if (error.response?.data?.status === "success") {
                 showNoSavedBooksMessage();
             } else {
                 console.error('Error loading saved books:', error);  
@@ -352,7 +365,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function generateBookCardHTML(book) {
         const title = book.title || 'Unknown Title';
         const author = book.author || 'Unknown Author';
-        const bookId = book._id.$oid || '';
+        const bookId = book._id.$oid || book._id || '';
         const thumbnailPath = book.thumbnail_path || '/assets/uploads/thumbnails/placeholder-book.jpg';
         const year = book.year || '';
         const categories = book.categories || [];
@@ -435,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 <i class="fas fa-bookmark fa-3x text-muted mb-3"></i>
                 <h4>No saved books</h4>
                 <p class="text-muted">You haven't saved any books to your list yet.</p>
-                <a href="<?= htmlspecialchars($searchUrl) ?>" class="btn btn-primary">Browse Books</a>
+                <a href="/search" class="btn btn-primary">Browse Books</a>
             </div>
         `;
     }

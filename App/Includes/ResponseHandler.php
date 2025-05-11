@@ -52,6 +52,51 @@ class ResponseHandler {
     }
 
     /**
+     * Send a file as a response
+     *
+     * @param string $filePath Path to the file
+     * @param string $contentType MIME type of the file
+     * @param bool $download Whether to force download or show inline
+     * @param string|null $filename Custom filename for download
+     * @return void
+     */
+    public static function respondWithFile($filePath, $contentType, $download = false, $filename = null) {
+        if (!file_exists($filePath) || !is_readable($filePath)) {
+            self::respond(false, 'File not found or not readable', 404);
+            return;
+        }
+
+        // Clear any output buffers that might be active
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        // Set the appropriate headers
+        if (!headers_sent()) {
+            // Content type header
+            header("Content-Type: $contentType");
+            
+            // Get file size
+            $fileSize = filesize($filePath);
+            header("Content-Length: $fileSize");
+            
+            // Set filename for download or reference
+            $filename = $filename ?? basename($filePath);
+            $disposition = $download ? 'attachment' : 'inline';
+            header('Content-Disposition: ' . $disposition . '; filename="' . $filename . '"');
+            
+            // Cache control headers
+            header('Cache-Control: private, max-age=300, must-revalidate');
+            header('Pragma: public');
+            header('Accept-Ranges: bytes');
+        }
+
+        // Output the file content
+        readfile($filePath);
+        exit;
+    }
+
+    /**
      * Redirect to another URL
      *
      * @param string $url The URL to redirect to

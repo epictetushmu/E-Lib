@@ -3,12 +3,10 @@ namespace App\Controllers;
 
 use App\Services\BookService; 
 use App\Includes\ResponseHandler;
-use App\Helpers\PdfHelper;
-
+use App\Helpers\FileHelper;
 
 class BookController {
     private $bookService;
-
     private $response; 
 
     public function __construct() {
@@ -167,26 +165,30 @@ class BookController {
             return $this->response->respond(false, 'PDF file upload error', 400);
         }
 
-        // Initialize PdfHelper with temporary path
-        $pdfHelper = new PdfHelper($_FILES['bookPdf']['tmp_name']);
+        // Initialize FileHelper with temporary path
+        $fileHelper = new FileHelper($_FILES['bookPdf']['tmp_name']);
         
         // Store the PDF
-        $pdfPath = $pdfHelper->storePdf($_FILES['bookPdf']);
+        $storedFile = $fileHelper->storeFile($_FILES['bookPdf']);
         
-        if (!$pdfPath) {
-            error_log("Failed to store PDF");
-            return $this->response->respond(false, 'Error storing PDF', 500);
+        if (!$storedFile) {
+            error_log("Failed to store file");
+            return $this->response->respond(false, 'Error storing file', 500);
         }
         
-        error_log("PDF stored successfully at: $pdfPath");
+        error_log("PDF stored successfully at: " . $storedFile['path']);
+        
+        // Update the FileHelper with the new stored file path
+        $fileHelper = new FileHelper($_SERVER['DOCUMENT_ROOT'] . $storedFile['path']);
         
         // Generate thumbnail
-        $thumbnailPath = $pdfHelper->getPdfThumbnail();
+        $thumbnailPath = $fileHelper->getThumbnail();
         
-        // Add the book to the database
+        // Add the book to the database with file details
         $response = $this->bookService->addBook(
             $title, $author, $year, $description, $categories, $isbn,
-            $pdfPath, $thumbnailPath, $downloadable
+            $storedFile['path'], $thumbnailPath, $downloadable,
+            $storedFile['type'], $storedFile['extension']
         );
         
         if ($response) {
@@ -223,7 +225,7 @@ class BookController {
         $bookService = new BookService();
         $book = $bookService->getBookDetails($bookId);
         
-        if (!$book || empty($book['pdf_path'])) {
+        if (!$book || empty($book['file_path'])) {
             header('HTTP/1.0 404 Not Found');
             echo "Book not found or has no PDF";
             exit;
@@ -237,7 +239,7 @@ class BookController {
         }
         
         // Get the absolute path to the PDF file
-        $pdfPath = $_SERVER['DOCUMENT_ROOT'] . $book['pdf_path'];
+        $pdfPath = $_SERVER['DOCUMENT_ROOT'] . $book['file_path'];
         
         // Check if file exists and is readable
         if (!file_exists($pdfPath) || !is_readable($pdfPath)) {
@@ -414,8 +416,8 @@ class BookController {
             
             try {
                 // Process the PDF file
-                $pdfHelper = new PdfHelper($file['tmp_name']);
-                $pdfPath = $pdfHelper->storePdf($file);
+                $fileHelper = new FileHelper($file['tmp_name']);
+                $pdfPath = $fileHelper->storeFile($file);
                 
                 if (!$pdfPath) {
                     $results['failed'][] = [
@@ -426,7 +428,7 @@ class BookController {
                 }
                 
                 // Generate thumbnail
-                $thumbnailPath = $pdfHelper->getPdfThumbnail();
+                $thumbnailPath = $fileHelper->getThumbnail();
                 
                 // Add the book to the database
                 $response = $this->bookService->addBook(
@@ -552,5 +554,86 @@ class BookController {
                 count($results['success']) > 0 ? 207 : 400
             );
         }
+    }
+
+    
+    /**
+     * Stream book file with secure token
+     * 
+     * @param string $bookId MongoDB ID of the book to stream
+     */
+    public function streamBookFile($bookId = null) {
+        // Validate book ID
+        if (!$bookId || !preg_match('/^[0-9a-f]{24}$/', $bookId)) {
+            $this->response->respond(false, 'Invalid book ID', 400);
+            return;
+        }
+        
+        // Check if user is authenticated (already checked by middleware)
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        // Get book details from database
+        $book = $this->bookService->getBookDetails($bookId);
+        error_log("Book details: " . print_r($book, true)); 
+
+        if (!$book || empty($book['file_path'])) {
+            $this->response->respond(false, 'Book not found or has no file', 404);
+            return;
+        }
+        
+        // Get the absolute path to the file
+        $filePath = $_SERVER['DOCUMENT_ROOT'] . $book['file_path'];
+        
+        // Check if file exists and is readable
+        if (!file_exists($filePath) || !is_readable($filePath)) {
+            $this->response->respond(false, 'File not found or not accessible', 404);
+            return;
+        }
+        
+        // Determine content type based on file extension
+        $contentType = 'application/pdf'; // Default to PDF
+        $fileExtension = isset($book['file_extension']) ? strtolower($book['file_extension']) : 'pdf';
+        
+        switch($fileExtension) {
+            case 'pdf':
+                $contentType = 'application/pdf';
+                break;
+            case 'epub':
+                $contentType = 'application/epub+zip';
+                break;
+            case 'ppt':
+                $contentType = 'application/vnd.ms-powerpoint';
+                break;
+            case 'pptx':
+                $contentType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+                break;
+            case 'doc':
+                $contentType = 'application/msword';
+                break;
+            case 'docx':
+                $contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                break;
+        }
+        
+        // Generate filename if not provided
+        $filename = basename($filePath);
+        if (!empty($book['title'])) {
+            // Create a safe filename based on the book title
+            $safeTitle = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $book['title']);
+            $filename = $safeTitle . '.' . $fileExtension;
+        }
+        
+        // Set appropriate headers for streaming
+        header('Content-Type: ' . $contentType);
+        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0, no-cache, must-revalidate, proxy-revalidate');
+        header('Expires: 0');
+        header('Pragma: public');
+        
+        // Send file content and exit
+        readfile($filePath);
+        exit;
     }
 }
