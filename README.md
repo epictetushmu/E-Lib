@@ -207,7 +207,7 @@ The application uses PHPMailer to handle all email functionality. To configure e
    MAIL_USERNAME=your_username
    MAIL_PASSWORD=your_password
    MAIL_ENCRYPTION=tls
-   MAIL_FROM_ADDRESS=support@epictetuslibrary.org
+   MAIL_FROM_ADDRESS=support@epictetuslibrary.com
    MAIL_FROM_NAME="Epictetus Library"
    SUPPORT_EMAIL=support@epictetuslibrary.org
    ```
