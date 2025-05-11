@@ -225,7 +225,7 @@ class BookController {
         $bookService = new BookService();
         $book = $bookService->getBookDetails($bookId);
         
-        if (!$book || empty($book['pdf_path'])) {
+        if (!$book || empty($book['file_path'])) {
             header('HTTP/1.0 404 Not Found');
             echo "Book not found or has no PDF";
             exit;
@@ -239,7 +239,7 @@ class BookController {
         }
         
         // Get the absolute path to the PDF file
-        $pdfPath = $_SERVER['DOCUMENT_ROOT'] . $book['pdf_path'];
+        $pdfPath = $_SERVER['DOCUMENT_ROOT'] . $book['file_path'];
         
         // Check if file exists and is readable
         if (!file_exists($pdfPath) || !is_readable($pdfPath)) {
@@ -576,14 +576,15 @@ class BookController {
         
         // Get book details from database
         $book = $this->bookService->getBookDetails($bookId);
-        
-        if (!$book || empty($book['pdf_path'])) {
+        error_log("Book details: " . print_r($book, true)); 
+
+        if (!$book || empty($book['file_path'])) {
             $this->response->respond(false, 'Book not found or has no file', 404);
             return;
         }
         
         // Get the absolute path to the file
-        $filePath = $_SERVER['DOCUMENT_ROOT'] . $book['pdf_path'];
+        $filePath = $_SERVER['DOCUMENT_ROOT'] . $book['file_path'];
         
         // Check if file exists and is readable
         if (!file_exists($filePath) || !is_readable($filePath)) {
