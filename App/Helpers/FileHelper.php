@@ -80,15 +80,144 @@ class FileHelper {
             case 'epub':
                 return $this->extractEpubThumbnail($filePath, $outputPath, $format);
                 
+            case 'word':
+                return $this->extractWordThumbnail($filePath, $outputPath, $format);
             case 'kindle':
             case 'djvu':
-            case 'word':
             default:
                 // For formats we can't extract thumbnails from yet, use a format-specific placeholder
                 return $this->useTypePlaceholder($outputPath, $this->fileType);
         }
     }
     
+
+    /**
+     * Extract thumbnail from Word document
+     */
+    private function extractWordThumbnail($docPath, $outputPath, $format = 'jpg') {
+        // Create temp directory for conversion output
+        $tempDir = sys_get_temp_dir() . '/docconvert_' . uniqid();
+        if (!is_dir($tempDir)) {
+            mkdir($tempDir, 0777, true);
+        }
+        chmod($tempDir, 0777); // Ensure temp directory is writable
+        
+        // Create user profile directories for LibreOffice
+        $userProfileDir = $tempDir . '/libreoffice_profile';
+        if (!is_dir($userProfileDir)) {
+            mkdir($userProfileDir, 0777, true);
+        }
+
+        $outputFileName = basename($docPath);
+        $baseFileName = pathinfo($outputFileName, PATHINFO_FILENAME);
+        
+        error_log("Converting Word document to PDF: $docPath using temp dir: $tempDir");
+        
+        // Set environment variables to suppress javaldx warnings
+        $environmentVars = array(
+            'HOME' => $tempDir,
+            'JAVALDX_IGNORE_CHECKS' => '1', // Suppress javaldx warnings
+            'UserInstallation' => "file://$userProfileDir" // Custom profile path
+        );
+        
+        // Build environment string
+        $envString = '';
+        foreach ($environmentVars as $key => $value) {
+            $envString .= "$key=" . escapeshellarg($value) . " ";
+        }
+        
+        // First try with all environment variables
+        $libreOfficeCommand = "$envString libreoffice --headless --convert-to pdf --outdir " . escapeshellarg($tempDir) . ' ' . escapeshellarg($docPath) . " 2>&1";
+        error_log("Executing: $libreOfficeCommand");
+        
+        exec($libreOfficeCommand, $output, $returnCode);
+        error_log("LibreOffice conversion output: " . implode("\n", $output) . " (Return code: $returnCode)");
+        
+        // The PDF will have the same name as the input file but with .pdf extension
+        $pdfPath = $tempDir . '/' . $baseFileName . '.pdf';
+        
+        // If the first attempt fails, try with simplified environment
+        if (!file_exists($pdfPath) || !is_readable($pdfPath)) {
+            error_log("First conversion attempt failed, trying alternative method");
+            
+            // Alternative approach with environment variables
+            $simpleCommand = "HOME=" . escapeshellarg($tempDir) . " libreoffice --headless --convert-to pdf --outdir " . escapeshellarg($tempDir) . ' ' . escapeshellarg($docPath) . " 2>/dev/null";
+            error_log("Executing alternative command: $simpleCommand");
+            
+            exec($simpleCommand, $output2, $returnCode2);
+            error_log("Alternative LibreOffice conversion output: " . implode("\n", $output2) . " (Return code: $returnCode2)");
+        }
+        
+        error_log("Looking for converted PDF at: $pdfPath");
+        
+        if (file_exists($pdfPath) && is_readable($pdfPath)) {
+            error_log("Word document successfully converted to PDF: $pdfPath");
+            $thumbnail = $this->extractPdfThumbnail($pdfPath, $outputPath, $format);
+            
+            // Clean up temporary files
+            @unlink($pdfPath);
+            $this->removeDirectory($userProfileDir);
+            @rmdir($tempDir);
+            
+            if ($thumbnail) {
+                return $thumbnail;
+            }
+        }
+        
+        // If both conversion attempts failed, extract metadata and create a custom thumbnail
+        if (!file_exists($pdfPath) || !is_readable($pdfPath)) {
+            error_log("Failed to convert Word document to PDF: $docPath (output file not found)");
+            
+            // Extract metadata from the Word document
+            $metadata = $this->extractWordMetadata($docPath);
+            
+            // Create a custom thumbnail with document metadata
+            if ($metadata && !empty($metadata['title'])) {
+                error_log("Creating custom thumbnail from Word document metadata");
+                
+                // Clean up temporary directories before returning
+                $this->removeDirectory($userProfileDir);
+                @rmdir($tempDir);
+                
+                return $this->createMetadataThumbnail($outputPath, $metadata, 'word');
+            }
+            
+            // Clean up temp directory
+            $this->removeDirectory($userProfileDir);
+            @rmdir($tempDir);
+            
+            // Fall back to word document placeholder
+            error_log("Using Word document placeholder image for thumbnail");
+            return $this->useTypePlaceholder($outputPath, 'word');
+        }
+    }
+    
+    /**
+     * Recursively remove a directory and its contents
+     *
+     * @param string $dir Directory path to remove
+     * @return bool Success or failure
+     */
+    private function removeDirectory($dir) {
+        if (!is_dir($dir)) {
+            return false;
+        }
+        
+        $files = array_diff(scandir($dir), array('.', '..'));
+        
+        foreach ($files as $file) {
+            $path = $dir . '/' . $file;
+            
+            if (is_dir($path)) {
+                $this->removeDirectory($path);
+            } else {
+                @unlink($path);
+            }
+        }
+        
+        return @rmdir($dir);
+    }
+
     /**
      * Extract thumbnail from PDF file
      */
