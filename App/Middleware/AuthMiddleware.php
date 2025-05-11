@@ -22,21 +22,33 @@ class AuthMiddleware implements MiddlewareInterface {
      */
     public function process(array $request, callable $next) {
         $path = $request['path'];
+        $method = $request['method'] ?? $_SERVER['REQUEST_METHOD'] ?? 'GET';
         
-        // Check if the path requires authentication
-        foreach ($this->protectedPaths as $protectedPath) {
-            if (strpos($path, $protectedPath) === 0) {
+        // Check if the path and method require authentication
+        foreach ($this->protectedPaths as $protected) {
+            // Allow both string and array definitions for protected paths
+            if (is_array($protected)) {
+                $protectedPath = $protected['path'] ?? '';
+                $protectedMethod = strtoupper($protected['method'] ?? 'GET');
+            } else {
+                $protectedPath = $protected;
+                $protectedMethod = null;
+            }
+            
+            // Match exact path and method if specified
+            if (
+                (strpos($path, $protectedPath) === 0) &&
+                ($protectedMethod === null || $protectedMethod === strtoupper($method))
+            ) {
                 // Initialize session if needed
                 SessionManager::initialize();
                 
                 // Check if user is authenticated
                 if (!SessionManager::getCurrentUserId()) {
                     if ($request['isApi']) {
-                        // API requests return JSON error
                         ResponseHandler::respond(false, 'Unauthorized access', 401);
                         return;
                     } else {
-                        // Web requests redirect to home with parameter to show login popup
                         header('Location: /?showLogin=1&redirect=' . urlencode($path));
                         exit;
                     }

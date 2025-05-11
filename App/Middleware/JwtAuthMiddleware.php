@@ -15,10 +15,22 @@ class JwtAuthMiddleware implements MiddlewareInterface {
 
     public function process(array $request, callable $next) {
         $path = isset($request['path']) ? $request['path'] : '/';
+        $method = isset($request['method']) ? strtoupper($request['method']) : (isset($_SERVER['REQUEST_METHOD']) ? strtoupper($_SERVER['REQUEST_METHOD']) : 'GET');
 
-        // Check if the path requires authentication
-        foreach ($this->protectedPaths as $protectedPath) {
-            if (strpos($path, $protectedPath) === 0) {
+        // Check if the path and method require authentication
+        foreach ($this->protectedPaths as $protected) {
+            if (is_array($protected)) {
+                $protectedPath = $protected['path'] ?? '';
+                $protectedMethod = strtoupper($protected['method'] ?? 'GET');
+            } else {
+                $protectedPath = $protected;
+                $protectedMethod = null;
+            }
+            // Match exact path and method if specified
+            if (
+                (strpos($path, $protectedPath) === 0) &&
+                ($protectedMethod === null || $protectedMethod === $method)
+            ) {
                 // Validate the JWT token
                 $headers = getallheaders();
                 $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : null;

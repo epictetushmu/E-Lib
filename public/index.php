@@ -110,30 +110,33 @@ SessionManager::initialize();
 // Create router with database
 $router = new BaseRouter($baseUrl);
 
-// require_once __DIR__ . '/../App/bootstrap.php';
-
 // Add middleware
 $router->addMiddleware(new LoggingMiddleware());
 $router->addMiddleware(new AuthMiddleware([
-    '/profile',
-    '/add-book',
-    '/read/',
-    '/dashboard',
-    '/admin/logs', // Added protection for admin logs page
-    '/api/v1/books' // Only POST requests actually need auth, but we keep it simple here
+    // Protect profile and dashboard pages for logged-in users
+    ['path' => '/profile', 'method' => 'GET'],
+    ['path' => '/dashboard', 'method' => 'GET'],
+    ['path' => '/admin/logs', 'method' => 'GET'],
+    // Protect book management endpoints
+    ['path' => '/api/v1/books', 'method' => 'POST'],
+    ['path' => '/api/v1/books', 'method' => 'PUT'],
+    ['path' => '/api/v1/books', 'method' => 'DELETE'],
 ]));
 
 $router->addMiddleware(new JwtAuthMiddleware([
-    '/api/v1/books',
-    '/api/v1/reviews',
-    '/api/v1/download',
-    '/api/v1/user',
-    '/api/v1/admin/logs', // Added protection for admin logs API endpoint
-    'api/v1/save-book',
-    'api/v1/remove-book',
-    'api/v1/saved-books',
-    '/api/v1/books/([0-9a-f]{24})/file', // Fixed path pattern to match actual route with book ID
-    '/api/v1/books/([0-9a-f]{24})/download', 
+    // Protect user-specific and admin API endpoints
+    ['path' => '/api/v1/user', 'method' => 'GET'],
+    ['path' => '/api/v1/remove-book', 'method' => 'POST'],
+    ['path' => '/api/v1/save-book', 'method' => 'POST'],
+    ['path' => '/api/v1/saved-books', 'method' => 'GET'],
+    ['path' => '/api/v1/reviews', 'method' => 'POST'],
+    ['path' => '/api/v1/books/([0-9a-f]{24})/file', 'method' => 'GET'],
+    ['path' => '/api/v1/books/([0-9a-f]{24})/download', 'method' => 'GET'],
+    ['path' => '/api/v1/admin/logs', 'method' => 'GET'],
+    ['path' => '/api/v1/update-profile', 'method' => 'POST'],
+
+
+    // ...add more as needed
 ]));
 
 // Handle the request
