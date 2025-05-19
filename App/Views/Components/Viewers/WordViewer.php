@@ -59,8 +59,116 @@ function initializeWordViewer() {
         document.getElementById('downloadWordBtn').style.display = 'none';
     }
     
+    // Add metadata display to the viewer
+    addMetadataDisplay();
+    
     // Fetch and render DOCX document
     fetchAndRenderDocument();
+    
+    /**
+     * Adds a metadata panel to display document properties
+     */
+    function addMetadataDisplay() {
+        // Create metadata container
+        const metadataContainer = document.createElement('div');
+        metadataContainer.className = 'document-metadata';
+        metadataContainer.innerHTML = `
+            <div class="metadata-header">
+                <button class="btn btn-sm btn-outline-secondary toggle-metadata">
+                    <i class="fas fa-info-circle"></i> Document Info
+                </button>
+            </div>
+            <div class="metadata-content" style="display: none;">
+                <div class="metadata-loading">Loading document information...</div>
+                <div class="metadata-details" style="display: none;">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <th>Title</th>
+                                <td class="metadata-title"></td>
+                            </tr>
+                            <tr>
+                                <th>Author</th>
+                                <td class="metadata-author"></td>
+                            </tr>
+                            <tr>
+                                <th>Last Modified</th>
+                                <td class="metadata-date"></td>
+                            </tr>
+                            <tr>
+                                <th>Subject</th>
+                                <td class="metadata-subject"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        // Insert after document container
+        documentContainer.parentNode.insertBefore(metadataContainer, documentContainer.nextSibling);
+        
+        // Set up toggle functionality
+        const toggleBtn = metadataContainer.querySelector('.toggle-metadata');
+        const metadataContent = metadataContainer.querySelector('.metadata-content');
+        
+        toggleBtn.addEventListener('click', function() {
+            if (metadataContent.style.display === 'none') {
+                metadataContent.style.display = 'block';
+                
+                // If we haven't fetched metadata yet, do it now
+                if (!metadataFetched) {
+                    fetchDocumentMetadata();
+                }
+            } else {
+                metadataContent.style.display = 'none';
+            }
+        });
+    }
+    
+    // Track if metadata has been fetched
+    let metadataFetched = false;
+    
+    /**
+     * Fetches document metadata from the server
+     */
+    function fetchDocumentMetadata() {
+        const url = `/api/v1/books/${bookId}/metadata`;
+        
+        // Show loading indicator
+        const metadataLoading = document.querySelector('.metadata-loading');
+        const metadataDetails = document.querySelector('.metadata-details');
+        
+        fetch(url, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(metadata => {
+            // Hide loading, show details
+            metadataLoading.style.display = 'none';
+            metadataDetails.style.display = 'block';
+            
+            // Populate metadata fields
+            document.querySelector('.metadata-title').textContent = metadata.title || 'Unknown';
+            document.querySelector('.metadata-author').textContent = metadata.author || 'Unknown';
+            document.querySelector('.metadata-date').textContent = metadata.date || 'Unknown';
+            document.querySelector('.metadata-subject').textContent = metadata.subject || 'N/A';
+            
+            metadataFetched = true;
+        })
+        .catch(error => {
+            console.error("Error fetching document metadata:", error);
+            metadataLoading.textContent = "Could not load document information";
+        });
+    }
     
     function fetchAndRenderDocument() {
         const url = `/api/v1/books/${bookId}/file`;
@@ -90,7 +198,7 @@ function initializeWordViewer() {
             applyDocumentStyling();
             
             // Hide spinner
-            spinner.style.display = 'none';
+            if (spinner) spinner.style.display = 'none';
             
             // Handle any warnings if needed
             if (result.messages.length > 0) {
@@ -102,7 +210,7 @@ function initializeWordViewer() {
             // Show fallback message if rendering fails
             documentContainer.style.display = 'none';
             fallbackMessage.style.display = 'block';
-            spinner.style.display = 'none';
+            if (spinner) spinner.style.display = 'none';
         });
     }
     
