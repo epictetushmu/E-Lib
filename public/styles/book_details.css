@@ -1,6 +1,6 @@
-.book-bookPdf {
+.book-bookFile {
     max-height: 400px;
-    object-fit: bookPdf;
+    object-fit: bookFile;
     object-position: top;
     border-radius: 10px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);

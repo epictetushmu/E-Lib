@@ -17,9 +17,9 @@
     font-weight: bold;
     margin: 0 auto 20px;
 }
-.book-bookPdf {
+.book-bookFile {
     height: 180px;
-    object-fit: bookPdf;
+    object-fit: bookFile;
 }
 .nav-pills .nav-link.active {
     background-color: #0d6efd;

@@ -160,16 +160,16 @@ class BookController {
         }
       
         // Check file upload
-        if (!isset($_FILES['bookPdf']) || $_FILES['bookPdf']['error'] != 0) {
-            error_log("File upload error: " . ($_FILES['bookPdf']['error'] ?? 'No file uploaded'));
+        if (!isset($_FILES['bookFile']) || $_FILES['bookFile']['error'] != 0) {
+            error_log("File upload error: " . ($_FILES['bookFile']['error'] ?? 'No file uploaded'));
             return $this->response->respond(false, 'PDF file upload error', 400);
         }
 
         // Initialize FileHelper with temporary path
-        $fileHelper = new FileHelper($_FILES['bookPdf']['tmp_name']);
+        $fileHelper = new FileHelper($_FILES['bookFile']['tmp_name']);
         
         // Store the PDF
-        $storedFile = $fileHelper->storeFile($_FILES['bookPdf']);
+        $storedFile = $fileHelper->storeFile($_FILES['bookFile']);
         
         if (!$storedFile) {
             error_log("Failed to store file");

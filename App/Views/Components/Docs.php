@@ -308,7 +308,7 @@ class JwtAuthMiddleware implements MiddlewareInterface {
 public function addBook() {
     // Validate file
     $validator = new FileValidator();
-    if (!$validator->validate($_FILES['bookPdf'])) {
+    if (!$validator->validate($_FILES['bookFile'])) {
         return ResponseHandler::respond(false, 'Invalid file');
     }
     
@@ -317,7 +317,7 @@ public function addBook() {
     $path = UPLOAD_DIR . '/' . $filename;
     
     // Save file securely
-    if (move_uploaded_file($_FILES['bookPdf']['tmp_name'], $path)) {
+    if (move_uploaded_file($_FILES['bookFile']['tmp_name'], $path)) {
         // Generate thumbnail
         $thumbPath = $this->pdfHelper->createThumbnail($path);
         

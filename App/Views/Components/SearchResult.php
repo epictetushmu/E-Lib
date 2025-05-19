@@ -4,7 +4,7 @@
                     <div class="col-md-4 col-lg-3 mb-4">
                         <div class="card h-100 shadow-sm">
                             <img src="<?= htmlspecialchars($book['thumbnail'] ?: '/assets/uploads/thumbnails/placeholder-book.jpg') ?>" 
-                                class="card-img-top book-bookPdf" 
+                                class="card-img-top book-bookFile" 
                                 alt="<?= htmlspecialchars($book['title']) ?>">
                             <div class="card-body">
                                 <h5 class="card-title"><?= htmlspecialchars($book['title']) ?></h5>
