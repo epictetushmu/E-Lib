@@ -497,6 +497,70 @@ public function addBook() {
     </section>
 
     <section class="mb-5">
+        <h2>Testing Framework</h2>
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-vial me-2"></i> PHPUnit Testing
+            </div>
+            <div class="card-body">
+                <p>E-Lib includes a comprehensive testing framework powered by PHPUnit. The testing structure follows modern PHP testing practices with separate test suites for different testing concerns.</p>
+                
+                <h5 class="mt-4">Test Structure</h5>
+                <ul>
+                    <li><strong>Unit Tests:</strong> Test individual components in isolation</li>
+                    <li><strong>Integration Tests:</strong> Test how components work together</li>
+                    <li><strong>Feature Tests:</strong> Test complete application features</li>
+                </ul>
+
+                <h5 class="mt-4">Running Tests</h5>
+                <pre class="bg-light p-3 rounded"><code>// Run all tests
+./vendor/bin/phpunit
+
+// Run a specific test suite
+./vendor/bin/phpunit --testsuite Unit
+
+// Run a specific test file
+./vendor/bin/phpunit tests/Unit/JsonDbInteractionTest.php
+
+// Run with coverage report
+./vendor/bin/phpunit --coverage-html coverage-report</code></pre>
+                
+                <h5 class="mt-4">Writing Tests</h5>
+                <p>Tests should follow these best practices:</p>
+                <ul>
+                    <li>Use descriptive method names that explain the test scenario</li>
+                    <li>Follow the Arrange-Act-Assert pattern</li>
+                    <li>Use setUp() and tearDown() for common test preparation and cleanup</li>
+                    <li>Create isolated test environments that don't affect production data</li>
+                    <li>Mock external dependencies when appropriate</li>
+                </ul>
+                
+                <h5 class="mt-4">Example Test</h5>
+                <pre class="bg-light p-3 rounded"><code>public function testBookCanBeAddedToDatabase()
+{
+    // Arrange - Set up test data
+    $bookData = [
+        'title' => 'Test Book Title',
+        'author' => 'Test Author',
+        'year' => 2023
+    ];
+    
+    // Act - Perform the action being tested
+    $result = $this->bookService->addBook($bookData);
+    
+    // Assert - Verify the expected outcome
+    $this->assertNotEmpty($result['id']);
+    $this->assertTrue($result['success']);
+    
+    // Verify the book was actually added to the database
+    $book = $this->bookService->getBookById($result['id']);
+    $this->assertEquals('Test Book Title', $book['title']);
+}</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-5">
         <h2>Development Information</h2>
         <div class="card">
             <div class="card-body">
