@@ -294,23 +294,45 @@ For a complete API reference, see the [API Documentation](../api-docs.md).
 
 ## Testing
 
-E-Lib uses PHPUnit for testing.
+### PHP static checks
 
-### Running Tests
+Composer scripts run PHP_CodeSniffer and PHPStan:
 
 ```bash
-# Run all tests
-./vendor/bin/phpunit
-
-# Run a specific test file
-./vendor/bin/phpunit tests/specs/BooksModelTest.php
+composer run check
 ```
 
-### Test Types
+### End-to-end (Playwright)
 
-1. **Unit Tests**: Test individual components in isolation
-2. **Integration Tests**: Test interactions between components
-3. **End-to-End Tests**: Test complete user flows
+Browser regression tests live under `tests/e2e/`. They need MongoDB reachable with the same `MONGO_URI` as in `.env`, and the app served (for example `php -S 127.0.0.1:8000 -t public` from the project root).
+
+One-time setup:
+
+```bash
+npm ci
+npx playwright install chromium
+```
+
+Run tests (when nothing is listening on port 8000, Playwright starts the PHP server automatically):
+
+```bash
+npm run test:e2e
+```
+
+Interactive debugging:
+
+```bash
+npm run test:e2e:ui
+```
+
+CI runs these on every push and pull request via `.github/workflows/e2e.yml` (MongoDB service + PHP + Playwright).
+
+### Test types
+
+1. **Smoke (`smoke.spec.ts`)**: Public routes return HTML and expected titles.
+2. **Negative (`negative.spec.ts`)**: Unknown routes and invalid book IDs yield 404 HTML; unauthenticated visits to `/profile` and `/dashboard` redirect home with `showLogin`; JWT APIs return 401/404 without a bearer token or for bad requests.
+3. **Authenticated (`authenticated.spec.ts`)**: After API signup/login in `auth.setup.ts`, session-protected pages load without redirect to login.
+4. **PHP quality**: Lint and static analysis via `composer run check`.
 
 ## Troubleshooting
 

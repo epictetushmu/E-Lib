@@ -36,4 +36,4 @@ node_modules/
 # Playwright (local E2E runs)
 playwright-report/
 test-results/
-playwright/.cache/
+playwright/
