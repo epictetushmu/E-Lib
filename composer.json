@@ -36,12 +36,14 @@
         "check": [
             "@lint",
             "@analyse"
-        ]
+        ],
+        "db:setup": "php scripts/db-setup.php"
     },
     "scripts-descriptions": {
         "lint": "Run PHP_CodeSniffer (PSR-12, see phpcs.xml).",
         "lint:fix": "Auto-fix PHPCS violations where possible.",
         "analyse": "Run PHPStan static analysis (see phpstan.neon).",
-        "check": "Run lint + analyse (typical pre-commit / CI)."
+        "check": "Run lint + analyse (typical pre-commit / CI).",
+        "db:setup": "Provision MongoDB collections (Books, Users) and required indexes. Safe to re-run."
     }
 }
