@@ -213,8 +213,7 @@ class BookController
         $uploadErr = (int) ($_FILES['bookFile']['error'] ?? UPLOAD_ERR_NO_FILE);
         if ($uploadErr !== UPLOAD_ERR_OK) {
             $msg = match ($uploadErr) {
-                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE =>
-                    'PDF exceeds server upload size limit (php.ini upload_max_filesize / post_max_size).',
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'PDF exceeds server upload size limit (php.ini upload_max_filesize / post_max_size).',
                 UPLOAD_ERR_PARTIAL => 'PDF upload was interrupted.',
                 UPLOAD_ERR_NO_FILE => 'No PDF file was selected.',
                 default => 'PDF file upload error (code ' . $uploadErr . ').',
@@ -391,7 +390,7 @@ class BookController
 
     /**
      * Get reviews for a book
-     * @param string $bookId
+     * @param string $name
      */
     public function getReviews($bookId)
     {
@@ -575,8 +574,7 @@ class BookController
                     } elseif (is_array($response) && isset($response['insertedId'])) {
                         $resultId = $response['insertedId'];
                     } else {
-                        // Neither array (handled above) nor string (handled above) at this point
-                        $resultId = json_encode($response);
+                        $resultId = is_string($response) ? $response : json_encode($response);
                     }
 
                     $results['success'][] = [
@@ -742,8 +740,7 @@ class BookController
         // Ensure we are only serving PDFs
         $actualExtension = isset($book['file_extension']) ? strtolower($book['file_extension']) : 'pdf';
         if ($actualExtension !== 'pdf') {
-             // If for some reason a non-PDF is requested (legacy data), we might want to block it or
-             // try to serve it as PDF (which might fail in browser but acts as a restriction)
+             // If for some reason a non-PDF is requested (legacy data), we might want to block it or try to serve it as PDF (which might fail in browser but acts as a restriction)
              // For strict restriction:
              // $this->response->respond(false, 'Only PDF files are supported', 400);
              // return;

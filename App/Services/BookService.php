@@ -57,7 +57,7 @@ class BookService
         $book = [
             'title' => $title,
             'author' => $author,
-            'year' => (int)$year,
+            'year' => (int)$year ?? null,
             'description' => $description,
             'categories' => $categories,
             'isbn' => $isbn,
@@ -93,7 +93,7 @@ class BookService
         $book = [
             'title' => $title,
             'author' => $author,
-            'year' => (int)$year,
+            'year' => (int)$year ?? null,
             'description' => $description,
             'categories' => $categories,
             'isbn' => $isbn,
