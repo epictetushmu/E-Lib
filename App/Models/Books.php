@@ -19,11 +19,6 @@ class Books extends BaseModel
     private const REQUIRED_FIELDS = ['title', 'author'];
 
     /**
-     * Optional fields for a book
-     */
-    private const OPTIONAL_FIELDS = ['year', 'description', 'categories', 'isbn', 'status', 'featured', 'downloadable', 'pdf_path', 'file_path', 'thumbnail', 'thumbnail_path'];
-
-    /**
      * Get all books in the database
      *
      * @return array Array of all books
