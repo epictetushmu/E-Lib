@@ -38,7 +38,7 @@ class JsonDatabase extends JsonDbInteraction implements DatabaseInterface
                     $data['_id'] = bin2hex(random_bytes(12));
                 } catch (Exception $e) {
                     // Fallback if random_bytes fails (unlikely)
-                    $data['_id'] = substr(md5(uniqid(rand(), true)), 0, 24);
+                    $data['_id'] = substr(md5(uniqid((string) mt_rand(), true)), 0, 24);
                 }
             }
 

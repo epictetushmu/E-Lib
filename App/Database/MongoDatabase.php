@@ -16,7 +16,7 @@ class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface
     /**
      * Constructor
      *
-     * @param Database $database A MongoDB Database instance or null for auto-connect
+     * Connects to the 'LibraryDb' database via MongoConnectionFactory.
      */
     public function __construct()
     {

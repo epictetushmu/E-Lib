@@ -14,30 +14,26 @@ class DatabaseRepository
 {
     private static $instance = null;
     private $database;
-    private $databaseName;
 
     /**
      * Private constructor to enforce Singleton pattern
-     *
-     * @param string|null $dbName Optional database name, defaults to value from environment
      */
-    private function __construct($dbName = null)
+    private function __construct()
     {
-        $this->databaseName = $dbName ? $dbName : Environment::get('DB_NAME', 'LibraryDb');
-
         $this->database = new MongoDatabase();
     }
 
     /**
      * Get the singleton instance of DatabaseRepository
      *
-     * @param string|null $dbName Optional database name
+     * @param string|null $dbName Optional database name (currently unused: MongoDatabase connects
+     *   to a hardcoded database name; kept for API compatibility with existing callers).
      * @return DatabaseRepository
      */
     public static function getInstance($dbName = null)
     {
         if (self::$instance === null) {
-            self::$instance = new self($dbName);
+            self::$instance = new self();
         }
         return self::$instance;
     }

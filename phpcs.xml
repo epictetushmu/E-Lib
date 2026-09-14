@@ -25,6 +25,7 @@
         <exclude-pattern>setup-mongodb-cert.php</exclude-pattern>
         <exclude-pattern>docker-entrypoint.php</exclude-pattern>
         <exclude-pattern>check-system.php</exclude-pattern>
+        <exclude-pattern>scripts/db-setup.php</exclude-pattern>
     </rule>
 
     <rule ref="Generic.Files.LineLength">
