@@ -5,7 +5,6 @@ namespace App\Helpers;
 class FileHelper
 {
     private $filePath;
-    private $thumbnailPath;
     private $fileType;
     private $fileExtension;
 
@@ -13,12 +12,10 @@ class FileHelper
      * Constructor
      *
      * @param string $filePath Path to the document file
-     * @param string $thumbnailPath Optional thumbnail path
      */
-    public function __construct($filePath = null, $thumbnailPath = null)
+    public function __construct($filePath = null)
     {
         $this->filePath = $filePath;
-        $this->thumbnailPath = $thumbnailPath;
 
         if ($filePath) {
             $this->detectFileType($filePath);
