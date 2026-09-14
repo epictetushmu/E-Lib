@@ -30,7 +30,11 @@ class ApiRouter
 
             // New API routes for secure PDF viewing
             ['method' => 'GET', 'path' => '/api/v1/books/([0-9a-f]{24})/file', 'handler' => [new BookController(), 'streamBookFile']],
-            ['method' => 'GET', 'path' => '/api/v1/books/([0-9a-f]{24})/thumbnail', 'handler' => [new BookController(), 'streamBookThumbnail']],
+            [
+                'method' => 'GET',
+                'path' => '/api/v1/books/([0-9a-f]{24})/thumbnail',
+                'handler' => [new BookController(), 'streamBookThumbnail'],
+            ],
 
             ['method' => 'GET', 'path' => '/api/v1/search/(\w+)', 'handler' => [new BookController(), 'searchBooks']],
 

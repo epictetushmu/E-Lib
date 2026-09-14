@@ -347,7 +347,7 @@ class UserController
         }
 
         // Send logs as JSON response
-        ResponseHandler::respond(true, 'Logs retrieved successfully', 200, $logs);
+        ResponseHandler::respond(true, $logs, 200);
     }
 
     /**

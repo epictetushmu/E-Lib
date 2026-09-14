@@ -15,7 +15,7 @@ class JsonDbInteraction
     /** @var JsonDatabase */
     private static $jsonDb = null;
 
-    /** @var string Default storage path */
+    /** @var string|null Default storage path */
     private static $storagePath = null;
 
     /**
