@@ -44,7 +44,7 @@ class CasService
 
             // Process the CAS server response
             $lines = explode("\n", trim($body));
-            if (strtolower(trim($lines[0])) === 'yes') {
+            if (count($lines) >= 1 && strtolower(trim($lines[0])) === 'yes') {
                 return true;
             }
 

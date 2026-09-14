@@ -15,7 +15,7 @@ class DbController
     private static $instance = null;
     private $repository;
 
-    private function __construct()
+    private function __construct($dbName = null)
     {
         $this->repository = DatabaseFactory::getDatabase();
 
@@ -31,14 +31,13 @@ class DbController
     /**
      * Get singleton instance
      *
-     * @param string|null $dbName Optional database name (currently unused: DatabaseFactory
-     *   connects to a hardcoded database name; kept for API compatibility with existing callers).
+     * @param string|null $dbName Optional database name
      * @return DbController
      */
     public static function getInstance($dbName = null)
     {
         if (self::$instance === null) {
-            self::$instance = new self();
+            self::$instance = new self($dbName);
         }
         return self::$instance;
     }
