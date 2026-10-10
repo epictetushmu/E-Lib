@@ -421,7 +421,7 @@ onBeforeUnmount(() => {
           @change="handleGoToPage"
           @keydown.enter="handleGoToPage"
         />
-        <span>of {{ pdf.numPages.value || '—' }}</span>
+        <span data-testid="page-count">of {{ pdf.numPages.value || '—' }}</span>
       </div>
 
       <div class="toolbar-tools">
@@ -450,7 +450,7 @@ onBeforeUnmount(() => {
             :aria-busy="search.searching.value"
             @keydown="handleSearchKey"
           />
-          <span class="search-status" :class="{ 'is-empty': search.status.value === 'No matches' }" aria-live="polite">{{
+          <span data-testid="search-status" class="search-status" :class="{ 'is-empty': search.status.value === 'No matches' }" aria-live="polite">{{
             search.status.value
           }}</span>
           <template v-if="search.matches.value.length">
@@ -489,7 +489,7 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <button type="button" class="notes-toggle" :aria-pressed="notesOpen" @click="notesOpen = !notesOpen">
+        <button type="button" class="notes-toggle" data-testid="notes-toggle" :aria-pressed="notesOpen" @click="notesOpen = !notesOpen">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM9 11h7M9 15h7" /></svg>
           Notes<span v-if="annotations.items.value.length" class="notes-count">{{ annotations.items.value.length }}</span>
         </button>
@@ -580,7 +580,7 @@ onBeforeUnmount(() => {
             Nothing here yet. Select text on a page to highlight it, or add a note above.
           </p>
           <ul v-else class="notes-list">
-            <li v-for="item in annotations.sorted.value" :key="item.id" class="note-item">
+            <li v-for="item in annotations.sorted.value" :key="item.id" class="note-item" data-testid="note-item">
               <button type="button" class="note-page" @click="pdf.goToPage(item.page)">p. {{ item.page }}</button>
               <div class="note-body">
                 <blockquote v-if="item.quote" :class="['note-quote', `quote-${item.color ?? 'saffron'}`]">{{ item.quote }}</blockquote>

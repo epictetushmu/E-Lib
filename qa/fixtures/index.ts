@@ -1,7 +1,14 @@
-import { test as base, expect, type APIRequestContext, type Page } from '@playwright/test';
-import { createBookViaApi, deleteBookViaApi, loginAsAdmin, setBookVisibility } from '../support/api';
+import { test as base, expect, type APIRequestContext, type Browser, type Page, type PlaywrightWorkerArgs } from '@playwright/test';
+import {
+  createBookViaApi,
+  deleteAllAnnotations,
+  deleteBookViaApi,
+  loginAsAdmin,
+  loginViaApi,
+  setBookVisibility,
+} from '../support/api';
 import { requireEnv } from '../support/env';
-import { buildSamplePdf } from '../support/samplePdf';
+import { buildReaderPdf, buildSamplePdf } from '../support/samplePdf';
 import { buildTestUser, uniqueBookTitle, type TestUser } from '../support/testData';
 import { LoginPage } from '../pages/LoginPage';
 
@@ -51,12 +58,51 @@ interface AdminCredentials {
   password: string;
 }
 
+/**
+ * A logged-in reader: their page, account, and their own API client + token for setup and
+ * cross-checks as them. The API client is per reader on purpose: logging in through a shared
+ * one would leave the last user's PHP session cookie on it, and the API trusts that cookie
+ * over the Bearer token (AuthenticatedUser::id()), so calls would act as the wrong user.
+ */
+export interface ReaderSession {
+  page: Page;
+  user: TestUser;
+  api: APIRequestContext;
+  token: string;
+}
+
 interface Fixtures {
   registeredUser: TestUser;
   adminCredentials: AdminCredentials;
   authenticatedPage: Page;
   adminPage: Page;
   seededBook: { id: string; title: string };
+  readerBook: { id: string; title: string };
+  reader: ReaderSession;
+  otherReader: ReaderSession;
+}
+
+/** Signs up a fresh user and logs them in, in its own browser context (so two users can be open at once). */
+async function startReaderSession(
+  browser: Browser,
+  playwright: PlaywrightWorkerArgs['playwright'],
+  baseURL: string | undefined,
+  prefix: string,
+): Promise<{ session: ReaderSession; close: () => Promise<void> }> {
+  const user = buildTestUser(prefix);
+  const api = await playwright.request.newContext({ baseURL });
+  await registerViaApi(api, user);
+  const context = await browser.newContext({ baseURL });
+  const page = await context.newPage();
+  await loginViaUi(page, user);
+  const token = await loginViaApi(api, user.email, user.password);
+  return {
+    session: { page, user, api, token },
+    close: async () => {
+      await context.close();
+      await api.dispose();
+    },
+  };
 }
 
 export const test = base.extend<Fixtures>({
@@ -110,6 +156,37 @@ export const test = base.extend<Fixtures>({
     await use({ id, title });
 
     await deleteBookViaApi(request, token, id);
+  },
+
+  // A public, multi-page text book for the reader specs (search, navigation,
+  // highlights, notes) — see READER_PDF in support/samplePdf.ts for its contents.
+  readerBook: async ({ request, adminCredentials }, use) => {
+    const token = await loginAsAdmin(request, adminCredentials.email, adminCredentials.password);
+    const title = uniqueBookTitle('QA Reader Book');
+    const id = await createBookViaApi(request, token, { title, pdf: buildReaderPdf() });
+    await setBookVisibility(request, token, id, { status: 'public' });
+
+    await use({ id, title });
+
+    await deleteBookViaApi(request, token, id);
+  },
+
+  // A logged-in reader of readerBook. Their highlights/notes on it are removed
+  // afterwards through the real annotations API (the account itself stays, like
+  // every other e2e user — there's no delete-account API).
+  reader: async ({ browser, playwright, baseURL, readerBook }, use) => {
+    const { session, close } = await startReaderSession(browser, playwright, baseURL, 'qa_reader');
+    await use(session);
+    await deleteAllAnnotations(session.api, session.token, readerBook.id);
+    await close();
+  },
+
+  // A second, unrelated reader of the same book — for privacy checks.
+  otherReader: async ({ browser, playwright, baseURL, readerBook }, use) => {
+    const { session, close } = await startReaderSession(browser, playwright, baseURL, 'qa_other');
+    await use(session);
+    await deleteAllAnnotations(session.api, session.token, readerBook.id);
+    await close();
   },
 });
 

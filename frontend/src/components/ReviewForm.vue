@@ -59,6 +59,7 @@ async function submit() {
         class="star-btn"
         :class="{ filled: i <= (hoverRating || rating) }"
         :aria-checked="i === rating"
+        :aria-label="`${i} star${i > 1 ? 's' : ''}`"
         role="radio"
         @click="rating = i"
         @mouseenter="hoverRating = i"
