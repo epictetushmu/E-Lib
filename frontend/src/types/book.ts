@@ -19,6 +19,11 @@ export interface Book {
   downloadable?: boolean
   thumbnail?: string
   average_rating?: number
+  review_count?: number
+  views?: number
+  downloads?: number
+  /** BSON UTCDateTime as json_encode emits it. */
+  created_at?: { $date: { $numberLong: string } }
   published_date?: string
   language?: string
   pages?: number

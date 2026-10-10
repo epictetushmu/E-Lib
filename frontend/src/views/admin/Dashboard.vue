@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import * as adminApi from '@/api/admin'
 import { isApiSuccess, apiErrorMessage, requestErrorMessage, type ApiError } from '@/types/api'
 import type { Book } from '@/types/book'
 import { idToString } from '@/types/book'
 import { useToast } from '@/composables/useToast'
 import { useCategoryOptions } from '@/composables/useCategoryOptions'
+import { thumbnailUrl } from '@/api/books'
+import { onThumbnailError } from '@/utils/dom'
 import CategoryPicker from '@/components/CategoryPicker.vue'
 
 const toast = useToast()
@@ -22,12 +24,86 @@ async function loadBooks() {
   try {
     const response = await adminApi.getAllBooks()
     const body = response.data
-    books.value = isApiSuccess(body) ? body.data : []
+    // Newest first: the books an admin just uploaded are the ones they're most likely to fix up.
+    books.value = isApiSuccess(body) ? [...body.data].sort((a, b) => addedAt(b) - addedAt(a)) : []
   } catch {
-    loadError.value = 'Failed to fetch books.'
+    loadError.value = "Couldn't load the catalogue. Check that the server is running, then try again."
   } finally {
     loading.value = false
   }
+}
+
+function addedAt(book: Book): number {
+  return Number(book.created_at?.$date?.$numberLong ?? 0)
+}
+
+// --- Filters (also the shelf's legend) ---
+type Filter = 'all' | 'public' | 'draft' | 'featured' | 'locked'
+const filter = ref<Filter>('all')
+const query = ref('')
+
+const filterTests: Record<Filter, (book: Book) => boolean> = {
+  all: () => true,
+  public: (b) => b.status === 'public',
+  draft: (b) => b.status !== 'public',
+  featured: (b) => !!b.featured,
+  locked: (b) => b.downloadable === false,
+}
+
+const filters = computed(() =>
+  (
+    [
+      ['all', 'All'],
+      ['public', 'Public'],
+      ['draft', 'Drafts'],
+      ['featured', 'Featured'],
+      ['locked', 'Downloads off'],
+    ] as const
+  ).map(([key, label]) => ({
+    key,
+    label,
+    count: books.value.filter(filterTests[key]).length,
+  })),
+)
+
+function matches(book: Book): boolean {
+  const q = query.value.trim().toLowerCase()
+  const text = `${book.title ?? ''} ${book.author ?? ''}`.toLowerCase()
+  return filterTests[filter.value](book) && (!q || text.includes(q))
+}
+
+const visibleBooks = computed(() => books.value.filter(matches))
+
+function clearFilters() {
+  filter.value = 'all'
+  query.value = ''
+}
+
+// --- The shelf: one spine per book, public before drafts, featured first ---
+const shelf = computed(() => {
+  const rank = (b: Book) => (b.status === 'public' ? (b.featured ? 0 : 1) : 2)
+  const reads = (b: Book) => (b.views ?? 0) + (b.downloads ?? 0)
+  const mostRead = Math.max(1, ...books.value.map(reads))
+  // ponytail: one flex item per book, spines thin to 2px past ~400 books; bucket by category if the catalogue grows that big.
+  return [...books.value]
+    .sort((a, b) => rank(a) - rank(b))
+    .map((book) => ({
+      book,
+      id: idToString(book._id),
+      height: 72 + (28 * reads(book)) / mostRead,
+    }))
+})
+
+const flashedId = ref('')
+
+async function showOnShelf(id: string) {
+  if (!visibleBooks.value.some((b) => idToString(b._id) === id)) clearFilters()
+  await nextTick()
+  document.getElementById(`book-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  flashedId.value = id
+  setTimeout(() => {
+    if (flashedId.value === id) flashedId.value = ''
+  }, 1600)
 }
 
 function isBusy(id: string) {
@@ -149,81 +225,195 @@ onMounted(loadBooks)
 
 <template>
   <div class="container admin-page" data-testid="dashboard-page">
-    <div class="admin-header">
+    <header class="admin-header">
       <h1 data-testid="dashboard-heading">Manage Books</h1>
-      <RouterLink to="/admin/upload" class="btn btn-primary" data-testid="upload-pdf-link">
-        Upload PDF
-      </RouterLink>
-    </div>
+      <div class="header-actions">
+        <RouterLink to="/admin/logs" class="link-btn">Server logs</RouterLink>
+        <RouterLink to="/admin/upload" class="btn btn-primary" data-testid="upload-pdf-link">Upload PDF</RouterLink>
+      </div>
+    </header>
 
     <div v-if="loading" class="spinner" role="status" aria-label="Loading books" data-testid="dashboard-loading"></div>
-    <p v-else-if="loadError" class="text-muted" data-testid="dashboard-error">{{ loadError }}</p>
 
-    <div v-else class="table-wrap">
-      <table class="admin-table" data-testid="books-table">
-        <thead>
-          <tr>
-            <th>Title</th>
-            <th>Author</th>
-            <th>ISBN</th>
-            <th>Status</th>
-            <th>Featured</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="book in books" :key="String(book._id)" :data-testid="`book-row-${idToString(book._id)}`">
-            <td>{{ book.title }}</td>
-            <td>{{ book.author }}</td>
-            <td>{{ book.isbn }}</td>
-            <td>
-              <button
-                type="button"
-                class="btn btn-sm"
-                :class="book.status === 'public' ? 'btn-primary' : 'btn-outline'"
-                :disabled="isBusy(idToString(book._id))"
-                :data-testid="`status-toggle-${idToString(book._id)}`"
-                @click="toggleStatus(book)"
-              >
-                {{ book.status === 'public' ? 'Public' : 'Draft' }}
-              </button>
-            </td>
-            <td>
-              <button
-                type="button"
-                class="btn btn-sm"
-                :class="book.featured ? 'btn-primary' : 'btn-outline'"
-                :disabled="isBusy(idToString(book._id))"
-                :data-testid="`featured-toggle-${idToString(book._id)}`"
-                @click="toggleFeatured(book)"
-              >
-                {{ book.featured ? 'Featured' : 'Regular' }}
-              </button>
-            </td>
-            <td class="actions-cell">
-              <button
-                type="button"
-                class="btn btn-sm btn-outline"
-                :data-testid="`edit-book-${idToString(book._id)}`"
-                @click="openEdit(book)"
-              >
-                Edit
-              </button>
-              <RouterLink :to="`/read/${idToString(book._id)}`" class="btn btn-sm btn-outline">Preview</RouterLink>
-              <button
-                type="button"
-                class="btn btn-sm btn-outline danger"
-                :disabled="isBusy(idToString(book._id))"
-                :data-testid="`delete-book-${idToString(book._id)}`"
-                @click="handleDelete(book)"
-              >
-                Delete
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-else-if="loadError" class="state-message" data-testid="dashboard-error">
+      <p>{{ loadError }}</p>
+      <button type="button" class="btn btn-outline" @click="loadBooks">Try again</button>
     </div>
+
+    <div v-else-if="!books.length" class="state-message">
+      <p>No books in the catalogue yet. Upload a PDF to start the collection.</p>
+      <RouterLink to="/admin/upload" class="btn btn-primary">Upload PDF</RouterLink>
+    </div>
+
+    <template v-else>
+      <section class="collection" aria-labelledby="collection-summary">
+        <p id="collection-summary" class="summary">
+          {{ books.length }} {{ books.length === 1 ? 'book' : 'books' }}: {{ filters[1].count }} public,
+          {{ filters[2].count }} {{ filters[2].count === 1 ? 'draft' : 'drafts' }}, {{ filters[3].count }} featured.
+        </p>
+
+        <!-- Decorative overview of the same data as the summary and table, so it's hidden from assistive tech. -->
+        <div class="shelf" aria-hidden="true">
+          <button
+            v-for="(spine, i) in shelf"
+            :key="spine.id"
+            type="button"
+            tabindex="-1"
+            class="spine"
+            :class="{
+              draft: spine.book.status !== 'public',
+              featured: spine.book.featured,
+              dim: !matches(spine.book),
+            }"
+            :style="{ height: `${spine.height}%`, '--i': Math.min(i, 40) }"
+            :title="spine.book.title"
+            @click="showOnShelf(spine.id)"
+          ></button>
+        </div>
+
+        <div class="toolbar">
+          <div class="filters" role="group" aria-label="Show books">
+            <button
+              v-for="f in filters"
+              :key="f.key"
+              type="button"
+              class="filter"
+              :class="`filter-${f.key}`"
+              :aria-pressed="filter === f.key"
+              @click="filter = f.key"
+            >
+              {{ f.label }} <span class="count">{{ f.count }}</span>
+            </button>
+          </div>
+          <label class="search">
+            <span class="visually-hidden">Find a book by title or author</span>
+            <input v-model="query" type="search" placeholder="Find by title or author" />
+          </label>
+        </div>
+      </section>
+
+      <div class="table-wrap">
+        <table class="admin-table" data-testid="books-table">
+          <thead>
+            <tr>
+              <th scope="col">Book</th>
+              <th scope="col">Status</th>
+              <th scope="col"><span class="visually-hidden">Featured</span></th>
+              <th scope="col" class="num">Views</th>
+              <th scope="col" class="num">Downloads</th>
+              <th scope="col" class="num">Rating</th>
+              <th scope="col"><span class="visually-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="book in visibleBooks"
+              :id="`book-${idToString(book._id)}`"
+              :key="idToString(book._id)"
+              :class="{ flash: flashedId === idToString(book._id) }"
+              :data-testid="`book-row-${idToString(book._id)}`"
+            >
+              <td>
+                <div class="book-cell">
+                  <img
+                    class="cover"
+                    :src="book.thumbnail || thumbnailUrl(idToString(book._id))"
+                    alt=""
+                    loading="lazy"
+                    @error="onThumbnailError"
+                  />
+                  <div class="book-text">
+                    <cite class="book-title">{{ book.title }}</cite>
+                    <span class="book-meta"
+                      >{{ book.author || 'Unknown author'
+                      }}<template v-if="book.year">, {{ book.year }}</template></span
+                    >
+                    <span v-if="book.categories?.length" class="book-categories">{{ book.categories.join(', ') }}</span>
+                  </div>
+                </div>
+              </td>
+              <td class="status-cell">
+                <button
+                  type="button"
+                  class="status-chip"
+                  :class="book.status === 'public' ? 'is-public' : 'is-draft'"
+                  :title="
+                    book.status === 'public' ? 'Public. Select to move back to drafts.' : 'Draft. Select to publish.'
+                  "
+                  :disabled="isBusy(idToString(book._id))"
+                  :data-testid="`status-toggle-${idToString(book._id)}`"
+                  @click="toggleStatus(book)"
+                >
+                  {{ book.status === 'public' ? 'Public' : 'Draft' }}
+                </button>
+              </td>
+              <td class="featured-cell">
+                <button
+                  type="button"
+                  class="star"
+                  aria-label="Featured"
+                  :aria-pressed="!!book.featured"
+                  :title="
+                    book.featured
+                      ? 'Featured on the home page. Select to remove.'
+                      : 'Select to feature on the home page.'
+                  "
+                  :disabled="isBusy(idToString(book._id))"
+                  :data-testid="`featured-toggle-${idToString(book._id)}`"
+                  @click="toggleFeatured(book)"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" />
+                  </svg>
+                </button>
+              </td>
+              <td class="num" data-label="Views">{{ book.views ?? 0 }}</td>
+              <td class="num" data-label="Downloads">
+                <span v-if="book.downloadable === false" class="locked" title="Downloads are turned off for this book"
+                  >Off</span
+                >
+                <template v-else>{{ book.downloads ?? 0 }}</template>
+              </td>
+              <td class="num" data-label="Rating">
+                <template v-if="book.review_count">
+                  {{ book.average_rating?.toFixed(1) }}
+                  <span class="reviews"
+                    >{{ book.review_count }} {{ book.review_count === 1 ? 'review' : 'reviews' }}</span
+                  >
+                </template>
+                <span v-else class="none">None yet</span>
+              </td>
+              <td class="actions-cell">
+                <button
+                  type="button"
+                  class="link-btn"
+                  :data-testid="`edit-book-${idToString(book._id)}`"
+                  @click="openEdit(book)"
+                >
+                  Edit
+                </button>
+                <RouterLink :to="`/read/${idToString(book._id)}`" class="link-btn">Preview</RouterLink>
+                <button
+                  type="button"
+                  class="link-btn danger"
+                  :disabled="isBusy(idToString(book._id))"
+                  :data-testid="`delete-book-${idToString(book._id)}`"
+                  @click="handleDelete(book)"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+            <tr v-if="!visibleBooks.length" class="no-match">
+              <td colspan="7">
+                No books match these filters.
+                <button type="button" class="link-btn" @click="clearFilters">Show all books</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
 
     <div v-if="editing" class="modal-overlay" @click.self="closeEdit">
       <div class="modal-panel card">
@@ -258,7 +448,10 @@ onMounted(loadBooks)
               <label><input v-model="editForm.featured" type="checkbox" /> Featured</label>
             </div>
             <div class="form-field checkbox-field">
-              <label><input v-model="editForm.downloadable" type="checkbox" data-testid="edit-downloadable-checkbox" /> Downloadable</label>
+              <label
+                ><input v-model="editForm.downloadable" type="checkbox" data-testid="edit-downloadable-checkbox" />
+                Downloadable</label
+              >
             </div>
             <div class="form-field span-2">
               <label for="edit-categories">Categories</label>
