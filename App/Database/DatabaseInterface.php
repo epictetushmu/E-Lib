@@ -11,6 +11,24 @@ interface DatabaseInterface
     public function insert(string $collection, array $data): array;
 
     /**
+     * Insert several documents in one round trip. Throws on failure (unlike insert()).
+     *
+     * @param list<array<string, mixed>> $documents
+     */
+    public function insertMany(string $collection, array $documents): int;
+
+    /**
+     * Atomically update the first document matching $filter and return it as it is after the update
+     * (null when nothing matched) — the primitive that lets several workers claim jobs without collisions.
+     *
+     * @param array<string, mixed> $filter
+     * @param array<string, mixed> $update
+     * @param array<string, mixed> $options e.g. ['sort' => [...]]
+     * @return array<string, mixed>|null
+     */
+    public function findOneAndUpdate(string $collection, array $filter, array $update, array $options = []): ?array;
+
+    /**
      * @param array<string, mixed> $filter
      * @param array<string, mixed> $options
      * @return list<array<string, mixed>>

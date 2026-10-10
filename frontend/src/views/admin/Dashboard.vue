@@ -106,6 +106,22 @@ async function showOnShelf(id: string) {
   }, 1600)
 }
 
+/** Content-search indexing state, shown only when it needs attention or is still in progress. */
+function indexLabel(book: Book): string {
+  switch (book.index_status) {
+    case 'done':
+      return ''
+    case 'failed':
+      return 'Not searchable: indexing failed'
+    case 'no_text':
+      return 'Not searchable: no text layer (scanned PDF)'
+    case 'indexing':
+      return 'Indexing for search…'
+    default:
+      return 'Waiting to be indexed for search'
+  }
+}
+
 function isBusy(id: string) {
   return busyIds.value.has(id)
 }
@@ -330,6 +346,14 @@ onMounted(loadBooks)
                       }}<template v-if="book.year">, {{ book.year }}</template></span
                     >
                     <span v-if="book.categories?.length" class="book-categories">{{ book.categories.join(', ') }}</span>
+                    <span
+                      v-if="indexLabel(book)"
+                      class="book-index"
+                      :class="{ 'is-problem': book.index_status === 'failed' || book.index_status === 'no_text' }"
+                      :title="book.index_error"
+                      :data-testid="`index-status-${idToString(book._id)}`"
+                      >{{ indexLabel(book) }}</span
+                    >
                   </div>
                 </div>
               </td>

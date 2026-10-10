@@ -303,7 +303,31 @@ and redeploys never touch them.
      && rm -rf /tmp/elib-uploads'
    ```
 
-### Without Docker
+### Content Search ("search inside books")
+
+Readers can search the *text* of every PDF, in Greek or English, by words or by meaning; results link
+straight to the matching page in the reader. Two extra containers power it, both running on your own
+server — no external AI service, no API keys, no per-request cost:
+
+- `embedder` — Ollama serving the `bge-m3` model (~2GB RAM; downloads 1.2GB on first start).
+- `worker` — the app image running `scripts/index-worker.php`, which indexes books in the background.
+  Existing books are indexed automatically; the admin dashboard shows books that aren't searchable yet.
+
+**Production:** after the first deploy, create the Atlas Search indexes once (they need Atlas; the free
+M0 tier works):
+
+```bash
+ssh user@your-server 'cd /srv/e-lib && docker compose exec -T app php scripts/db-setup.php'
+```
+
+Server sizing: ~4GB RAM total (app + LibreOffice + embedder). Indexing a 300-page book takes a few minutes
+on CPU; to index faster, run more workers: `docker compose up -d --scale worker=3`.
+
+**Local:** opt in with `docker compose --profile search up -d`. Point `MONGO_URI` at the local
+`mongo` container first (see above) — the worker writes search data to whichever database `MONGO_URI`
+names — then run `php scripts/db-setup.php` against it once.
+
+
 
 1. **Requirements**:
    - PHP 8.2+

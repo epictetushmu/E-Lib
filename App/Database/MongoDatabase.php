@@ -34,6 +34,22 @@ class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface
         }
     }
 
+    public function insertMany(string $collection, array $documents): int
+    {
+        if ($documents === []) {
+            return 0;
+        }
+        return $this->db->selectCollection($collection)->insertMany($documents)->getInsertedCount();
+    }
+
+    public function findOneAndUpdate(string $collection, array $filter, array $update, array $options = []): ?array
+    {
+        $document = $this->db->selectCollection($collection)->findOneAndUpdate($filter, $update, $options + [
+            'returnDocument' => \MongoDB\Operation\FindOneAndUpdate::RETURN_DOCUMENT_AFTER,
+            'typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array'],
+        ]);
+        return is_array($document) ? $document : null;
+    }
 
     public function find(string $collection, array $filter = [], array $options = []): array
     {

@@ -184,4 +184,70 @@ class BooksTest extends ModelTestCase
 
         $this->assertFalse($result);
     }
+
+    public function testDeleteBookAlsoDeletesItsSearchChunks(): void
+    {
+        $db = $this->createMock(DatabaseInterface::class);
+        $deleted = [];
+        $db->method('delete')->willReturnCallback(function (string $collection, array $filter) use (&$deleted) {
+            $deleted[] = [$collection, $filter];
+            return ['deletedCount' => 1];
+        });
+
+        $this->makeBooks($db)->deleteBook('507f1f77bcf86cd799439011');
+
+        $this->assertSame('Books', $deleted[0][0]);
+        $this->assertSame(['BookChunks', ['book_id' => '507f1f77bcf86cd799439011']], $deleted[1]);
+    }
+
+    public function testUpdateBookCopiesStatusChangesToSearchChunks(): void
+    {
+        $db = $this->createMock(DatabaseInterface::class);
+        $updates = [];
+        $db->method('update')->willReturnCallback(function (string $collection, array $filter, array $update) use (&$updates) {
+            $updates[] = [$collection, $filter, $update];
+            return ['modifiedCount' => 1];
+        });
+
+        $this->makeBooks($db)->updateBook('507f1f77bcf86cd799439011', ['status' => 'public', 'title' => 'T']);
+
+        $this->assertCount(2, $updates);
+        $this->assertSame(
+            ['BookChunks', ['book_id' => '507f1f77bcf86cd799439011'], ['$set' => ['status' => 'public']]],
+            $updates[1]
+        );
+    }
+
+    public function testUpdateBookWithoutStatusLeavesSearchChunksAlone(): void
+    {
+        $db = $this->createMock(DatabaseInterface::class);
+        $db->expects($this->once())->method('update')->with('Books');
+
+        $this->makeBooks($db)->updateBook('507f1f77bcf86cd799439011', ['title' => 'T']);
+    }
+
+    public function testClaimNextForIndexingLeasesTheBookAndCoversEveryReindexCase(): void
+    {
+        $db = $this->createMock(DatabaseInterface::class);
+        $db->expects($this->once())
+            ->method('findOneAndUpdate')
+            ->with(
+                'Books',
+                $this->callback(function (array $filter) {
+                    $cases = array_map(fn ($c) => $c['index_status'], $filter['$or']);
+                    $this->assertContains(['$exists' => false], $cases);
+                    $this->assertContains('indexing', $cases);
+                    $this->assertContains('failed', $cases);
+                    $modelChange = $filter['$or'][4];
+                    $this->assertSame(['$ne' => 'model-b'], $modelChange['index_model']);
+                    $this->assertSame(['$lt' => 3], $filter['$or'][3]['index_attempts']);
+                    return true;
+                }),
+                $this->callback(fn (array $update) => $update['$set']['index_status'] === 'indexing'
+                    && $update['$set']['index_lease_until']->toDateTime()->getTimestamp() >= time() + 299)
+            )
+            ->willReturn(null);
+
+        $this->assertNull($this->makeBooks($db)->claimNextForIndexing('model-b', 300, 3));
+    }
 }

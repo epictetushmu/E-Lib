@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Helpers\Database\MongoHelper;
 use InvalidArgumentException;
+use MongoDB\BSON\UTCDateTime;
 
 /**
  * Books model handles all book-related data operations
@@ -191,7 +192,11 @@ class Books extends BaseModel
      */
     public function deleteBook(string $id): array
     {
-        return $this->deleteById($id);
+        $result = $this->deleteById($id);
+        // Its search chunks go with it (written directly: models share one connection, and this keeps
+        // the cascade in the one place every delete goes through).
+        $this->db->delete(BookChunks::COLLECTION, ['book_id' => $id]);
+        return $result;
     }
 
     /**
@@ -212,7 +217,58 @@ class Books extends BaseModel
             return false; // No fields to update
         }
 
-        return $this->updateById($id, $filteredBook);
+        $result = $this->updateById($id, $filteredBook);
+        // Chunks carry a copy of the status so content search can hide drafts before ranking.
+        if (isset($filteredBook['status'])) {
+            $this->db->update(BookChunks::COLLECTION, ['book_id' => $id], ['$set' => ['status' => $filteredBook['status']]]);
+        }
+        return $result;
+    }
+
+    /**
+     * Atomically claim the next book that needs (re)indexing for content search, leasing it so
+     * other workers skip it. Covers: never indexed, a lapsed lease (crashed worker), a failed book
+     * whose retry time has come, and books indexed by a different embedding model.
+     *
+     * @return array<string, mixed>|null The claimed book, or null when there's nothing to do
+     */
+    public function claimNextForIndexing(string $model, int $leaseSeconds, int $maxAttempts): ?array
+    {
+        $now = new UTCDateTime();
+        return $this->db->findOneAndUpdate(
+            $this->collection,
+            [
+                'file_path' => ['$nin' => [null, '']],
+                '$or' => [
+                    ['index_status' => ['$exists' => false]],
+                    ['index_status' => 'pending'],
+                    ['index_status' => 'indexing', 'index_lease_until' => ['$lt' => $now]],
+                    ['index_status' => 'failed', 'index_attempts' => ['$lt' => $maxAttempts], 'index_retry_at' => ['$lt' => $now]],
+                    ['index_status' => ['$in' => ['done', 'no_text']], 'index_model' => ['$ne' => $model]],
+                ],
+            ],
+            ['$set' => [
+                'index_status' => 'indexing',
+                'index_lease_until' => new UTCDateTime((time() + $leaseSeconds) * 1000),
+            ]],
+            ['sort' => ['created_at' => 1]]
+        );
+    }
+
+    /**
+     * Write content-search indexing state (index_* fields) without touching anything else.
+     *
+     * @param array<string, mixed> $set
+     * @param array<string, int> $inc
+     * @return array<string, mixed>
+     */
+    public function updateIndexState(string $id, array $set, array $inc = []): array
+    {
+        $update = ['$set' => $set];
+        if ($inc !== []) {
+            $update['$inc'] = $inc;
+        }
+        return $this->db->update($this->collection, ['_id' => $this->ensureId($id)], $update);
     }
 
     /**

@@ -384,9 +384,10 @@ onMounted(async () => {
     await handleFitWidth()
   }
 
-  const savedPage = persistence.getSavedPage()
-  if (savedPage && savedPage >= 1 && savedPage <= pdf.numPages.value) {
-    setTimeout(() => pdf.goToPage(savedPage), 400)
+  // ?page=N (e.g. a content-search hit) wins over the last-read page.
+  const startPage = Number(route.query.page) || persistence.getSavedPage()
+  if (startPage && startPage >= 1 && startPage <= pdf.numPages.value) {
+    setTimeout(() => pdf.goToPage(startPage), 400)
   }
 })
 

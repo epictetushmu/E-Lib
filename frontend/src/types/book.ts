@@ -29,4 +29,13 @@ export interface Book {
   pages?: number
   publisher?: string
   file_extension?: string
+  /** Content-search indexing state, written by the indexing worker. Absent = not indexed yet. */
+  index_status?: 'pending' | 'indexing' | 'done' | 'no_text' | 'failed'
+  index_error?: string
+}
+
+/** One book from GET /v1/content-search, with the pages that matched best. */
+export interface ContentSearchResult {
+  book: Book
+  matches: { page: number; snippet: string }[]
 }

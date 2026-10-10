@@ -21,11 +21,31 @@ services:
     depends_on:
       - mongo
 
-  # Throwaway local database, so local test runs never write to the real Atlas cluster.
-  # Point the app at it with MONGO_URI=mongodb://root:example@mongo:27017 in your local .env.
+  # Content search is opt-in locally (`docker compose --profile search up -d`): the worker writes
+  # BookChunks + index_* fields into whatever MONGO_URI points at (point it at the local `mongo`
+  # below, not the real Atlas cluster), and the embedder downloads a 1.2GB model on first start.
+  worker:
+    profiles: ["search"]
+    environment:
+      - APP_ENV=development
+    volumes:
+      - .:/var/www/html
+      - ./public/assets/uploads:/var/www/html/public/assets/uploads
+
+  embedder:
+    profiles: ["search"]
+    ports:
+      # Loopback only, so `php -S` + `php scripts/index-worker.php` on the host can use it
+      # (EMBEDDING_URL=http://127.0.0.1:8082). Still unreachable from other machines.
+      - "127.0.0.1:8082:11434"
+
+  # Throwaway local database, so local test runs never write to the real Atlas cluster. The Atlas
+  # Local image (not plain mongo) so Atlas Search / Vector Search — content search — work locally.
+  # Point the app at it with MONGO_URI=mongodb://root:example@mongo:27017/?directConnection=true
+  # (or 127.0.0.1:27017 from the host), then run `php scripts/db-setup.php` once.
   # (CI doesn't use this — the GitHub workflows start their own mongo service container.)
   mongo:
-    image: mongo:latest
+    image: mongodb/mongodb-atlas-local:8.0
     container_name: elib-mongo
     restart: unless-stopped
     ports:
@@ -36,13 +56,14 @@ services:
       # this host connect with the default root/example credentials below.
       - "127.0.0.1:27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME:-root}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-example}
-      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE:-e_lib}
+      MONGODB_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME:-root}
+      MONGODB_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-example}
     volumes:
-      - mongo-data:/data/db
+      - atlas-data:/data/db
+      - atlas-config:/data/configdb
     networks:
       - elib-network
 
 volumes:
-  mongo-data:
+  atlas-data:
+  atlas-config:

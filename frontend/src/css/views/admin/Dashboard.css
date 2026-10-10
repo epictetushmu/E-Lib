@@ -284,6 +284,15 @@
   color: var(--color-accent-text);
 }
 
+.book-index {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.book-index.is-problem {
+  color: var(--color-danger);
+}
+
 .status-chip {
   display: inline-flex;
   align-items: center;

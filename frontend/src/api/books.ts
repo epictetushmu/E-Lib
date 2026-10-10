@@ -1,6 +1,6 @@
 import client from './client'
 import type { ApiResponse } from '@/types/api'
-import type { Book } from '@/types/book'
+import type { Book, ContentSearchResult } from '@/types/book'
 
 export function getFeaturedBooks() {
   return client.get<ApiResponse<Book[]>>('/v1/books/featured')
@@ -17,6 +17,11 @@ export function getCategories() {
 
 export function searchBooks(term: string) {
   return client.get<ApiResponse<Book[]>>(`/v1/search/${encodeURIComponent(term)}`)
+}
+
+/** Search inside books: pages matching the query by words or by meaning. */
+export function contentSearch(query: string) {
+  return client.get<ApiResponse<ContentSearchResult[]>>('/v1/content-search', { params: { q: query } })
 }
 
 export function getBook(id: string) {

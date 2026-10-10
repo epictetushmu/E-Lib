@@ -1,36 +1,46 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import * as booksApi from '@/api/books'
 import { isApiSuccess } from '@/types/api'
-import type { Book } from '@/types/book'
+import type { Book, ContentSearchResult } from '@/types/book'
+import { idToString } from '@/types/book'
 import BookCard from '@/components/BookCard.vue'
+
+type Mode = 'title' | 'content'
 
 const route = useRoute()
 const router = useRouter()
 
 const searchTerm = ref(typeof route.query.q === 'string' ? route.query.q : '')
+const mode = computed<Mode>(() => (route.query.mode === 'content' ? 'content' : 'title'))
 const books = ref<Book[]>([])
+const contentResults = ref<ContentSearchResult[]>([])
 const loading = ref(false)
 const error = ref('')
 const hasSearched = ref(false)
 
-async function runSearch(term: string) {
+async function runSearch(term: string, searchMode: Mode) {
   const trimmed = term.trim()
+  books.value = []
+  contentResults.value = []
   if (!trimmed) {
-    books.value = []
     hasSearched.value = false
+    error.value = ''
     return
   }
   loading.value = true
   error.value = ''
   hasSearched.value = true
   try {
-    const response = await booksApi.searchBooks(trimmed)
-    const body = response.data
-    books.value = isApiSuccess(body) ? body.data : []
-    if (!books.value.length) {
-      error.value = `No books found for "${trimmed}".`
+    if (searchMode === 'content') {
+      const { data } = await booksApi.contentSearch(trimmed)
+      contentResults.value = isApiSuccess(data) ? data.data : []
+      if (!contentResults.value.length) error.value = `No pages found for "${trimmed}".`
+    } else {
+      const { data } = await booksApi.searchBooks(trimmed)
+      books.value = isApiSuccess(data) ? data.data : []
+      if (!books.value.length) error.value = `No books found for "${trimmed}".`
     }
   } catch {
     error.value = 'An error occurred while searching.'
@@ -40,14 +50,18 @@ async function runSearch(term: string) {
 }
 
 function submit() {
-  router.push({ path: '/search', query: { q: searchTerm.value } })
+  router.push({ path: '/search', query: { q: searchTerm.value, ...(mode.value === 'content' ? { mode: 'content' } : {}) } })
+}
+
+function setMode(next: Mode) {
+  router.replace({ path: '/search', query: { ...route.query, mode: next === 'content' ? 'content' : undefined } })
 }
 
 watch(
-  () => route.query.q,
-  (q) => {
+  () => [route.query.q, mode.value] as const,
+  ([q, searchMode]) => {
     searchTerm.value = typeof q === 'string' ? q : ''
-    runSearch(searchTerm.value)
+    runSearch(searchTerm.value, searchMode)
   },
   { immediate: true },
 )
@@ -56,11 +70,32 @@ watch(
 <template>
   <div class="container search-page" data-testid="search-page">
     <h1>Search</h1>
+    <div class="search-modes" role="group" aria-label="What to search">
+      <button
+        type="button"
+        class="mode-btn"
+        :aria-pressed="mode === 'title'"
+        data-testid="search-mode-title"
+        @click="setMode('title')"
+      >
+        Titles
+      </button>
+      <button
+        type="button"
+        class="mode-btn"
+        :aria-pressed="mode === 'content'"
+        data-testid="search-mode-content"
+        @click="setMode('content')"
+      >
+        Inside books
+      </button>
+    </div>
     <form class="search-bar" data-testid="search-form" @submit.prevent="submit">
       <input
         v-model="searchTerm"
         type="search"
-        placeholder="Search by title…"
+        :placeholder="mode === 'content' ? 'Search for a topic, idea or phrase…' : 'Search by title…'"
+        :maxlength="mode === 'content' ? 300 : undefined"
         aria-label="Search books"
         data-testid="search-input"
       />
@@ -69,10 +104,33 @@ watch(
 
     <div v-if="loading" class="spinner" role="status" aria-label="Searching" data-testid="search-loading"></div>
     <p v-else-if="error" class="text-muted" data-testid="search-message">{{ error }}</p>
+    <ol v-else-if="hasSearched && mode === 'content'" class="content-results" data-testid="content-results">
+      <li v-for="result in contentResults" :key="idToString(result.book._id)" class="content-result">
+        <BookCard :book="result.book" />
+        <ul class="matches">
+          <li v-for="match in result.matches" :key="match.page">
+            <RouterLink
+              :to="{ path: `/read/${idToString(result.book._id)}`, query: { page: match.page } }"
+              class="match"
+              :data-testid="`content-match-${idToString(result.book._id)}-${match.page}`"
+            >
+              <span class="match-page">Page {{ match.page }}</span>
+              <span class="match-snippet">{{ match.snippet }}</span>
+            </RouterLink>
+          </li>
+        </ul>
+      </li>
+    </ol>
     <div v-else-if="hasSearched" class="grid-books" data-testid="search-results">
       <BookCard v-for="book in books" :key="String(book._id)" :book="book" />
     </div>
-    <p v-else class="text-muted" data-testid="search-message">Enter a title to search the catalog.</p>
+    <p v-else class="text-muted" data-testid="search-message">
+      {{
+        mode === 'content'
+          ? 'Describe what you are looking for, in Greek or English, to find the pages that cover it.'
+          : 'Enter a title to search the catalog.'
+      }}
+    </p>
   </div>
 </template>
 
