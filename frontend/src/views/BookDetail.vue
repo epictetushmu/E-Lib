@@ -151,7 +151,7 @@ onMounted(async () => {
 
         <div v-if="book.average_rating" class="rating-row">
           <StarRating :rating="book.average_rating" />
-          <span class="text-muted">({{ book.average_rating }})</span>
+          <span class="text-muted" data-testid="book-rating">({{ book.average_rating }})</span>
         </div>
 
         <div v-if="book.categories?.length" class="categories">

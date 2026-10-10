@@ -14,6 +14,8 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: '../public/dist',
     emptyOutDir: true,
+    // Never inline fonts as data: URIs (KaTeX ships small ones): PageRouter's CSP font-src doesn't allow data:.
+    assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/.test(file) ? false : undefined),
   },
   server: {
     proxy: {

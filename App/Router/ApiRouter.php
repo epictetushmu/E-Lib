@@ -3,6 +3,7 @@
 namespace App\Router;
 
 // Include all necessary controllers
+use App\Controllers\AnnotationController;
 use App\Controllers\BookController;
 use App\Controllers\UserController;
 use App\Includes\ResponseHandler;
@@ -44,6 +45,20 @@ class ApiRouter
 
             ['method' => 'POST', 'path' => '/api/v1/reviews', 'handler' => [new BookController(), 'addReview']],
             ['method' => 'GET', 'path' => '/api/v1/reviews/([0-9a-f]{24})', 'handler' => [new BookController(), 'getReviews']],
+
+            // The signed-in user's private highlights and notes
+            [
+                'method' => 'GET',
+                'path' => '/api/v1/books/([0-9a-f]{24})/annotations',
+                'handler' => [new AnnotationController(), 'listForBook'],
+            ],
+            [
+                'method' => 'POST',
+                'path' => '/api/v1/books/([0-9a-f]{24})/annotations',
+                'handler' => [new AnnotationController(), 'create'],
+            ],
+            ['method' => 'PUT', 'path' => '/api/v1/annotations/([0-9a-f]{24})', 'handler' => [new AnnotationController(), 'update']],
+            ['method' => 'DELETE', 'path' => '/api/v1/annotations/([0-9a-f]{24})', 'handler' => [new AnnotationController(), 'delete']],
 
             ['method' => 'GET', 'path' => '/api/v1/books/([0-9a-f]{24})/download', 'handler' => [new BookController(), 'downloadBook']],
 

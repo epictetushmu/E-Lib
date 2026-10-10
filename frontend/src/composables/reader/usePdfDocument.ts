@@ -1,15 +1,18 @@
 import { ref, shallowRef, type Ref } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
-import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist'
+import type { PDFDocumentLoadingTask, PDFDocumentProxy, PageViewport } from 'pdfjs-dist'
 import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import * as booksApi from '@/api/books'
 import { requestErrorMessage } from '@/types/api'
+import { scrollWithin } from '@/utils/dom'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
 
 export interface UsePdfDocumentOptions {
   scale: Ref<number>
   rotation: Ref<number>
+  /** Called each time a page lands in the DOM (and on redecorate()), to draw overlays such as search hits. */
+  decoratePage?: (pageNumber: number, wrapper: HTMLElement, viewport: PageViewport) => void
 }
 
 /** Loads a book's PDF via authenticated fetch, then lazily renders pages into a container element. */
@@ -25,6 +28,7 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
   let container: HTMLElement | null = null
   let lazyObserver: IntersectionObserver | null = null
   let trackObserver: IntersectionObserver | null = null
+  const viewports = new Map<number, PageViewport>()
 
   function setContainer(el: HTMLElement | null) {
     container = el
@@ -46,10 +50,20 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
     canvas.height = viewport.height
     wrapper.appendChild(canvas)
 
+    // Invisible, selectable text laid over the canvas so readers can select (and highlight) passages.
+    const textLayer = document.createElement('div')
+    textLayer.className = 'textLayer'
+    wrapper.style.setProperty('--total-scale-factor', String(viewport.scale))
+    wrapper.appendChild(textLayer)
+    new pdfjsLib.TextLayer({ textContentSource: page.streamTextContent(), container: textLayer, viewport })
+      .render()
+      .catch((err) => console.error('PDF text layer error', err))
+
     const label = document.createElement('div')
     label.className = 'pdf-page-label'
     label.textContent = String(pageNumber)
     wrapper.appendChild(label)
+    viewports.set(pageNumber, viewport)
 
     const context = canvas.getContext('2d')
     if (context) {
@@ -61,8 +75,13 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
     return wrapper
   }
 
-  function makePlaceholder(pageNumber: number): HTMLElement {
+  /** `size` is page 1's rendered size; most books use one page size throughout. */
+  function makePlaceholder(pageNumber: number, size?: PageViewport): HTMLElement {
     const placeholder = document.createElement('div')
+    if (size) {
+      placeholder.style.width = `${size.width}px`
+      placeholder.style.aspectRatio = `${size.width} / ${size.height}`
+    }
     placeholder.className = 'pdf-page-placeholder'
     placeholder.dataset.pageNumber = String(pageNumber)
     placeholder.textContent = `Page ${pageNumber}`
@@ -81,6 +100,7 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
           renderPage(pageNumber).then((el) => {
             if (el) {
               target.replaceWith(el)
+              decorate(el)
               trackObserver?.observe(el)
             }
           })
@@ -107,18 +127,54 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
     container.querySelectorAll('.pdf-page').forEach((el) => trackObserver?.observe(el))
   }
 
-  /** Re-renders page 1 immediately and re-queues the rest as lazy placeholders (used after zoom/rotate changes). */
+  function decorate(wrapper: HTMLElement) {
+    const pageNumber = Number(wrapper.dataset.pageNumber)
+    const viewport = viewports.get(pageNumber)
+    if (viewport) options.decoratePage?.(pageNumber, wrapper, viewport)
+  }
+
+  /** Re-runs decoratePage on every page currently rendered. */
+  function redecorate() {
+    container?.querySelectorAll<HTMLElement>('.pdf-page').forEach(decorate)
+  }
+
+  /** Which page is at the top of the view, and how far down it (0–1), so a re-layout can return there. */
+  function readingPosition(): { page: number; fraction: number } | null {
+    const el = container?.querySelector<HTMLElement>(`[data-page-number="${currentPage.value}"]`)
+    if (!container || !el) return null
+    const top = el.getBoundingClientRect().top - container.getBoundingClientRect().top
+    return { page: currentPage.value, fraction: Math.min(1, Math.max(0, -top / el.offsetHeight)) }
+  }
+
+  function restorePosition(position: { page: number; fraction: number }) {
+    const el = container?.querySelector<HTMLElement>(`[data-page-number="${position.page}"]`)
+    if (!container || !el) return
+    const top = el.getBoundingClientRect().top - container.getBoundingClientRect().top
+    container.scrollTop += top + position.fraction * el.offsetHeight
+    currentPage.value = position.page
+  }
+
+  /**
+   * Re-renders page 1 immediately and re-queues the rest as lazy placeholders (used after zoom/rotate changes),
+   * keeping the reader on the same page: page sizes change, so the old scroll offset would land elsewhere.
+   */
   async function rebuildPages() {
     if (!pdfDoc.value || !container) return
+    const position = readingPosition()
     lazyObserver?.disconnect()
     trackObserver?.disconnect()
     container.innerHTML = ''
+    viewports.clear()
 
     const first = await renderPage(1)
-    if (first) container.appendChild(first)
-    for (let pageNumber = 2; pageNumber <= numPages.value; pageNumber++) {
-      container.appendChild(makePlaceholder(pageNumber))
+    if (first) {
+      container.appendChild(first)
+      decorate(first)
     }
+    for (let pageNumber = 2; pageNumber <= numPages.value; pageNumber++) {
+      container.appendChild(makePlaceholder(pageNumber, viewports.get(1)))
+    }
+    if (position) restorePosition(position)
 
     setupLazyRendering()
     setupPageTracking()
@@ -144,7 +200,7 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
   function goToPage(pageNumber: number) {
     if (!container || pageNumber < 1 || pageNumber > numPages.value) return
     const el = container.querySelector(`[data-page-number="${pageNumber}"]`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (el) scrollWithin(container, el.getBoundingClientRect().top - container.getBoundingClientRect().top)
     currentPage.value = pageNumber
   }
 
@@ -170,6 +226,8 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
     load,
     rebuildPages,
     goToPage,
+    redecorate,
+    viewportFor: (pageNumber: number) => viewports.get(pageNumber),
     getPageBaseWidth,
     destroy,
   }

@@ -235,14 +235,14 @@ class BookService
      */
     private function updateBookRating(string $bookId): array|false
     {
-        $book = $this->getBookDetails($bookId);
-        if (!$book || empty($book['reviews'])) {
+        // getBookReviews() turns the driver's BSONArray/BSONDocument values into plain arrays array_column() accepts.
+        $ratings = array_column($this->getBookReviews($bookId), 'rating');
+        if ($ratings === []) {
             return false;
         }
 
-        $ratings = array_column($book['reviews'], 'rating');
         $count = count($ratings);
-        $averageRating = $count > 0 ? round(array_sum($ratings) / $count, 1) : 0;
+        $averageRating = round(array_sum($ratings) / $count, 1);
 
         // Update the book with the new average rating
         return $this->book->updateBookRating($bookId, $averageRating, $count);

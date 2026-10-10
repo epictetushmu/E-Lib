@@ -11,14 +11,17 @@ consumes it via environment variables. See "Admin-gated tests" below.
 
 ```
 qa/
-  tests/            # *.spec.ts files, grouped by feature (auth/, books/, profile/, navigation/)
+  tests/            # *.spec.ts files, grouped by feature (auth/, books/, profile/, navigation/,
+                     # reader/ — search, navigation, highlights & notes, rich notes, diagrams)
   pages/            # Page Objects — one class per page/component, DOM details live here only
   fixtures/         # Custom Playwright fixtures (registeredUser, adminCredentials,
-                     # authenticatedPage, adminPage, seededBook) — test setup/teardown
+                     # authenticatedPage, adminPage, seededBook, readerBook, reader,
+                     # otherReader) — test setup/teardown
   support/          # testData.ts (unique data generators), api.ts (thin wrappers around
                      # the app's real HTTP endpoints for setup/teardown), samplePdf.ts
-                     # (generates a dummy PDF in memory — no binary fixture is
-                     # committed, since .gitignore blanket-ignores *.pdf), env.ts
+                     # (generates dummy PDFs in memory — no binary fixture is
+                     # committed, since .gitignore blanket-ignores *.pdf; buildReaderPdf()
+                     # is a 12-page text book with known search terms), env.ts
 playwright.config.ts   # repo root; testDir points at qa/tests
 ```
 
@@ -95,6 +98,10 @@ here, rather than a confusing downstream error.
 - Books created via `support/api.ts` (the `seededBook` fixture, and the
   browse/upload-pdf specs) are deleted afterwards through the real
   `DELETE /api/v1/books/:id` endpoint.
+- Highlights and notes made by the `reader` / `otherReader` fixtures are deleted
+  afterwards through the real annotations API (`DELETE /api/v1/annotations/:id`).
+  Each reader gets its own API client: the API trusts a PHP session cookie over
+  a Bearer token, so a shared client would act as whichever user logged in last.
 - Users created via signup (`registeredUser`, and the signup specs) are **not**
   deleted — there's no self-service "delete my account" API. They're tagged
   with the `e2e.e-lib.test` email domain (see `support/testData.ts`) so

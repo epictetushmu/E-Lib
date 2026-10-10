@@ -70,7 +70,7 @@ echo "\n";
 // --- Step 2: ensure collections exist ---
 echo "Ensuring collections...\n";
 
-$collectionsToCreate = ['Books', 'Users'];
+$collectionsToCreate = ['Books', 'Users', 'Annotations'];
 try {
     $existing = iterator_to_array($db->listCollectionNames());
 } catch (Throwable $e) {
@@ -126,6 +126,13 @@ $indexPlan = [
         [
             'key' => ['status' => 1, 'featured' => 1],
             'options' => ['name' => 'idx_status_featured'],
+        ],
+    ],
+    'Annotations' => [
+        [
+            // Every read is "this user's annotations for this book".
+            'key' => ['user_id' => 1, 'book_id' => 1, 'page' => 1],
+            'options' => ['name' => 'idx_user_book_page'],
         ],
     ],
 ];

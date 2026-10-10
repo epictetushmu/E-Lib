@@ -4,6 +4,8 @@ namespace Tests\Unit\Services;
 
 use App\Models\Books;
 use App\Services\BookService;
+use MongoDB\Model\BSONArray;
+use MongoDB\Model\BSONDocument;
 use Tests\Support\ServiceTestCase;
 
 class BookServiceTest extends ServiceTestCase
@@ -239,6 +241,22 @@ class BookServiceTest extends ServiceTestCase
             ->willReturn(['modifiedCount' => 1]);
 
         $this->service($books)->addReview('book1', ['rating' => 2]);
+    }
+
+    public function testAddReviewRecalculatesRatingFromDriverBsonTypes(): void
+    {
+        // What the MongoDB driver actually returns for an embedded array of documents.
+        $books = $this->createMock(Books::class);
+        $books->method('addReview')->willReturn(['modifiedCount' => 1]);
+        $books->method('getBookDetails')->willReturn([
+            'reviews' => new BSONArray([new BSONDocument(['rating' => 5]), new BSONDocument(['rating' => 4])]),
+        ]);
+        $books->expects($this->once())
+            ->method('updateBookRating')
+            ->with('book1', 4.5, 2)
+            ->willReturn(['modifiedCount' => 1]);
+
+        $this->service($books)->addReview('book1', ['rating' => 4]);
     }
 
     public function testAddReviewSkipsRatingRecalculationWhenAddFails(): void

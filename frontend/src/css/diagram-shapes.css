@@ -1,0 +1,246 @@
+/*
+ * Diagram shapes, shared by the editor (DiagramDialog) and notes (renderDiagramSvg) so a diagram looks the
+ * same in both. Unscoped on purpose. Fills reuse the highlight inks: start/end olive, decision saffron,
+ * input/output aegean, notes saffron.
+ */
+
+/* Flowchart outlines (SVG) */
+.dg-outline > *,
+.dg-kind-icon > * {
+  fill: var(--color-surface);
+  stroke: var(--color-text);
+  stroke-width: 1.25;
+}
+
+.dg-shape-terminal .dg-outline > *,
+.dg-kind-icon.dg-shape-terminal > * {
+  fill: color-mix(in srgb, var(--ink-olive) 38%, transparent);
+}
+
+.dg-shape-decision .dg-outline > *,
+.dg-kind-icon.dg-shape-decision > * {
+  fill: color-mix(in srgb, var(--ink-saffron) 40%, transparent);
+}
+
+.dg-shape-io .dg-outline > *,
+.dg-kind-icon.dg-shape-io > * {
+  fill: color-mix(in srgb, var(--ink-aegean) 38%, transparent);
+}
+
+/* Node contents (HTML, inside foreignObject in notes) */
+.dg-node {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.25;
+  color: var(--color-text);
+}
+
+.dg-node *,
+.dg-node *::before {
+  box-sizing: border-box;
+}
+
+.dg-placeholder {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.dg-terminal,
+.dg-step,
+.dg-decision,
+.dg-io {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 16px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.dg-decision {
+  padding: 20px 32px;
+}
+
+.dg-io {
+  padding: 4px 24px;
+}
+
+/* UML class: name / attributes / methods */
+.dg-class {
+  border: 1.25px solid var(--color-text);
+  border-radius: 2px;
+  background: var(--color-surface);
+}
+
+.dg-class-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 10px;
+  border-bottom: 1.25px solid var(--color-text);
+  background: color-mix(in srgb, var(--ink-aegean) 22%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dg-class-head:has(small) {
+  height: 44px;
+}
+
+.dg-class-head small {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.dg-class-head.is-abstract strong {
+  font-style: italic;
+}
+
+.dg-rows,
+.dg-cols {
+  margin: 0;
+  padding: 4px 10px;
+  list-style: none;
+}
+
+.dg-rows + .dg-rows {
+  border-top: 1.25px solid var(--color-text);
+}
+
+.dg-rows li {
+  height: 20px;
+  line-height: 20px;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Database table: name bar, then key / column / type rows */
+.dg-table {
+  border: 1.25px solid var(--color-text);
+  border-radius: 4px;
+  background: var(--color-surface);
+}
+
+.dg-table-head {
+  height: 32px;
+  padding: 0 10px;
+  line-height: 32px;
+  font-weight: 700;
+  background: var(--color-text);
+  color: var(--color-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dg-table-head .dg-placeholder {
+  color: inherit;
+  opacity: 0.7;
+}
+
+.dg-cols {
+  padding: 3px 10px 3px 6px;
+}
+
+.dg-cols li {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  height: 24px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.dg-cols li > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dg-key {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--color-accent-text);
+}
+
+.dg-col.is-pk {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.dg-type {
+  padding-left: 8px;
+  color: var(--color-text-muted);
+}
+
+/* Free text and sticky notes */
+.dg-text {
+  display: flex;
+  align-items: center;
+  padding: 6px 2px;
+  font-size: 14px;
+}
+
+.dg-text .dg-label,
+.dg-note .dg-label {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dg-note {
+  padding: 12px 14px;
+  background: linear-gradient(225deg, transparent 12px, color-mix(in srgb, var(--ink-saffron) 45%, transparent) 12px);
+  border-radius: 2px;
+}
+
+/* Connectors */
+.dg-edge {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1.4;
+}
+
+.dg-edge.is-dashed {
+  stroke-dasharray: 6 4;
+}
+
+.dg-marker path {
+  fill: none;
+  stroke: var(--color-text-muted);
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+
+.dg-marker-arrow path,
+.dg-marker-diamond-filled path {
+  fill: var(--color-text-muted);
+}
+
+.dg-marker-triangle path,
+.dg-marker-diamond path {
+  fill: var(--color-surface);
+}
+
+.dg-edge-label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--color-text);
+  paint-order: stroke;
+  stroke: var(--color-surface);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+
+.dg-end-label {
+  font-size: 11px;
+}

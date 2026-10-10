@@ -23,22 +23,15 @@ export async function loginAsAdmin(
   email: string,
   password: string,
 ): Promise<string> {
-  const response = await request.post('/api/v1/login', { data: { email, password } });
-  const body = (await response.json()) as LoginResponse;
-
-  if (!response.ok() || body.status !== 'success' || !body.data?.token) {
-    throw new Error(
-      `QA_ADMIN_EMAIL/QA_ADMIN_PASSWORD login failed: ${response.status()} ${JSON.stringify(body)}`,
-    );
-  }
-  if (!body.data.user?.isAdmin) {
+  const { token, isAdmin } = await loginViaApi(request, email, password);
+  if (!isAdmin) {
     throw new Error(
       `"${email}" logged in but is not an admin. Provision one with: ` +
         `composer admin:create -- ${email} <password>`,
     );
   }
 
-  return body.data.token;
+  return token;
 }
 
 interface CreateBookResponse {
@@ -163,4 +156,75 @@ export async function deleteBooksByTitle(
       await deleteBookViaApi(request, adminToken, id);
     }
   }
+}
+
+/** POST /api/v1/login for any account; returns its JWT (for API-side setup/cleanup as that user). */
+export async function loginViaApi(
+  request: APIRequestContext,
+  email: string,
+  password: string,
+): Promise<{ token: string; isAdmin: boolean }> {
+  const response = await request.post('/api/v1/login', { data: { email, password } });
+  const body = (await response.json()) as LoginResponse;
+  if (!response.ok() || body.status !== 'success' || !body.data?.token) {
+    throw new Error(`Login failed for ${email}: ${response.status()} ${JSON.stringify(body)}`);
+  }
+  return { token: body.data.token, isAdmin: !!body.data.user?.isAdmin };
+}
+
+/** A private highlight (has rects) or page note, as the annotations API returns it. */
+export interface ApiAnnotation {
+  id: string;
+  page: number;
+  rects: number[][];
+  quote: string;
+  note: string;
+  color: string | null;
+}
+
+/** GET /api/v1/books/:id/annotations — only ever the calling user's own annotations. */
+export async function listAnnotations(request: APIRequestContext, token: string, bookId: string): Promise<ApiAnnotation[]> {
+  const response = await request.get(`/api/v1/books/${bookId}/annotations`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok()) {
+    throw new Error(`listAnnotations failed: ${response.status()} ${await response.text()}`);
+  }
+  return ((await response.json()) as { data: ApiAnnotation[] }).data;
+}
+
+/** POST /api/v1/books/:id/annotations — seeds a highlight or note as that user. */
+export async function createAnnotation(
+  request: APIRequestContext,
+  token: string,
+  bookId: string,
+  annotation: Omit<ApiAnnotation, 'id'>,
+): Promise<ApiAnnotation> {
+  const response = await request.post(`/api/v1/books/${bookId}/annotations`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: annotation,
+  });
+  if (!response.ok()) {
+    throw new Error(`createAnnotation failed: ${response.status()} ${await response.text()}`);
+  }
+  return ((await response.json()) as { data: ApiAnnotation }).data;
+}
+
+/** Removes every annotation the user made on a book (test teardown). */
+export async function deleteAllAnnotations(request: APIRequestContext, token: string, bookId: string): Promise<void> {
+  for (const annotation of await listAnnotations(request, token, bookId)) {
+    await request.delete(`/api/v1/annotations/${annotation.id}`, { headers: { Authorization: `Bearer ${token}` } });
+  }
+}
+
+/** GET /api/v1/books/:id — e.g. to cross-check a book's average rating. */
+export async function getBookViaApi(
+  request: APIRequestContext,
+  id: string,
+): Promise<{ title: string; average_rating?: number; review_count?: number }> {
+  const response = await request.get(`/api/v1/books/${id}`);
+  if (!response.ok()) {
+    throw new Error(`getBookViaApi failed: ${response.status()} ${await response.text()}`);
+  }
+  return ((await response.json()) as { data: { title: string; average_rating?: number; review_count?: number } }).data;
 }

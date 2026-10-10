@@ -1,0 +1,439 @@
+.diagram-editor {
+  width: min(80rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  padding: 1.1rem 1.25rem 1.1rem;
+}
+
+.dg-marker-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.dg-head h2 {
+  margin-bottom: 0.7rem;
+}
+
+/* Toolbar: which set of shapes, the shapes in it, then text and notes (always available). */
+.dg-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  margin-bottom: 0.6rem;
+}
+
+.dg-sets {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--color-bg);
+}
+
+.dg-sets button {
+  height: 2rem;
+  padding: 0 0.85rem;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dg-sets button[aria-selected='true'] {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+
+.dg-shapes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.dg-shapes-common {
+  margin-left: auto;
+}
+
+.dg-shape-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 2.25rem;
+  padding: 0 0.7rem 0 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dg-shape-btn:hover {
+  border-color: var(--color-primary);
+  background: var(--color-bg);
+}
+
+.dg-kind-icon {
+  width: 1.75rem;
+  height: 1.1rem;
+  overflow: visible;
+}
+
+.dg-kind-icon > * {
+  stroke-width: 6;
+}
+
+/* Small glyphs for the HTML-drawn kinds */
+.dg-kind-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.1rem;
+  border: 1.25px solid var(--color-text);
+  border-radius: 2px;
+  font: 700 0.75rem/1 var(--font-serif);
+}
+
+.dg-glyph-class {
+  background: linear-gradient(to bottom, rgba(127, 188, 214, 0.35) 35%, var(--color-text) 35%, var(--color-text) 42%, transparent 42%);
+}
+
+.dg-glyph-table {
+  background: linear-gradient(to bottom, var(--color-text) 35%, transparent 35%);
+}
+
+.dg-glyph-text {
+  border-color: transparent;
+}
+
+.dg-glyph-note {
+  border-color: transparent;
+  background: linear-gradient(225deg, transparent 4px, rgba(242, 201, 76, 0.7) 4px);
+}
+
+/* Canvas + side panel */
+.dg-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 17.5rem;
+  gap: 0.75rem;
+}
+
+.dg-canvas {
+  position: relative;
+  height: min(64vh, 38rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-bg);
+  background-image: radial-gradient(circle, rgba(var(--color-navy-rgb), 0.16) 1px, transparent 1.2px);
+  background-size: 16px 16px;
+}
+
+.dg-empty-hint {
+  position: absolute;
+  inset: 50% 1rem auto;
+  transform: translateY(-50%);
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.dg-canvas :deep(.vue-flow__node) {
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.dg-canvas :deep(.dg-editor-node) {
+  position: relative;
+}
+
+.dg-canvas :deep(.dg-outline) {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.dg-canvas :deep(.dg-editor-node > .dg-node) {
+  position: relative;
+  cursor: grab;
+}
+
+.dg-canvas :deep(.dg-editor-node.is-selected .dg-outline > *) {
+  stroke: var(--color-primary);
+  stroke-width: 2.25;
+}
+
+.dg-canvas :deep(.dg-editor-node.is-selected > .dg-class),
+.dg-canvas :deep(.dg-editor-node.is-selected > .dg-table) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.dg-canvas :deep(.dg-editor-node.is-selected > .dg-text),
+.dg-canvas :deep(.dg-editor-node.is-selected > .dg-note) {
+  outline: 1.5px dashed var(--color-primary);
+  outline-offset: 2px;
+}
+
+.dg-canvas :deep(.dg-inline-input) {
+  position: absolute;
+  inset: 8px 14px;
+  width: auto;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--color-text);
+  font: 13px/1.25 var(--font-sans);
+  text-align: center;
+  align-content: center;
+}
+
+.dg-canvas :deep(.dg-inline-text),
+.dg-canvas :deep(.dg-inline-note) {
+  inset: 6px 8px;
+  text-align: left;
+  align-content: start;
+}
+
+.dg-canvas :deep(.dg-inline-note) {
+  background: rgba(242, 201, 76, 0.45);
+}
+
+/* Connection dots: shown on hover / selection, the place to drag a new connection from. */
+.dg-canvas :deep(.dg-handle) {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--color-primary);
+  background: var(--color-surface);
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+
+.dg-canvas :deep(.vue-flow__node:hover .dg-handle),
+.dg-canvas :deep(.vue-flow__node.selected .dg-handle),
+.dg-canvas :deep(.vue-flow__node .dg-handle.connecting) {
+  opacity: 1;
+}
+
+.dg-canvas :deep(.vue-flow__connection-path) {
+  stroke: var(--color-primary);
+  stroke-width: 1.4;
+}
+
+.dg-canvas :deep(.dg-edge.is-selected) {
+  stroke: var(--color-primary);
+  stroke-width: 2.2;
+}
+
+.dg-canvas :deep(.vue-flow__edge-textbg) {
+  fill: var(--color-surface);
+}
+
+.dg-canvas :deep(.vue-flow__edge-text) {
+  fill: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dg-canvas :deep(.dg-end-tag) {
+  position: absolute;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--color-surface);
+  font: 600 11px/1.3 var(--font-sans);
+  color: var(--color-text);
+  pointer-events: none;
+}
+
+/* Side panel */
+.dg-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: min(64vh, 38rem);
+  overflow-y: auto;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+}
+
+.dg-panel h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.dg-panel label {
+  margin-top: 0.35rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.dg-panel label small {
+  font-weight: 400;
+}
+
+.dg-panel input[type='text'],
+.dg-panel select,
+.dg-panel textarea {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.dg-panel textarea {
+  resize: vertical;
+  font-family: var(--font-sans);
+  line-height: 1.45;
+}
+
+.dg-panel input:focus,
+.dg-panel select:focus,
+.dg-panel textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.dg-columns {
+  width: 100%;
+  margin-top: 0.5rem;
+  border-collapse: collapse;
+}
+
+.dg-columns th {
+  padding: 0 0 0.2rem;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.dg-columns td {
+  padding: 0.12rem 0.15rem 0.12rem 0;
+}
+
+.dg-columns td:nth-child(3),
+.dg-columns td:nth-child(4),
+.dg-columns th:nth-child(3),
+.dg-columns th:nth-child(4) {
+  width: 1.6rem;
+  text-align: center;
+}
+
+.dg-columns input[type='text'] {
+  padding: 0.3rem 0.35rem;
+  font-size: 0.8rem;
+}
+
+.dg-columns input[type='checkbox'] {
+  accent-color: var(--color-primary);
+}
+
+.dg-remove {
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.dg-remove:hover {
+  color: var(--color-danger);
+}
+
+.dg-ends {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.dg-ends > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.dg-add-row {
+  align-self: flex-start;
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dg-add-row:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.dg-delete {
+  align-self: flex-start;
+  margin-top: auto;
+  padding-top: 1rem;
+  border: none;
+  background: none;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.dg-delete:hover {
+  color: var(--color-danger);
+}
+
+.dg-panel-help ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.dg-panel-help li + li {
+  margin-top: 0.35rem;
+}
+
+.dg-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 0.8rem;
+}
+
+.dg-foot .link-btn {
+  font-size: 0.9rem;
+}
+
+@media (max-width: 760px) {
+  .dg-body {
+    grid-template-columns: 1fr;
+  }
+
+  .dg-canvas {
+    height: 50vh;
+  }
+
+  .dg-shapes-common {
+    margin-left: 0;
+  }
+}

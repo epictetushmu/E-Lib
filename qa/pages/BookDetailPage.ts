@@ -11,6 +11,10 @@ export class BookDetailPage extends BasePage {
   readonly downloadButton: Locator;
   readonly downloadDisabledButton: Locator;
   readonly loginHint: Locator;
+  readonly rating: Locator;
+  readonly reviewForm: Locator;
+  readonly reviewComment: Locator;
+  readonly submitReview: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -21,6 +25,17 @@ export class BookDetailPage extends BasePage {
     this.downloadButton = page.getByTestId('download-button');
     this.downloadDisabledButton = page.getByTestId('download-disabled-button');
     this.loginHint = page.getByTestId('login-hint');
+    this.rating = page.getByTestId('book-rating');
+    this.reviewForm = page.locator('form.review-form');
+    this.reviewComment = this.reviewForm.getByLabel('Comment');
+    this.submitReview = this.reviewForm.getByRole('button', { name: 'Submit Review' });
+  }
+
+  /** Picks 1–5 stars and submits a review with the given comment. */
+  async writeReview(stars: number, comment: string): Promise<void> {
+    await this.reviewForm.getByRole('radio', { name: `${stars} star${stars > 1 ? 's' : ''}` }).click();
+    await this.reviewComment.fill(comment);
+    await this.submitReview.click();
   }
 
   async openBook(bookId: string): Promise<void> {
