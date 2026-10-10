@@ -52,7 +52,7 @@ pkgs.mkShell {
     # shared libs, e.g. libglib-2.0.so.0) — use nixpkgs' prebuilt, patched
     # browsers instead via PLAYWRIGHT_BROWSERS_PATH below. The browser
     # revision here must match package.json's pinned @playwright/test
-    # version (currently 1.61.1) or Playwright refuses to launch it.
+    # version (currently 1.63.0) or Playwright refuses to launch it.
     playwright-driver.browsers
   ];
 
