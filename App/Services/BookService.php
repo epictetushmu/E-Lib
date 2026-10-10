@@ -197,7 +197,7 @@ class BookService
      * @param array<string, mixed> $review
      * @return array<string, mixed>|false
      */
-    public function addReview(string $bookId, array $review, mixed $rating = null): array|false
+    public function saveReview(string $bookId, array $review, mixed $rating = null): array|false
     {
         // Make sure rating is included
         if (isset($rating) && !isset($review['rating'])) {
@@ -209,8 +209,8 @@ class BookService
             $review['created_at'] = date('Y-m-d H:i:s');
         }
 
-        // Add the review to the book
-        $result = $this->book->addReview($bookId, $review);
+        // Add the review to the book, or replace this user's existing one
+        $result = $this->book->saveReview($bookId, $review);
 
         if ($result) {
             // Update the book's average rating

@@ -102,24 +102,42 @@ class Books extends BaseModel
     }
 
     /**
-     * Add a review to a book
+     * Save a user's review of a book: edits their existing review, or adds one if they have none.
      *
      * @param string $bookId Book ID
-     * @param array<string, mixed> $review Review data
+     * @param array<string, mixed> $review Review data, including user_id
      * @return array<string, mixed>|false Update result or false on error
      * @throws InvalidArgumentException If the ID format is invalid
      */
-    public function addReview(string $bookId, array $review)
+    public function saveReview(string $bookId, array $review)
     {
         try {
-            // Return the result of the update operation
+            $id = $this->ensureId($bookId);
+            $userId = $review['user_id'];
+
+            // Each write is a no-op when the other applies, and the $ne guard makes the push
+            // atomic per document, so concurrent submits still can't create a second review.
+            $edit = $this->db->update(
+                $this->collection,
+                ['_id' => $id, 'reviews.user_id' => $userId],
+                ['$set' => [
+                    'reviews.$.username' => $review['username'] ?? null,
+                    'reviews.$.rating' => $review['rating'] ?? null,
+                    'reviews.$.comment' => $review['comment'] ?? null,
+                    'reviews.$.updated_at' => date('Y-m-d H:i:s'),
+                ]]
+            );
+            if (isset($edit['error'])) {
+                return $edit;
+            }
+
             return $this->db->update(
                 $this->collection,
-                ['_id' => $this->ensureId($bookId)],
+                ['_id' => $id, 'reviews.user_id' => ['$ne' => $userId]],
                 ['$push' => ['reviews' => $review]]
             );
         } catch (\Exception $e) {
-            error_log("Error adding review: " . $e->getMessage());
+            error_log("Error saving review: " . $e->getMessage());
             return false;
         }
     }

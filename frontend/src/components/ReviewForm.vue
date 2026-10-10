@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import * as reviewsWriteApi from '@/api/reviews'
+import type { Review } from '@/types/review'
 import { isApiSuccess, apiErrorMessage, requestErrorMessage, type ApiError } from '@/types/api'
 import { useToast } from '@/composables/useToast'
 
-const props = defineProps<{ bookId: string }>()
+// existing: the current user's review of this book, if any — the form then edits it instead of adding one.
+const props = defineProps<{ bookId: string; existing?: Review }>()
 const emit = defineEmits<{ submitted: [] }>()
 
 const toast = useToast()
 
-const rating = ref(0)
+const rating = ref(props.existing?.rating ?? 0)
 const hoverRating = ref(0)
-const comment = ref('')
+const comment = ref(props.existing?.comment ?? '')
 const submitting = ref(false)
 const error = ref('')
 
@@ -31,9 +33,7 @@ async function submit() {
     const response = await reviewsWriteApi.addReview(props.bookId, rating.value, comment.value.trim())
     const body = response.data
     if (isApiSuccess(body)) {
-      toast.success('Your review has been submitted')
-      rating.value = 0
-      comment.value = ''
+      toast.success(props.existing ? 'Your review has been updated' : 'Your review has been submitted')
       emit('submitted')
     } else {
       error.value = apiErrorMessage(body as ApiError, 'Error submitting review')
@@ -48,7 +48,7 @@ async function submit() {
 
 <template>
   <form class="review-form card" @submit.prevent="submit">
-    <h4>Add Your Review</h4>
+    <h4>{{ existing ? 'Edit Your Review' : 'Add Your Review' }}</h4>
     <p v-if="error" class="alert alert-danger" role="alert">{{ error }}</p>
 
     <div class="star-picker" role="radiogroup" aria-label="Rating">
@@ -75,7 +75,7 @@ async function submit() {
     </div>
 
     <button type="submit" class="btn btn-primary" :disabled="submitting">
-      {{ submitting ? 'Submitting…' : 'Submit Review' }}
+      {{ submitting ? 'Saving…' : existing ? 'Update Review' : 'Submit Review' }}
     </button>
   </form>
 </template>

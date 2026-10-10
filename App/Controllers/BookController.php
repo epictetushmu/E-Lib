@@ -376,9 +376,9 @@ class BookController
     }
 
     /**
-     * Add a new book review
+     * Add or edit the current user's review of a book (one review per user per book)
      */
-    public function addReview(): void
+    public function saveReview(): void
     {
         $userId = AuthenticatedUser::id();
         if ($userId === null) {
@@ -416,12 +416,12 @@ class BookController
 
         // Save review
         $bookService = new BookService();
-        $result = $bookService->addReview($input['book_id'], $review);
+        $result = $bookService->saveReview($input['book_id'], $review);
 
         if ($result) {
-            ResponseHandler::respond(true, 'Review added successfully');
+            ResponseHandler::respond(true, 'Review saved successfully');
         } else {
-            ResponseHandler::respond(false, 'Failed to add review', 500);
+            ResponseHandler::respond(false, 'Failed to save review', 500);
         }
     }
 

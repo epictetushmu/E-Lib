@@ -43,7 +43,7 @@ class ApiRouter
 
             ['method' => 'GET', 'path' => '/api/v1/search/([^/]+)', 'handler' => [new BookController(), 'searchBooks']],
 
-            ['method' => 'POST', 'path' => '/api/v1/reviews', 'handler' => [new BookController(), 'addReview']],
+            ['method' => 'POST', 'path' => '/api/v1/reviews', 'handler' => [new BookController(), 'saveReview']],
             ['method' => 'GET', 'path' => '/api/v1/reviews/([0-9a-f]{24})', 'handler' => [new BookController(), 'getReviews']],
 
             // The signed-in user's private highlights and notes

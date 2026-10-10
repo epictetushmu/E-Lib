@@ -30,6 +30,7 @@ const downloading = ref(false)
 
 const cover = computed(() => book.value?.thumbnail || booksApi.thumbnailUrl(bookId))
 const isDownloadable = computed(() => book.value?.downloadable !== false)
+const myReview = computed(() => reviews.value.find((r) => r.user_id === auth.claims?.user_id))
 
 async function loadReviews() {
   try {
@@ -175,7 +176,14 @@ onMounted(async () => {
         </div>
 
         <hr />
-        <ReviewForm v-if="auth.isAuthenticated" :book-id="bookId" @submitted="loadReviews" />
+        <!-- Keyed so the form re-initialises from myReview once reviews load or a new review is saved. -->
+        <ReviewForm
+          v-if="auth.isAuthenticated"
+          :key="myReview?.created_at ?? 'new'"
+          :book-id="bookId"
+          :existing="myReview"
+          @submitted="loadReviews"
+        />
         <p v-else class="alert alert-info">
           <RouterLink :to="{ path: '/login', query: { redirect: route.fullPath } }">Log in</RouterLink>
           to leave a review.

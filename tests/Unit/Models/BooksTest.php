@@ -145,14 +145,34 @@ class BooksTest extends ModelTestCase
         $this->makeBooks($db)->getPublicBooks();
     }
 
-    public function testAddReviewReturnsFalseOnDatabaseException(): void
+    public function testSaveReviewReturnsFalseOnDatabaseException(): void
     {
         $db = $this->createMock(DatabaseInterface::class);
         $db->method('update')->willThrowException(new \RuntimeException('mongo down'));
 
-        $result = $this->makeBooks($db)->addReview('507f1f77bcf86cd799439011', ['rating' => 5]);
+        $result = $this->makeBooks($db)->saveReview('507f1f77bcf86cd799439011', ['user_id' => 'u1', 'rating' => 5]);
 
         $this->assertFalse($result);
+    }
+
+    public function testSaveReviewEditsExistingReviewOrPushesOnlyWhenUserHasNone(): void
+    {
+        $db = $this->createMock(DatabaseInterface::class);
+        $calls = [];
+        $db->method('update')->willReturnCallback(function ($collection, $filter, $update) use (&$calls) {
+            $calls[] = [$filter, $update];
+            return ['modifiedCount' => 1];
+        });
+
+        $review = ['user_id' => 'u1', 'username' => 'ann', 'rating' => 3, 'comment' => 'ok', 'created_at' => 'then'];
+        $this->makeBooks($db)->saveReview('507f1f77bcf86cd799439011', $review);
+
+        [[$editFilter, $edit], [$pushFilter, $push]] = $calls;
+        $this->assertSame('u1', $editFilter['reviews.user_id']);
+        $this->assertSame(3, $edit['$set']['reviews.$.rating']);
+        $this->assertArrayNotHasKey('reviews.$.created_at', $edit['$set']);
+        $this->assertSame(['$ne' => 'u1'], $pushFilter['reviews.user_id']);
+        $this->assertSame($review, $push['$push']['reviews']);
     }
 
     public function testUpdateBookReturnsFalseWhenNoFieldsToUpdate(): void

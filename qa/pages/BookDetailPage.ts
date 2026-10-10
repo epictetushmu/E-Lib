@@ -28,10 +28,11 @@ export class BookDetailPage extends BasePage {
     this.rating = page.getByTestId('book-rating');
     this.reviewForm = page.locator('form.review-form');
     this.reviewComment = this.reviewForm.getByLabel('Comment');
-    this.submitReview = this.reviewForm.getByRole('button', { name: 'Submit Review' });
+    // 'Submit Review' for a new review, 'Update Review' when editing the user's existing one.
+    this.submitReview = this.reviewForm.getByRole('button', { name: /^(Submit|Update) Review$/ });
   }
 
-  /** Picks 1–5 stars and submits a review with the given comment. */
+  /** Picks 1–5 stars and submits (or, if the user already reviewed the book, updates) a review with the given comment. */
   async writeReview(stars: number, comment: string): Promise<void> {
     await this.reviewForm.getByRole('radio', { name: `${stars} star${stars > 1 ? 's' : ''}` }).click();
     await this.reviewComment.fill(comment);

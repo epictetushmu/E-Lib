@@ -203,35 +203,35 @@ class BookServiceTest extends ServiceTestCase
         $this->assertSame([], $this->service($books)->searchBooks(['title' => 'x']));
     }
 
-    public function testAddReviewFillsInMissingRatingFromArgument(): void
+    public function testSaveReviewFillsInMissingRatingFromArgument(): void
     {
         $books = $this->createMock(Books::class);
         $books->expects($this->once())
-            ->method('addReview')
+            ->method('saveReview')
             ->with('book1', $this->callback(fn ($review) => $review['rating'] === 4))
             ->willReturn(['modifiedCount' => 1]);
         // No reviews on the book afterward, so no rating recalculation call is required to succeed.
         $books->method('getBookDetails')->willReturn(null);
 
-        $this->service($books)->addReview('book1', [], 4);
+        $this->service($books)->saveReview('book1', [], 4);
     }
 
-    public function testAddReviewDoesNotOverrideExplicitRating(): void
+    public function testSaveReviewDoesNotOverrideExplicitRating(): void
     {
         $books = $this->createMock(Books::class);
         $books->expects($this->once())
-            ->method('addReview')
+            ->method('saveReview')
             ->with('book1', $this->callback(fn ($review) => $review['rating'] === 5))
             ->willReturn(['modifiedCount' => 1]);
         $books->method('getBookDetails')->willReturn(null);
 
-        $this->service($books)->addReview('book1', ['rating' => 5], 1);
+        $this->service($books)->saveReview('book1', ['rating' => 5], 1);
     }
 
-    public function testAddReviewRecalculatesAverageRatingAfterSuccess(): void
+    public function testSaveReviewRecalculatesAverageRatingAfterSuccess(): void
     {
         $books = $this->createMock(Books::class);
-        $books->method('addReview')->willReturn(['modifiedCount' => 1]);
+        $books->method('saveReview')->willReturn(['modifiedCount' => 1]);
         $books->method('getBookDetails')->willReturn([
             'reviews' => [['rating' => 4], ['rating' => 2]],
         ]);
@@ -240,14 +240,14 @@ class BookServiceTest extends ServiceTestCase
             ->with('book1', 3.0, 2)
             ->willReturn(['modifiedCount' => 1]);
 
-        $this->service($books)->addReview('book1', ['rating' => 2]);
+        $this->service($books)->saveReview('book1', ['rating' => 2]);
     }
 
-    public function testAddReviewRecalculatesRatingFromDriverBsonTypes(): void
+    public function testSaveReviewRecalculatesRatingFromDriverBsonTypes(): void
     {
         // What the MongoDB driver actually returns for an embedded array of documents.
         $books = $this->createMock(Books::class);
-        $books->method('addReview')->willReturn(['modifiedCount' => 1]);
+        $books->method('saveReview')->willReturn(['modifiedCount' => 1]);
         $books->method('getBookDetails')->willReturn([
             'reviews' => new BSONArray([new BSONDocument(['rating' => 5]), new BSONDocument(['rating' => 4])]),
         ]);
@@ -256,16 +256,16 @@ class BookServiceTest extends ServiceTestCase
             ->with('book1', 4.5, 2)
             ->willReturn(['modifiedCount' => 1]);
 
-        $this->service($books)->addReview('book1', ['rating' => 4]);
+        $this->service($books)->saveReview('book1', ['rating' => 4]);
     }
 
-    public function testAddReviewSkipsRatingRecalculationWhenAddFails(): void
+    public function testSaveReviewSkipsRatingRecalculationWhenAddFails(): void
     {
         $books = $this->createMock(Books::class);
-        $books->method('addReview')->willReturn(false);
+        $books->method('saveReview')->willReturn(false);
         $books->expects($this->never())->method('updateBookRating');
 
-        $result = $this->service($books)->addReview('book1', ['rating' => 2]);
+        $result = $this->service($books)->saveReview('book1', ['rating' => 2]);
 
         $this->assertFalse($result);
     }
