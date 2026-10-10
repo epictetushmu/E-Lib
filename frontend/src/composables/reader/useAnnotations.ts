@@ -69,10 +69,5 @@ export function useAnnotations(bookId: string) {
       .find((a) => a.page === pageNumber && a.rects.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2))
   }
 
-  /** Copies everything as JSON to the clipboard. */
-  async function exportJson() {
-    await navigator.clipboard.writeText(JSON.stringify(sorted.value, null, 2))
-  }
-
-  return { items, sorted, canAnnotate, load, add, update, remove, paint, highlightAt, exportJson }
+  return { items, sorted, canAnnotate, load, add, update, remove, paint, highlightAt }
 }

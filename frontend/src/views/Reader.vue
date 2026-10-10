@@ -53,8 +53,63 @@ const progress = computed(() => (pdf.numPages.value ? (pdf.currentPage.value / p
 
 const pageInput = ref(1)
 const notesOpen = ref(false)
-const noteText = ref('')
 
+
+/* Notes panel width: dragged by its left edge, remembered across books in this browser. */
+const PANEL_DEFAULT = 400
+const PANEL_MIN = 280
+const PANEL_WIDTH_KEY = 'elib_notes_panel_width'
+const panelWidth = ref(readPanelWidth())
+const resizingPanel = ref(false)
+
+function readPanelWidth(): number {
+  try {
+    const saved = Number(localStorage.getItem(PANEL_WIDTH_KEY))
+    return saved >= PANEL_MIN ? saved : PANEL_DEFAULT
+  } catch {
+    return PANEL_DEFAULT
+  }
+}
+
+/** Keeps at least a quarter of the reader for the book itself. */
+function setPanelWidth(width: number) {
+  const max = Math.max(PANEL_MIN, (readerShell.value?.clientWidth ?? window.innerWidth) * 0.75)
+  panelWidth.value = Math.round(Math.min(max, Math.max(PANEL_MIN, width)))
+  try {
+    localStorage.setItem(PANEL_WIDTH_KEY, String(panelWidth.value))
+  } catch {
+    // Storage unavailable: the width just won't be remembered.
+  }
+}
+
+function startPanelResize(event: PointerEvent) {
+  const handle = event.currentTarget as HTMLElement
+  const startX = event.clientX
+  const startWidth = panelWidth.value
+  handle.setPointerCapture(event.pointerId)
+  resizingPanel.value = true
+  // The panel grows leftwards, so dragging left (negative dx) widens it.
+  const move = (e: PointerEvent) => setPanelWidth(startWidth - (e.clientX - startX))
+  const stop = () => {
+    resizingPanel.value = false
+    handle.removeEventListener('pointermove', move)
+    handle.removeEventListener('pointerup', stop)
+    handle.removeEventListener('pointercancel', stop)
+  }
+  handle.addEventListener('pointermove', move)
+  handle.addEventListener('pointerup', stop)
+  handle.addEventListener('pointercancel', stop)
+}
+
+function handlePanelResizeKey(event: KeyboardEvent) {
+  const step = event.shiftKey ? 80 : 20
+  if (event.key === 'ArrowLeft') setPanelWidth(panelWidth.value + step)
+  else if (event.key === 'ArrowRight') setPanelWidth(panelWidth.value - step)
+  else if (event.key === 'Home') setPanelWidth(PANEL_DEFAULT)
+  else return
+  event.preventDefault()
+}
+const noteText = ref('')
 const zoomPercent = computed(() => Math.round(zoomRotate.scale.value * 100))
 
 watch(pdf.currentPage, (page) => {
@@ -271,10 +326,6 @@ async function handleRemoveAnnotation(id: string) {
   }
 }
 
-async function handleExportNotes() {
-  await annotations.exportJson()
-  toast.success('Notes and highlights copied as JSON.')
-}
 
 function handlePrint() {
   window.print()
@@ -290,6 +341,8 @@ function toggleFullscreen() {
 }
 
 function handleKeydown(event: KeyboardEvent) {
+  const target = event.target as HTMLElement
+  if (target.closest?.('dialog[open]')) return
   // The browser's own find can't see text drawn on canvas, so Ctrl/Cmd+F goes to the book search.
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
     event.preventDefault()
@@ -297,8 +350,8 @@ function handleKeydown(event: KeyboardEvent) {
     searchInput.value?.select()
     return
   }
-  const tag = (event.target as HTMLElement)?.tagName
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return
+  // Zoom keys never fire while typing, including in the <math-field> equation editor.
+  if (target.closest?.('input, textarea, select, [contenteditable="true"], math-field')) return
   if (event.key === '+' || event.key === '=') {
     event.preventDefault()
     applyZoom(() => zoomRotate.zoomIn())
@@ -479,7 +532,26 @@ onBeforeUnmount(() => {
         @close="closePopover"
       />
 
-      <aside v-if="notesOpen" class="pdf-notes-panel" aria-label="Notes">
+      <aside
+        v-if="notesOpen"
+        class="pdf-notes-panel"
+        :class="{ 'is-resizing': resizingPanel }"
+        :style="{ width: `${panelWidth}px` }"
+        aria-label="Notes"
+      >
+        <div
+          class="panel-resizer"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize notes panel"
+          :aria-valuenow="panelWidth"
+          :aria-valuemin="PANEL_MIN"
+          tabindex="0"
+          title="Drag to resize · double-click to reset"
+          @pointerdown.prevent="startPanelResize"
+          @dblclick="setPanelWidth(PANEL_DEFAULT)"
+          @keydown="handlePanelResizeKey"
+        ></div>
         <div class="notes-header">
           <h2>Notes</h2>
           <button type="button" class="btn-close" aria-label="Close notes" @click="notesOpen = false">&times;</button>
@@ -497,9 +569,6 @@ onBeforeUnmount(() => {
             <textarea id="reader-note-text" v-model="noteText" rows="3" placeholder="A thought about this page"></textarea>
             <div class="notes-actions">
               <button type="button" class="btn btn-primary" :disabled="!noteText.trim()" @click="handleAddNote">Add note</button>
-              <button type="button" class="link-btn" :disabled="!annotations.items.value.length" @click="handleExportNotes">
-                Copy as JSON
-              </button>
             </div>
           </div>
 
