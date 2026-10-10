@@ -8,6 +8,17 @@
   flex: 1;
 }
 
+.app-shell--immersive {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.app-shell--immersive .app-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .skip-link {
   position: absolute;
   top: -100%;

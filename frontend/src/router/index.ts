@@ -12,6 +12,8 @@ const router = createRouter({
       path: '/read/:id',
       name: 'reader',
       component: () => import('@/views/Reader.vue'),
+      // Full-window app view: no footer, and the reader is the only thing that scrolls.
+      meta: { immersive: true },
     },
     {
       path: '/login',

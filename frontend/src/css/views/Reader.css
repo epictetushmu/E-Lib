@@ -4,7 +4,8 @@
   --desk-ink: #5a5340;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 64px);
+  flex: 1;
+  min-height: 0;
 }
 
 .pdf-reader-shell.theme-sepia {
@@ -363,6 +364,7 @@ svg {
 .pdf-container {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 2rem 1.5rem 3rem;
   text-align: center;
   background: var(--desk);
@@ -371,7 +373,8 @@ svg {
 
 .pdf-container :deep(.pdf-page) {
   position: relative;
-  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
   margin: 0 auto 3.25rem;
   background: #fff;
   box-shadow: 0 1px 2px rgba(var(--color-navy-rgb), 0.18), 0 10px 28px -12px rgba(var(--color-navy-rgb), 0.35);
@@ -437,9 +440,9 @@ svg {
   font-variant-numeric: oldstyle-nums;
 }
 
+/* Sized to page 1 by usePdfDocument so rendering a page doesn't shift everything below it. */
 .pdf-container :deep(.pdf-page-placeholder) {
-  height: 800px;
-  max-width: 90%;
+  max-width: 100%;
   margin: 0 auto 3.25rem;
   background: rgba(255, 255, 255, 0.25);
   display: flex;

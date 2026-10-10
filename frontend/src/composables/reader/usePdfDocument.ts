@@ -4,6 +4,7 @@ import type { PDFDocumentLoadingTask, PDFDocumentProxy, PageViewport } from 'pdf
 import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import * as booksApi from '@/api/books'
 import { requestErrorMessage } from '@/types/api'
+import { scrollWithin } from '@/utils/dom'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
 
@@ -65,8 +66,13 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
     return wrapper
   }
 
-  function makePlaceholder(pageNumber: number): HTMLElement {
+  /** `size` is page 1's rendered size; most books use one page size throughout. */
+  function makePlaceholder(pageNumber: number, size?: PageViewport): HTMLElement {
     const placeholder = document.createElement('div')
+    if (size) {
+      placeholder.style.width = `${size.width}px`
+      placeholder.style.aspectRatio = `${size.width} / ${size.height}`
+    }
     placeholder.className = 'pdf-page-placeholder'
     placeholder.dataset.pageNumber = String(pageNumber)
     placeholder.textContent = `Page ${pageNumber}`
@@ -137,7 +143,7 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
       decorate(first)
     }
     for (let pageNumber = 2; pageNumber <= numPages.value; pageNumber++) {
-      container.appendChild(makePlaceholder(pageNumber))
+      container.appendChild(makePlaceholder(pageNumber, viewports.get(1)))
     }
 
     setupLazyRendering()
@@ -164,10 +170,7 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
   function goToPage(pageNumber: number) {
     if (!container || pageNumber < 1 || pageNumber > numPages.value) return
     const el = container.querySelector(`[data-page-number="${pageNumber}"]`)
-    // Scroll the page container only; scrollIntoView would also scroll the window past the toolbar.
-    if (el) {
-      container.scrollBy({ top: el.getBoundingClientRect().top - container.getBoundingClientRect().top, behavior: 'smooth' })
-    }
+    if (el) scrollWithin(container, el.getBoundingClientRect().top - container.getBoundingClientRect().top)
     currentPage.value = pageNumber
   }
 

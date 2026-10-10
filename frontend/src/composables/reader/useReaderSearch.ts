@@ -1,6 +1,7 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import type { PDFDocumentProxy, PageViewport } from 'pdfjs-dist'
 import type { TextItem } from 'pdfjs-dist/types/src/display/api'
+import { scrollWithin } from '@/utils/dom'
 
 /** One occurrence of the search term; rects are in PDF user space ([x1, y1, x2, y2]), one per text run it spans. */
 export interface SearchMatch {
@@ -32,11 +33,11 @@ function centerInScroller(el: HTMLElement) {
   if (!scroller) return
   const box = el.getBoundingClientRect()
   const view = scroller.getBoundingClientRect()
-  scroller.scrollBy({
-    top: box.top - view.top - (view.height - box.height) / 2,
-    left: box.left - view.left - (view.width - box.width) / 2,
-    behavior: 'smooth',
-  })
+  scrollWithin(
+    scroller,
+    box.top - view.top - (view.height - box.height) / 2,
+    box.left - view.left - (view.width - box.width) / 2,
+  )
 }
 
 /** Case- and accent-insensitive, so "αρχη" finds "Αρχή"; final sigma matches σ. */
