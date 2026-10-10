@@ -1,6 +1,6 @@
 import { ref, shallowRef, type Ref } from 'vue'
 import * as pdfjsLib from 'pdfjs-dist'
-import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist'
+import type { PDFDocumentLoadingTask, PDFDocumentProxy, PageViewport } from 'pdfjs-dist'
 import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import * as booksApi from '@/api/books'
 import { requestErrorMessage } from '@/types/api'
@@ -10,6 +10,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
 export interface UsePdfDocumentOptions {
   scale: Ref<number>
   rotation: Ref<number>
+  /** Called each time a page lands in the DOM (and on redecorate()), to draw overlays such as search hits. */
+  decoratePage?: (pageNumber: number, wrapper: HTMLElement, viewport: PageViewport) => void
 }
 
 /** Loads a book's PDF via authenticated fetch, then lazily renders pages into a container element. */
@@ -25,6 +27,7 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
   let container: HTMLElement | null = null
   let lazyObserver: IntersectionObserver | null = null
   let trackObserver: IntersectionObserver | null = null
+  const viewports = new Map<number, PageViewport>()
 
   function setContainer(el: HTMLElement | null) {
     container = el
@@ -50,6 +53,7 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
     label.className = 'pdf-page-label'
     label.textContent = String(pageNumber)
     wrapper.appendChild(label)
+    viewports.set(pageNumber, viewport)
 
     const context = canvas.getContext('2d')
     if (context) {
@@ -81,6 +85,7 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
           renderPage(pageNumber).then((el) => {
             if (el) {
               target.replaceWith(el)
+              decorate(el)
               trackObserver?.observe(el)
             }
           })
@@ -107,15 +112,30 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
     container.querySelectorAll('.pdf-page').forEach((el) => trackObserver?.observe(el))
   }
 
+  function decorate(wrapper: HTMLElement) {
+    const pageNumber = Number(wrapper.dataset.pageNumber)
+    const viewport = viewports.get(pageNumber)
+    if (viewport) options.decoratePage?.(pageNumber, wrapper, viewport)
+  }
+
+  /** Re-runs decoratePage on every page currently rendered. */
+  function redecorate() {
+    container?.querySelectorAll<HTMLElement>('.pdf-page').forEach(decorate)
+  }
+
   /** Re-renders page 1 immediately and re-queues the rest as lazy placeholders (used after zoom/rotate changes). */
   async function rebuildPages() {
     if (!pdfDoc.value || !container) return
     lazyObserver?.disconnect()
     trackObserver?.disconnect()
     container.innerHTML = ''
+    viewports.clear()
 
     const first = await renderPage(1)
-    if (first) container.appendChild(first)
+    if (first) {
+      container.appendChild(first)
+      decorate(first)
+    }
     for (let pageNumber = 2; pageNumber <= numPages.value; pageNumber++) {
       container.appendChild(makePlaceholder(pageNumber))
     }
@@ -144,7 +164,10 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
   function goToPage(pageNumber: number) {
     if (!container || pageNumber < 1 || pageNumber > numPages.value) return
     const el = container.querySelector(`[data-page-number="${pageNumber}"]`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Scroll the page container only; scrollIntoView would also scroll the window past the toolbar.
+    if (el) {
+      container.scrollBy({ top: el.getBoundingClientRect().top - container.getBoundingClientRect().top, behavior: 'smooth' })
+    }
     currentPage.value = pageNumber
   }
 
@@ -170,6 +193,7 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
     load,
     rebuildPages,
     goToPage,
+    redecorate,
     getPageBaseWidth,
     destroy,
   }
