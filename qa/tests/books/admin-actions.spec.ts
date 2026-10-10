@@ -5,6 +5,7 @@ import { expect, test } from '../../fixtures';
 import { DashboardPage } from '../../pages/DashboardPage';
 import { BrowsePage } from '../../pages/BrowsePage';
 import { BookDetailPage } from '../../pages/BookDetailPage';
+import { HomePage } from '../../pages/HomePage';
 
 // Three of the admin dashboard's mutating actions (frontend/src/views/admin/Dashboard.vue)
 // have no coverage in dashboard.spec.ts, which only checks page access/display. All three
@@ -119,6 +120,8 @@ test.describe('Admin book management actions', () => {
       await expect(dashboard.downloadableCheckbox).toBeChecked();
       await dashboard.downloadableCheckbox.uncheck();
       await dashboard.saveEditButton.click();
+      // The modal closes only once the PUT succeeds; navigating before that can race the save.
+      await expect(dashboard.editDialog).toHaveCount(0);
 
       // UI layer: the detail page shows "download disabled" instead of the download button.
       const bookDetail = new BookDetailPage(adminPage);
@@ -132,6 +135,90 @@ test.describe('Admin book management actions', () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       expect(response.status()).toBe(403);
+    } finally {
+      await deleteBookViaApi(request, token, id);
+    }
+  });
+
+  test('featuring a book puts it in the home page Featured Collection, and unfeaturing removes it', async ({
+    adminPage,
+    request,
+    adminCredentials,
+  }, testInfo) => {
+    // Four page loads plus API cross-checks against the single-threaded dev server.
+    testInfo.setTimeout(60_000);
+
+    const token = await loginAsAdmin(request, adminCredentials.email, adminCredentials.password);
+    const title = uniqueBookTitle('QA Featured Toggle');
+    const id = await createBookViaApi(request, token, { title, pdf: buildSamplePdf(title) });
+    await setBookVisibility(request, token, id, { status: 'public', featured: false });
+
+    try {
+      const dashboard = new DashboardPage(adminPage);
+      const home = new HomePage(adminPage);
+
+      await dashboard.open();
+      await expect(dashboard.featuredToggle(id)).toHaveAttribute('aria-pressed', 'false');
+      await dashboard.featuredToggle(id).click();
+      await expect(dashboard.featuredToggle(id)).toHaveAttribute('aria-pressed', 'true');
+
+      expect((await getBookByTitle(request, title))?.featured).toBe(true);
+      await home.open();
+      await expect(home.bookCardById(id)).toBeVisible();
+
+      await dashboard.open();
+      await dashboard.featuredToggle(id).click();
+      await expect(dashboard.featuredToggle(id)).toHaveAttribute('aria-pressed', 'false');
+
+      expect((await getBookByTitle(request, title))?.featured).toBe(false);
+      await home.open();
+      await expect(adminPage.getByTestId('featured-section')).toBeVisible();
+      await expect(home.bookCardById(id)).toHaveCount(0);
+    } finally {
+      await deleteBookViaApi(request, token, id);
+    }
+  });
+
+  test('editing a book saves its details and shows them on the book page', async ({ adminPage, request, adminCredentials }) => {
+    const token = await loginAsAdmin(request, adminCredentials.email, adminCredentials.password);
+    const title = uniqueBookTitle('QA Edit Before');
+    const id = await createBookViaApi(request, token, { title, pdf: buildSamplePdf(title) });
+    const newTitle = uniqueBookTitle('QA Edit After');
+
+    try {
+      const dashboard = new DashboardPage(adminPage);
+      await dashboard.open();
+      await dashboard.editButton(id).click();
+      await expect(dashboard.editDialog).toBeVisible();
+      await expect(dashboard.editField('Title')).toHaveValue(title);
+
+      await dashboard.editField('Title').fill(newTitle);
+      await dashboard.editField('Author').fill('E. Kazantzakis');
+      await dashboard.editField('Description').fill('A field guide to Cretan monasteries.');
+      await dashboard.editField('ISBN').fill('9780000000002');
+      await dashboard.editField('Categories').fill('QA Travel');
+      await dashboard.editField('Categories').press('Enter');
+      // The suggestions menu stays open after a pick (for adding several) and overlaps Save; close it like a user would.
+      await dashboard.editField('Categories').press('Escape');
+      await dashboard.saveEditButton.click();
+
+      await expect(adminPage.getByText('Book updated successfully.')).toBeVisible();
+      await expect(dashboard.editDialog).toHaveCount(0);
+      await expect(dashboard.rowById(id)).toContainText(newTitle);
+      await expect(dashboard.rowById(id)).toContainText('E. Kazantzakis');
+
+      // Persisted server-side, not just patched into the page's own list.
+      expect(await getBookByTitle(request, title)).toBeNull();
+      expect(await getBookByTitle(request, newTitle)).toMatchObject({
+        author: 'E. Kazantzakis',
+        description: 'A field guide to Cretan monasteries.',
+        isbn: '9780000000002',
+        categories: ['QA Travel'],
+      });
+
+      const detail = new BookDetailPage(adminPage);
+      await detail.openBook(id);
+      await expect(detail.title).toHaveText(newTitle);
     } finally {
       await deleteBookViaApi(request, token, id);
     }

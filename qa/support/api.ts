@@ -94,7 +94,10 @@ export interface UploadedBook {
   _id: string | { $oid: string };
   title: string;
   author?: string;
+  description?: string;
+  isbn?: string;
   status?: string;
+  featured?: boolean;
   downloadable?: boolean;
   file_extension?: string;
   categories?: string[];

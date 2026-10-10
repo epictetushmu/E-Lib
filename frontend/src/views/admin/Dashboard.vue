@@ -267,6 +267,7 @@ onMounted(loadBooks)
             }"
             :style="{ height: `${spine.height}%`, '--i': Math.min(i, 40) }"
             :title="spine.book.title"
+            :data-testid="`shelf-spine-${spine.id}`"
             @click="showOnShelf(spine.id)"
           ></button>
         </div>
@@ -416,8 +417,8 @@ onMounted(loadBooks)
     </template>
 
     <div v-if="editing" class="modal-overlay" @click.self="closeEdit">
-      <div class="modal-panel card">
-        <h2>Edit Book</h2>
+      <div class="modal-panel card" role="dialog" aria-modal="true" aria-labelledby="edit-book-heading">
+        <h2 id="edit-book-heading">Edit Book</h2>
         <p v-if="editError" class="alert alert-danger">{{ editError }}</p>
         <form @submit.prevent="submitEdit">
           <div class="form-grid">
