@@ -102,6 +102,16 @@
   position: relative;
 }
 
+.auth-area .btn-outline {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #fff;
+}
+
+.auth-area .btn-outline:hover {
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
 .user-chip {
   display: flex;
   align-items: center;
