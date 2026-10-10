@@ -3,6 +3,8 @@ import katexPlugin from '@vscode/markdown-it-katex'
 import katex from 'katex'
 import hljs from 'highlight.js/lib/common'
 import 'katex/dist/katex.min.css'
+import '@/css/diagram-shapes.css'
+import { parseDiagram, renderDiagramSvg } from '@/utils/diagram'
 
 /**
  * Renders a reader's note: Markdown, $inline$ / $$block$$ maths (KaTeX), highlighted ```code```,
@@ -27,6 +29,15 @@ md.use(plugin, { throwOnError: false, katex })
 const defaultFence = md.renderer.rules.fence!
 md.renderer.rules.fence = (tokens, idx, options, env, self) => {
   const token = tokens[idx]
+  // Drawn in the visual editor (```flowchart is the older name for the same format).
+  if (['diagram', 'flowchart'].includes(token.info.trim())) {
+    try {
+      const svg = renderDiagramSvg(parseDiagram(token.content))
+      return `<div class="note-diagram note-drawn" role="button" tabindex="0" aria-label="Open diagram full size" title="Open full size">${svg}</div>`
+    } catch {
+      return '<div class="note-diagram is-invalid">This diagram couldn\'t be read. Open it in the editor and insert it again.</div>'
+    }
+  }
   if (token.info.trim() === 'mermaid') {
     return `<div class="note-diagram" data-mermaid>${md.utils.escapeHtml(token.content)}</div>`
   }
