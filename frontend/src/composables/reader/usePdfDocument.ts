@@ -138,9 +138,29 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
     container?.querySelectorAll<HTMLElement>('.pdf-page').forEach(decorate)
   }
 
-  /** Re-renders page 1 immediately and re-queues the rest as lazy placeholders (used after zoom/rotate changes). */
+  /** Which page is at the top of the view, and how far down it (0–1), so a re-layout can return there. */
+  function readingPosition(): { page: number; fraction: number } | null {
+    const el = container?.querySelector<HTMLElement>(`[data-page-number="${currentPage.value}"]`)
+    if (!container || !el) return null
+    const top = el.getBoundingClientRect().top - container.getBoundingClientRect().top
+    return { page: currentPage.value, fraction: Math.min(1, Math.max(0, -top / el.offsetHeight)) }
+  }
+
+  function restorePosition(position: { page: number; fraction: number }) {
+    const el = container?.querySelector<HTMLElement>(`[data-page-number="${position.page}"]`)
+    if (!container || !el) return
+    const top = el.getBoundingClientRect().top - container.getBoundingClientRect().top
+    container.scrollTop += top + position.fraction * el.offsetHeight
+    currentPage.value = position.page
+  }
+
+  /**
+   * Re-renders page 1 immediately and re-queues the rest as lazy placeholders (used after zoom/rotate changes),
+   * keeping the reader on the same page: page sizes change, so the old scroll offset would land elsewhere.
+   */
   async function rebuildPages() {
     if (!pdfDoc.value || !container) return
+    const position = readingPosition()
     lazyObserver?.disconnect()
     trackObserver?.disconnect()
     container.innerHTML = ''
@@ -154,6 +174,7 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
     for (let pageNumber = 2; pageNumber <= numPages.value; pageNumber++) {
       container.appendChild(makePlaceholder(pageNumber, viewports.get(1)))
     }
+    if (position) restorePosition(position)
 
     setupLazyRendering()
     setupPageTracking()
