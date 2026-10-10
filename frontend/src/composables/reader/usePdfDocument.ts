@@ -50,6 +50,15 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
     canvas.height = viewport.height
     wrapper.appendChild(canvas)
 
+    // Invisible, selectable text laid over the canvas so readers can select (and highlight) passages.
+    const textLayer = document.createElement('div')
+    textLayer.className = 'textLayer'
+    wrapper.style.setProperty('--total-scale-factor', String(viewport.scale))
+    wrapper.appendChild(textLayer)
+    new pdfjsLib.TextLayer({ textContentSource: page.streamTextContent(), container: textLayer, viewport })
+      .render()
+      .catch((err) => console.error('PDF text layer error', err))
+
     const label = document.createElement('div')
     label.className = 'pdf-page-label'
     label.textContent = String(pageNumber)
@@ -197,6 +206,7 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
     rebuildPages,
     goToPage,
     redecorate,
+    viewportFor: (pageNumber: number) => viewports.get(pageNumber),
     getPageBaseWidth,
     destroy,
   }

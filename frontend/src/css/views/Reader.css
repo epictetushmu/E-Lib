@@ -363,7 +363,7 @@ svg {
 
 .pdf-container {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
   overscroll-behavior: contain;
   padding: 2rem 1.5rem 3rem;
   text-align: center;
@@ -371,10 +371,12 @@ svg {
   transition: background-color 0.25s ease;
 }
 
+/* Pages keep their rendered size (zoom is real zoom); wider-than-window pages scroll sideways. */
 .pdf-container :deep(.pdf-page) {
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
   position: relative;
   width: fit-content;
-  max-width: 100%;
   margin: 0 auto 3.25rem;
   background: #fff;
   box-shadow: 0 1px 2px rgba(var(--color-navy-rgb), 0.18), 0 10px 28px -12px rgba(var(--color-navy-rgb), 0.35);
@@ -382,8 +384,6 @@ svg {
 
 .pdf-container :deep(canvas) {
   display: block;
-  max-width: 100%;
-  height: auto;
 }
 
 .theme-sepia .pdf-container :deep(canvas) {
@@ -400,24 +400,125 @@ svg {
   box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.7);
 }
 
-/* Search hits: ochre wash for every occurrence, fresco red frame for the one you're on. */
+/*
+ * Text layer (from pdf.js's viewer CSS, flattened): transparent text over the canvas,
+ * positioned and scaled by pdf.js, so the reader can select it.
+ */
+.pdf-container :deep(.textLayer) {
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  text-align: initial;
+  line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  z-index: 0;
+}
+
+.pdf-container :deep(.textLayer span),
+.pdf-container :deep(.textLayer br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  user-select: text;
+}
+
+.pdf-container :deep(.textLayer > :not(.markedContent)),
+.pdf-container :deep(.textLayer .markedContent span:not(.markedContent)) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.pdf-container :deep(.textLayer .markedContent) {
+  display: contents;
+}
+
+.pdf-container :deep(.textLayer ::selection) {
+  background: rgba(var(--color-navy-rgb), 0.22);
+  color: transparent;
+}
+
+.pdf-container :deep(.textLayer br::selection) {
+  background: transparent;
+}
+
+.pdf-container :deep(.textLayer .endOfContent) {
+  display: block;
+  position: absolute;
+  inset: 100% 0 0;
+  z-index: 0;
+  cursor: default;
+  user-select: none;
+}
+
+.pdf-container :deep(.textLayer.selecting .endOfContent) {
+  top: 0;
+}
+
+/* Reader highlights: marker inks laid under the text (multiply keeps the print legible). */
+.pdf-container :deep(.user-highlight) {
+  position: absolute;
+  border-radius: 2px;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.pdf-container :deep(.hl-saffron) {
+  background: rgba(242, 201, 76, 0.55);
+}
+
+.pdf-container :deep(.hl-olive) {
+  background: rgba(169, 191, 107, 0.55);
+}
+
+.pdf-container :deep(.hl-aegean) {
+  background: rgba(127, 188, 214, 0.55);
+}
+
+.pdf-container :deep(.hl-rose) {
+  background: rgba(233, 160, 160, 0.6);
+}
+
+.pdf-container :deep(.user-highlight.is-active) {
+  box-shadow: 0 0 0 1.5px rgba(var(--color-navy-rgb), 0.55);
+}
+
+/* On the inverted night page, multiply would vanish; screen lifts the ink instead. */
+.theme-dark .pdf-container :deep(.user-highlight) {
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+/* Search hits: a fresco wash, distinct from any highlight ink, with a frame on the current one. */
 .pdf-container :deep(.search-hit) {
   position: absolute;
-  background: rgba(214, 160, 44, 0.38);
+  background: rgba(166, 67, 42, 0.22);
   mix-blend-mode: multiply;
   border-radius: 2px;
   pointer-events: none;
 }
 
 .pdf-container :deep(.search-hit.is-current) {
-  background: rgba(214, 160, 44, 0.55);
+  background: rgba(166, 67, 42, 0.3);
   box-shadow: 0 0 0 2px var(--color-primary);
   mix-blend-mode: normal;
   animation: hit-arrive 0.5s ease-out;
 }
 
 .theme-dark .pdf-container :deep(.search-hit) {
-  background: rgba(230, 180, 70, 0.32);
+  background: rgba(224, 120, 94, 0.35);
   mix-blend-mode: screen;
 }
 
@@ -442,7 +543,6 @@ svg {
 
 /* Sized to page 1 by usePdfDocument so rendering a page doesn't shift everything below it. */
 .pdf-container :deep(.pdf-page-placeholder) {
-  max-width: 100%;
   margin: 0 auto 3.25rem;
   background: rgba(255, 255, 255, 0.25);
   display: flex;
@@ -565,6 +665,78 @@ svg {
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Edit/delete sit quietly until the entry is hovered or focused; always shown where there's no hover. */
+.note-actions {
+  display: flex;
+  gap: 0.1rem;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.note-item:hover .note-actions,
+.note-item:focus-within .note-actions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .note-actions {
+    opacity: 1;
+  }
+}
+
+.note-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.note-action svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.note-action:hover {
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
+.note-action-delete:hover {
+  color: var(--color-danger);
+}
+
+.note-edit textarea {
+  width: 100%;
+  margin-top: 0.15rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  padding: 0.5rem;
+  font-family: var(--font-serif);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.note-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 0.4rem;
+}
+
+.note-edit-actions .btn {
+  padding: 0.35rem 0.8rem;
+  font-size: 0.85rem;
+}
+
 .note-page {
   background: none;
   border: none;
@@ -579,6 +751,49 @@ svg {
 
 .note-page:hover {
   text-decoration: underline;
+}
+
+.note-body {
+  min-width: 0;
+}
+
+/* The highlighted passage, edged in the ink it was marked with. */
+.note-quote {
+  margin: 0 0 0.3rem;
+  padding-left: 0.6rem;
+  border-left: 3px solid #f2c94c;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.quote-olive {
+  border-left-color: #a9bf6b;
+}
+
+.quote-aegean {
+  border-left-color: #7fbcd6;
+}
+
+.quote-rose {
+  border-left-color: #e9a0a0;
+}
+
+.note-quote + .note-text {
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.notes-guest p {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .note-text {

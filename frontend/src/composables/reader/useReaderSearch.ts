@@ -2,6 +2,7 @@ import { computed, ref, watch, type Ref } from 'vue'
 import type { PDFDocumentProxy, PageViewport } from 'pdfjs-dist'
 import type { TextItem } from 'pdfjs-dist/types/src/display/api'
 import { scrollWithin } from '@/utils/dom'
+import { placeOverPdfRect } from './pdfGeometry'
 
 /** One occurrence of the search term; rects are in PDF user space ([x1, y1, x2, y2]), one per text run it spans. */
 export interface SearchMatch {
@@ -176,14 +177,9 @@ export function useReaderSearch(pdfDoc: Ref<PDFDocumentProxy | null>) {
     matches.value.forEach((match, index) => {
       if (match.page !== pageNumber) return
       match.rects.forEach((rect) => {
-        const [ax, ay] = viewport.convertToViewportPoint(rect[0], rect[1])
-        const [bx, by] = viewport.convertToViewportPoint(rect[2], rect[3])
         const hit = document.createElement('div')
         hit.className = index === current.value ? 'search-hit is-current' : 'search-hit'
-        hit.style.left = `${(Math.min(ax, bx) / viewport.width) * 100}%`
-        hit.style.top = `${(Math.min(ay, by) / viewport.height) * 100}%`
-        hit.style.width = `${(Math.abs(bx - ax) / viewport.width) * 100}%`
-        hit.style.height = `${(Math.abs(by - ay) / viewport.height) * 100}%`
+        placeOverPdfRect(hit, rect, viewport)
         wrapper.appendChild(hit)
       })
     })

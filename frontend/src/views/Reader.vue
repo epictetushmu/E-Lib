@@ -4,12 +4,15 @@ import { useRoute } from 'vue-router'
 import { usePdfDocument } from '@/composables/reader/usePdfDocument'
 import { useZoomRotate, DEFAULT_SCALE } from '@/composables/reader/useZoomRotate'
 import { useReaderSearch } from '@/composables/reader/useReaderSearch'
-import { useReaderNotes } from '@/composables/reader/useReaderNotes'
+import { useAnnotations } from '@/composables/reader/useAnnotations'
+import { clientPointToPdf, clientRectToPdf, mergeLineRects } from '@/composables/reader/pdfGeometry'
 import { useReaderPersistence } from '@/composables/reader/useReaderPersistence'
 import { useToast } from '@/composables/useToast'
 import * as booksApi from '@/api/books'
 import type { Book } from '@/types/book'
-import { isApiSuccess } from '@/types/api'
+import { isApiSuccess, requestErrorMessage } from '@/types/api'
+import type { Annotation, HighlightColor, NewAnnotation } from '@/types/annotation'
+import AnnotationPopover from '@/components/AnnotationPopover.vue'
 
 const route = useRoute()
 const toast = useToast()
@@ -22,10 +25,16 @@ const zoomRotate = useZoomRotate(savedZoom ?? DEFAULT_SCALE)
 const pdf = usePdfDocument(bookId, {
   scale: zoomRotate.scale,
   rotation: zoomRotate.rotation,
-  decoratePage: (pageNumber, wrapper, viewport) => search.paintHits(pageNumber, wrapper, viewport),
+  decoratePage: (pageNumber, wrapper, viewport) => {
+    annotations.paint(pageNumber, wrapper, viewport, popover.value?.annotation?.id)
+    search.paintHits(pageNumber, wrapper, viewport)
+  },
 })
 const search = useReaderSearch(pdf.pdfDoc)
-const notes = useReaderNotes(bookId)
+const annotations = useAnnotations(bookId)
+/** Focuses the element when it appears (the note editor). */
+const vFocus = { mounted: (el: HTMLElement) => el.focus() }
+const loginPath = `/login?redirect=${encodeURIComponent(route.fullPath)}`
 
 const readerShell = ref<HTMLElement | null>(null)
 const pagesContainer = ref<HTMLElement | null>(null)
@@ -97,21 +106,174 @@ watch([search.matches, search.current], () => {
   }
 })
 
-function handleAddNote() {
-  if (!noteText.value.trim()) return
-  notes.addNote(pdf.currentPage.value, noteText.value)
-  noteText.value = ''
+/* Highlights and notes */
+
+interface PopoverState {
+  mode: 'new' | 'edit' | 'guest' | 'multipage'
+  left: number
+  top: number
+  placeAbove: boolean
+  pending?: NewAnnotation
+  annotation?: Annotation
+}
+
+const popover = ref<PopoverState | null>(null)
+const popoverBusy = ref(false)
+
+watch([annotations.items, popover], () => pdf.redecorate())
+
+/** Below the anchor, or above it when there isn't room; kept clear of the window edges. */
+function anchorFor(box: { left: number; right: number; top: number; bottom: number }) {
+  const placeAbove = box.bottom + 160 > window.innerHeight
+  return {
+    placeAbove,
+    top: placeAbove ? box.top - 8 : box.bottom + 8,
+    left: Math.min(Math.max((box.left + box.right) / 2, 150), window.innerWidth - 150),
+  }
+}
+
+function pageOf(node: Node): HTMLElement | null {
+  return (node instanceof Element ? node : node.parentElement)?.closest<HTMLElement>('.pdf-page') ?? null
+}
+
+function openForSelection(range: Range) {
+  const page = pageOf(range.startContainer)
+  if (!page?.querySelector('.textLayer')?.contains(range.startContainer)) return
+  const box = range.getBoundingClientRect()
+  if (!annotations.canAnnotate.value) {
+    popover.value = { mode: 'guest', ...anchorFor(box) }
+    return
+  }
+  const endPage = pageOf(range.endContainer)
+  if (endPage && endPage !== page) {
+    popover.value = { mode: 'multipage', ...anchorFor(box) }
+    return
+  }
+
+  const pageNumber = Number(page.dataset.pageNumber)
+  const viewport = pdf.viewportFor(pageNumber)
+  if (!viewport) return
+  const pageBox = page.getBoundingClientRect()
+  const lines = mergeLineRects([...range.getClientRects()]).filter((r) => r.bottom > pageBox.top && r.top < pageBox.bottom)
+  if (!lines.length) return
+
+  popover.value = {
+    mode: 'new',
+    ...anchorFor(box),
+    pending: {
+      page: pageNumber,
+      rects: lines.map((r) => clientRectToPdf(r, page, viewport)),
+      // The selection's text keeps pdf.js's line breaks (<br>) as whitespace; range.toString() drops them.
+      quote: (window.getSelection()?.toString() ?? range.toString()).replace(/\s+/g, ' ').trim().slice(0, 2000),
+      note: '',
+      color: 'saffron',
+    },
+  }
+}
+
+/** After a drag, offer to highlight the selection; after a plain click, open the highlight under it. */
+function handlePagePointerUp(event: PointerEvent) {
+  requestAnimationFrame(() => {
+    const selection = window.getSelection()
+    if (selection && !selection.isCollapsed && selection.rangeCount) {
+      openForSelection(selection.getRangeAt(0))
+      return
+    }
+    const page = (event.target as HTMLElement).closest<HTMLElement>('.pdf-page')
+    const pageNumber = Number(page?.dataset.pageNumber)
+    const viewport = pdf.viewportFor(pageNumber)
+    if (!page || !viewport) return
+    const hit = annotations.highlightAt(pageNumber, clientPointToPdf(event.clientX, event.clientY, page, viewport))
+    if (hit) {
+      const point = { left: event.clientX, right: event.clientX, top: event.clientY, bottom: event.clientY + 12 }
+      popover.value = { mode: 'edit', ...anchorFor(point), annotation: hit }
+    }
+  })
+}
+
+function closePopover() {
+  popover.value = null
+}
+
+function handleDocumentPointerDown(event: PointerEvent) {
+  if (popover.value && !(event.target as HTMLElement).closest('.annotation-popover')) closePopover()
+}
+
+async function withPopoverBusy(action: () => Promise<unknown>, failure: string) {
+  popoverBusy.value = true
+  try {
+    await action()
+    window.getSelection()?.removeAllRanges()
+    closePopover()
+  } catch (err) {
+    toast.error(requestErrorMessage(err, failure))
+  } finally {
+    popoverBusy.value = false
+  }
+}
+
+function handlePopoverPick(color: HighlightColor) {
+  const { pending, annotation } = popover.value ?? {}
+  if (pending) withPopoverBusy(() => annotations.add({ ...pending, color }), 'Could not save the highlight.')
+  else if (annotation) withPopoverBusy(() => annotations.update(annotation.id, { color }), 'Could not change the colour.')
+}
+
+function handlePopoverSave(note: string) {
+  const { pending, annotation } = popover.value ?? {}
+  if (pending) withPopoverBusy(() => annotations.add({ ...pending, note }), 'Could not save the highlight.')
+  else if (annotation) withPopoverBusy(() => annotations.update(annotation.id, { note }), 'Could not save the note.')
+}
+
+function handlePopoverRemove() {
+  const annotation = popover.value?.annotation
+  if (annotation) withPopoverBusy(() => annotations.remove(annotation.id), 'Could not delete the highlight.')
+}
+
+async function handleAddNote() {
+  const note = noteText.value.trim()
+  if (!note) return
+  try {
+    await annotations.add({ page: pdf.currentPage.value, rects: [], quote: '', note, color: null })
+    noteText.value = ''
+  } catch (err) {
+    toast.error(requestErrorMessage(err, 'Could not save the note.'))
+  }
+}
+
+/* Editing a note in place from the sidebar */
+
+const editingId = ref<string | null>(null)
+const editText = ref('')
+const savingEdit = ref(false)
+
+function startEdit(item: Annotation) {
+  editingId.value = item.id
+  editText.value = item.note
+}
+
+async function saveEdit(item: Annotation) {
+  savingEdit.value = true
+  try {
+    await annotations.update(item.id, { note: editText.value })
+    editingId.value = null
+  } catch (err) {
+    toast.error(requestErrorMessage(err, 'Could not save the note.'))
+  } finally {
+    savingEdit.value = false
+  }
+}
+
+async function handleRemoveAnnotation(id: string) {
+  try {
+    await annotations.remove(id)
+  } catch (err) {
+    toast.error(requestErrorMessage(err, 'Could not delete it.'))
+  }
 }
 
 async function handleExportNotes() {
-  await notes.exportNotes()
-  toast.success('Notes copied to clipboard as JSON.')
-}
-
-function handleClearNotes() {
-  if (confirm('Delete all notes for this book in this browser?')) {
-    notes.clearNotes()
-  }
+  await annotations.exportJson()
+  toast.success('Notes and highlights copied as JSON.')
 }
 
 function handlePrint() {
@@ -148,6 +310,7 @@ function handleKeydown(event: KeyboardEvent) {
 
 onMounted(async () => {
   document.addEventListener('keydown', handleKeydown)
+  document.addEventListener('pointerdown', handleDocumentPointerDown)
   pdf.setContainer(pagesContainer.value)
   // Title is decoration for the toolbar; the reader still works if this fails.
   booksApi
@@ -157,6 +320,7 @@ onMounted(async () => {
     })
     .catch(() => {})
   await pdf.load()
+  annotations.load().catch(() => toast.error('Could not load your notes and highlights.'))
 
   if (savedZoom === null) {
     await handleFitWidth()
@@ -170,6 +334,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('pointerdown', handleDocumentPointerDown)
   pdf.destroy()
 })
 </script>
@@ -269,7 +434,7 @@ onBeforeUnmount(() => {
 
         <button type="button" class="notes-toggle" :aria-pressed="notesOpen" @click="notesOpen = !notesOpen">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM9 11h7M9 15h7" /></svg>
-          Notes<span v-if="notes.notes.value.length" class="notes-count">{{ notes.notes.value.length }}</span>
+          Notes<span v-if="annotations.items.value.length" class="notes-count">{{ annotations.items.value.length }}</span>
         </button>
       </div>
 
@@ -289,31 +454,107 @@ onBeforeUnmount(() => {
       <div v-if="pdf.loading.value" class="spinner" role="status" aria-label="Loading PDF"></div>
       <p v-else-if="pdf.error.value" class="alert alert-danger reader-error">{{ pdf.error.value }}</p>
 
-      <div ref="pagesContainer" class="pdf-container" :hidden="pdf.loading.value || !!pdf.error.value"></div>
+      <div
+        ref="pagesContainer"
+        class="pdf-container"
+        :hidden="pdf.loading.value || !!pdf.error.value"
+        @pointerup="handlePagePointerUp"
+        @scroll.passive="closePopover"
+      ></div>
+
+      <AnnotationPopover
+        v-if="popover"
+        :key="popover.annotation?.id ?? 'new'"
+        :mode="popover.mode"
+        :left="popover.left"
+        :top="popover.top"
+        :place-above="popover.placeAbove"
+        :color="popover.annotation?.color"
+        :note="popover.annotation?.note"
+        :login-path="loginPath"
+        :busy="popoverBusy"
+        @pick="handlePopoverPick"
+        @save="handlePopoverSave"
+        @remove="handlePopoverRemove"
+        @close="closePopover"
+      />
 
       <aside v-if="notesOpen" class="pdf-notes-panel" aria-label="Notes">
         <div class="notes-header">
           <h2>Notes</h2>
           <button type="button" class="btn-close" aria-label="Close notes" @click="notesOpen = false">&times;</button>
         </div>
-        <p class="notes-hint">Kept in this browser, for this book only.</p>
-        <div class="notes-add">
-          <label for="reader-note-text">Note on page {{ pdf.currentPage.value }}</label>
-          <textarea id="reader-note-text" v-model="noteText" rows="3" placeholder="A quote, a question, a reminder"></textarea>
-          <div class="notes-actions">
-            <button type="button" class="btn btn-primary" :disabled="!noteText.trim()" @click="handleAddNote">Add note</button>
-            <button type="button" class="link-btn" :disabled="!notes.notes.value.length" @click="handleExportNotes">Copy as JSON</button>
-            <button type="button" class="link-btn link-btn-danger" :disabled="!notes.notes.value.length" @click="handleClearNotes">Delete all</button>
-          </div>
+        <p class="notes-hint">Only you can see your notes and highlights.</p>
+
+        <div v-if="!annotations.canAnnotate.value" class="notes-guest">
+          <p>Log in to highlight passages and keep notes on this book. They're saved to your account and stay private.</p>
+          <RouterLink :to="loginPath" class="btn btn-primary">Log in</RouterLink>
         </div>
-        <p v-if="!notes.notes.value.length" class="notes-empty">Nothing here yet. Notes you add appear in page order, so you can jump back to them.</p>
-        <ul v-else class="notes-list">
-          <li v-for="note in notes.notes.value" :key="note.id" class="note-item">
-            <button type="button" class="note-page" @click="pdf.goToPage(note.page)">p. {{ note.page }}</button>
-            <p class="note-text">{{ note.text }}</p>
-            <button type="button" class="btn-close" aria-label="Delete note" @click="notes.removeNote(note.id)">&times;</button>
-          </li>
-        </ul>
+
+        <template v-else>
+          <div class="notes-add">
+            <label for="reader-note-text">Note on page {{ pdf.currentPage.value }}</label>
+            <textarea id="reader-note-text" v-model="noteText" rows="3" placeholder="A thought about this page"></textarea>
+            <div class="notes-actions">
+              <button type="button" class="btn btn-primary" :disabled="!noteText.trim()" @click="handleAddNote">Add note</button>
+              <button type="button" class="link-btn" :disabled="!annotations.items.value.length" @click="handleExportNotes">
+                Copy as JSON
+              </button>
+            </div>
+          </div>
+
+          <p v-if="!annotations.items.value.length" class="notes-empty">
+            Nothing here yet. Select text on a page to highlight it, or add a note above.
+          </p>
+          <ul v-else class="notes-list">
+            <li v-for="item in annotations.sorted.value" :key="item.id" class="note-item">
+              <button type="button" class="note-page" @click="pdf.goToPage(item.page)">p. {{ item.page }}</button>
+              <div class="note-body">
+                <blockquote v-if="item.quote" :class="['note-quote', `quote-${item.color ?? 'saffron'}`]">{{ item.quote }}</blockquote>
+                <form v-if="editingId === item.id" class="note-edit" @submit.prevent="saveEdit(item)" @keydown.esc="editingId = null">
+                  <label class="visually-hidden" :for="`note-edit-${item.id}`">Note</label>
+                  <textarea
+                    :id="`note-edit-${item.id}`"
+                    v-model="editText"
+                    v-focus
+                    rows="3"
+                    :placeholder="item.rects.length ? 'Add a note to this highlight' : ''"
+                    @keydown.enter.ctrl.prevent="saveEdit(item)"
+                    @keydown.enter.meta.prevent="saveEdit(item)"
+                  ></textarea>
+                  <div class="note-edit-actions">
+                    <!-- A page note is nothing but its text, so it can't be saved empty (delete it instead). -->
+                    <button type="submit" class="btn btn-primary" :disabled="savingEdit || (!item.rects.length && !editText.trim())">
+                      Save
+                    </button>
+                    <button type="button" class="link-btn" @click="editingId = null">Cancel</button>
+                  </div>
+                </form>
+                <p v-else-if="item.note" class="note-text">{{ item.note }}</p>
+              </div>
+              <div v-if="editingId !== item.id" class="note-actions">
+                <button
+                  type="button"
+                  class="note-action"
+                  :aria-label="item.rects.length ? (item.note ? 'Edit note on highlight' : 'Add note to highlight') : 'Edit note'"
+                  :title="item.note ? 'Edit note' : 'Add note'"
+                  @click="startEdit(item)"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" /></svg>
+                </button>
+                <button
+                  type="button"
+                  class="note-action note-action-delete"
+                  :aria-label="item.rects.length ? 'Delete highlight' : 'Delete note'"
+                  title="Delete"
+                  @click="handleRemoveAnnotation(item.id)"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>
+              </div>
+            </li>
+          </ul>
+        </template>
       </aside>
     </div>
   </div>

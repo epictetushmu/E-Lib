@@ -1,0 +1,139 @@
+.annotation-popover {
+  position: fixed;
+  z-index: 30;
+  width: max-content;
+  max-width: min(18rem, calc(100vw - 2rem));
+  transform: translateX(-50%);
+  padding: 0.6rem 0.7rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md);
+  animation: popover-in 0.12s ease-out;
+}
+
+.annotation-popover.above {
+  transform: translate(-50%, -100%);
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.popover-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.marker-tray {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* Marker swatches: the same inks the highlights are drawn in. */
+.marker {
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 1px solid rgba(var(--color-navy-rgb), 0.2);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.marker[aria-checked='true'] {
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 3.5px var(--color-text);
+}
+
+.marker:hover:not(:disabled) {
+  transform: scale(1.1);
+}
+
+.hl-saffron {
+  background: #f2c94c;
+}
+
+.hl-olive {
+  background: #a9bf6b;
+}
+
+.hl-aegean {
+  background: #7fbcd6;
+}
+
+.hl-rose {
+  background: #e9a0a0;
+}
+
+.popover-link {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.popover-link:hover:not(:disabled) {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.popover-delete {
+  display: block;
+  margin-top: 0.6rem;
+  color: var(--color-text-muted);
+}
+
+.popover-delete:hover:not(:disabled) {
+  color: var(--color-danger);
+}
+
+.popover-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+}
+
+.popover-note textarea {
+  width: 16rem;
+  max-width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  padding: 0.5rem;
+  font-family: var(--font-serif);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.popover-note .btn {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+.popover-message {
+  margin: 0;
+  max-width: 15rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.popover-login {
+  margin-top: 0.55rem;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+.popover-login:hover {
+  text-decoration: none;
+}

@@ -1,0 +1,139 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Annotations;
+use InvalidArgumentException;
+use MongoDB\BSON\UTCDateTime;
+
+/**
+ * Private per-user highlights and notes. The user id always comes from the
+ * authenticated request, never from client input.
+ */
+class AnnotationService
+{
+    private Annotations $annotations;
+
+    public function __construct()
+    {
+        $this->annotations = new Annotations();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function listForBook(string $userId, string $bookId): array
+    {
+        return array_map([$this, 'toClient'], $this->annotations->findForUserAndBook($userId, $bookId));
+    }
+
+    /**
+     * @param array<string, mixed> $input
+     * @return array<string, mixed> the created annotation
+     * @throws InvalidArgumentException with a JSON map of field errors
+     */
+    public function create(string $userId, string $bookId, array $input): array
+    {
+        $rects = $input['rects'] ?? [];
+        $doc = [
+            'user_id' => $userId,
+            'book_id' => $bookId,
+            'page' => $input['page'] ?? null,
+            'rects' => $rects,
+            'quote' => $this->trimmed($input['quote'] ?? ''),
+            'note' => $this->trimmed($input['note'] ?? ''),
+            'color' => $rects === [] ? null : ($input['color'] ?? null),
+            'created_at' => new UTCDateTime(),
+        ];
+
+        $result = $this->annotations->create($doc);
+        if (empty($result['insertedId'])) {
+            throw new \RuntimeException('Could not save annotation');
+        }
+        $doc['_id'] = $result['insertedId'];
+
+        return $this->toClient($doc);
+    }
+
+    /**
+     * Only the note and colour can change; the highlighted passage is fixed.
+     *
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>|null the updated annotation, or null if it isn't this user's
+     * @throws InvalidArgumentException with a JSON map of field errors
+     */
+    public function update(string $userId, string $id, array $input): ?array
+    {
+        $existing = $this->annotations->findOwned($id, $userId);
+        if ($existing === null) {
+            return null;
+        }
+
+        $existing = (array) $existing;
+        $fields = [];
+        if (array_key_exists('note', $input)) {
+            $fields['note'] = $this->trimmed($input['note']);
+        }
+        if (array_key_exists('color', $input) && !empty($existing['rects'])) {
+            $fields['color'] = $input['color'];
+        }
+
+        $merged = array_merge($existing, $fields, ['rects' => $this->plainRects($existing['rects'] ?? [])]);
+        $errors = $this->annotations->validate($merged);
+        if (!empty($errors)) {
+            throw new InvalidArgumentException((string) json_encode($errors));
+        }
+
+        if ($fields !== []) {
+            $this->annotations->updateOwned($id, $userId, $fields);
+        }
+
+        return $this->toClient($merged);
+    }
+
+    /** Non-strings pass through untouched so validation rejects them instead of storing "Array". */
+    private function trimmed(mixed $value): mixed
+    {
+        return is_string($value) ? trim($value) : $value;
+    }
+
+    public function delete(string $userId, string $id): bool
+    {
+        return ($this->annotations->deleteOwned($id, $userId)['deletedCount'] ?? 0) > 0;
+    }
+
+    /**
+     * BSON arrays from the driver come back as objects; validation and JSON want plain arrays.
+     *
+     * @return list<list<float>>
+     */
+    private function plainRects(mixed $rects): array
+    {
+        $out = [];
+        foreach ((array) (is_object($rects) && method_exists($rects, 'getArrayCopy') ? $rects->getArrayCopy() : $rects) as $rect) {
+            $rect = is_object($rect) && method_exists($rect, 'getArrayCopy') ? $rect->getArrayCopy() : (array) $rect;
+            $out[] = array_map('floatval', array_values($rect));
+        }
+        return $out;
+    }
+
+    /**
+     * @param array<string, mixed>|object $doc
+     * @return array<string, mixed>
+     */
+    private function toClient(array|object $doc): array
+    {
+        $doc = (array) $doc;
+        $createdAt = $doc['created_at'] ?? null;
+
+        return [
+            'id' => (string) $doc['_id'],
+            'page' => (int) $doc['page'],
+            'rects' => $this->plainRects($doc['rects'] ?? []),
+            'quote' => (string) ($doc['quote'] ?? ''),
+            'note' => (string) ($doc['note'] ?? ''),
+            'color' => $doc['color'] ?? null,
+            'created_at' => $createdAt instanceof UTCDateTime ? $createdAt->toDateTime()->format(DATE_ATOM) : null,
+        ];
+    }
+}
