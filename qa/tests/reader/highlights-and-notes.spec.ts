@@ -108,6 +108,9 @@ test.describe('Reader: highlights and notes', () => {
   });
 
   test("one reader never sees another reader's highlights or notes", async ({ reader, otherReader, readerBook }) => {
+    // Two sign-ups, two browser logins and a book upload: the heaviest setup in the suite,
+    // which the single-threaded dev server (php -S) can't always fit in 30s under parallel load.
+    test.slow();
     await createAnnotation(reader.api, reader.token, readerBook.id, {
       page: 1,
       rects: [[60, 690, 400, 704]],

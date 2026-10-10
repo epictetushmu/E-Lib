@@ -88,8 +88,9 @@ export class ReaderPage extends BasePage {
       const container = document.querySelector('.pdf-container');
       const el = container?.querySelector(`[data-page-number="${n}"]`);
       if (!container || !el) return null;
-      // `|| 0` turns -0 into 0, so callers can compare with toBe(0).
-      return Math.round(el.getBoundingClientRect().top - container.getBoundingClientRect().top) || 0;
+      // Truncated, not rounded: pages have fractional heights and WebKit scrolls in whole pixels,
+      // so a page scrolled to the top can sit up to 1px off. `|| 0` turns -0 into 0 for toBe(0).
+      return Math.trunc(el.getBoundingClientRect().top - container.getBoundingClientRect().top) || 0;
     }, pageNumber);
   }
 

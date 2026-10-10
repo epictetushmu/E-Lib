@@ -252,6 +252,19 @@ function closePopover() {
   popover.value = null
 }
 
+// Where the pages were scrolled when the popover opened. Firefox fires scroll events that move nothing
+// (e.g. as the equation editor opens over the popover), so only a real scroll closes it.
+let popoverScroll = { top: 0, left: 0 }
+watch(popover, (now, before) => {
+  const el = pagesContainer.value
+  if (now && !before && el) popoverScroll = { top: el.scrollTop, left: el.scrollLeft }
+})
+
+function handlePagesScroll() {
+  const el = pagesContainer.value
+  if (el && Math.abs(el.scrollTop - popoverScroll.top) + Math.abs(el.scrollLeft - popoverScroll.left) > 1) closePopover()
+}
+
 function handleDocumentPointerDown(event: PointerEvent) {
   // While a dialog (e.g. the equation editor) is open, clicks belong to it, including MathLive's floating UI.
   if (document.querySelector('dialog[open]')) return
@@ -516,7 +529,7 @@ onBeforeUnmount(() => {
         class="pdf-container"
         :hidden="pdf.loading.value || !!pdf.error.value"
         @pointerup="handlePagePointerUp"
-        @scroll.passive="closePopover"
+        @scroll.passive="handlePagesScroll"
       ></div>
 
       <AnnotationPopover
