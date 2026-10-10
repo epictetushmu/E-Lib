@@ -41,6 +41,7 @@
   padding: 0;
   border: 1px solid rgba(var(--color-navy-rgb), 0.2);
   border-radius: 50%;
+  background: var(--ink);
   cursor: pointer;
 }
 
@@ -50,22 +51,6 @@
 
 .marker:hover:not(:disabled) {
   transform: scale(1.1);
-}
-
-.hl-saffron {
-  background: #f2c94c;
-}
-
-.hl-olive {
-  background: #a9bf6b;
-}
-
-.hl-aegean {
-  background: #7fbcd6;
-}
-
-.hl-rose {
-  background: #e9a0a0;
 }
 
 .popover-link {

@@ -106,14 +106,13 @@
   color: var(--color-danger);
 }
 
-/* Diagrams: scaled to the panel; the source shows (pre-formatted) until Mermaid has drawn it. */
+/* Diagrams: scaled to the panel; the muted text is the can't-read-it message. */
 .note-content :deep(.note-diagram) {
   margin: 0 0 0.55rem;
   padding: 0.5rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-surface);
-  white-space: pre;
   font-size: 0.75rem;
   color: var(--color-text-muted);
   overflow-x: auto;
@@ -145,15 +144,6 @@
   max-width: 92vw;
   max-height: 88vh;
   padding: 2.5rem 1.5rem 1.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: var(--shadow-md);
-}
-
-.diagram-dialog::backdrop {
-  background: rgba(var(--color-navy-rgb), 0.55);
 }
 
 .diagram-dialog-body {
@@ -171,12 +161,6 @@
   position: absolute;
   top: 0.5rem;
   right: 0.75rem;
-  border: none;
-  background: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  color: var(--color-text-muted);
-  cursor: pointer;
 }
 
 .diagram-dialog-close:hover {

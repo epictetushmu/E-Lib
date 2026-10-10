@@ -18,6 +18,27 @@
   --radius: 4px;
   --shadow-sm: 0 1px 2px rgba(var(--color-navy-rgb), 0.1);
   --shadow-md: 0 6px 18px rgba(var(--color-navy-rgb), 0.14);
+  /* Highlight inks, also reused by diagram shape fills. */
+  --ink-saffron: #f2c94c;
+  --ink-olive: #a9bf6b;
+  --ink-aegean: #7fbcd6;
+  --ink-rose: #e9a0a0;
+}
+
+.hl-saffron {
+  --ink: var(--ink-saffron);
+}
+
+.hl-olive {
+  --ink: var(--ink-olive);
+}
+
+.hl-aegean {
+  --ink: var(--ink-aegean);
+}
+
+.hl-rose {
+  --ink: var(--ink-rose);
 }
 
 .meander {
@@ -142,6 +163,61 @@ textarea {
 .btn-ghost {
   background: transparent;
   color: var(--color-text-muted);
+}
+
+/* Text-only button: Cancel and similar secondary actions. */
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.link-btn:hover:not(:disabled) {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.link-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Shared shell for native <dialog> modals (diagram editor, equation editor, diagram viewer). */
+.dialog-shell {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-md);
+}
+
+.dialog-shell::backdrop {
+  background: rgba(var(--color-navy-rgb), 0.55);
+}
+
+.dialog-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.dialog-head h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.3rem;
+  color: var(--color-text);
+}
+
+.dialog-close {
+  border: none;
+  background: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
 }
 
 .form-field {

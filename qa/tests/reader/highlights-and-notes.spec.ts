@@ -50,7 +50,7 @@ test.describe('Reader: highlights and notes', () => {
 
     // "Highlight with note" saves the highlight together with its note.
     await view.selectionPopover.getByRole('button', { name: 'Highlight with note' }).click();
-    await view.popoverNoteEditor(view.selectionPopover).fill('Classic pangram.');
+    await view.noteEditor(view.selectionPopover).fill('Classic pangram.');
     await view.selectionPopover.getByRole('button', { name: 'Save highlight' }).click();
     await expect(view.highlights.first()).toBeVisible();
 
@@ -62,7 +62,7 @@ test.describe('Reader: highlights and notes', () => {
     await entry.hover();
     await expect(view.editButton(entry)).toHaveCSS('opacity', '1');
     await view.editButton(entry).click();
-    await view.entryEditor(entry).fill('Every letter of the alphabet.');
+    await view.noteEditor(entry).fill('Every letter of the alphabet.');
     await entry.getByRole('button', { name: 'Save' }).click();
     await expect(entry).toContainText('Every letter of the alphabet.');
 

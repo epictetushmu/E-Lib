@@ -2,8 +2,8 @@ import { getSmoothStepPath, Position } from '@vue-flow/core'
 
 /**
  * Diagrams drawn in the visual editor: flowcharts, UML class diagrams, database schemas, plus free text
- * and sticky notes. A note stores one as a ```diagram block of this JSON (older ```flowchart blocks still
- * read). Positions are kept, so the note shows the diagram exactly as it was laid out.
+ * and sticky notes. A note stores one as a ```diagram block of this JSON. Positions are kept, so the
+ * note shows the diagram exactly as it was laid out.
  *
  * The editor and the note renderer both size nodes with nodeSize(), fill them with nodeHtml() and draw
  * connector ends with markerDefs(), so the two can't drift apart.
@@ -78,9 +78,6 @@ export const NODE_KINDS: Record<NodeKind, { name: string }> = {
   note: { name: 'Note' },
 }
 
-export const FLOW_KINDS: FlowKind[] = ['terminal', 'step', 'decision', 'io']
-export const isFlowKind = (kind: NodeKind): kind is FlowKind => (FLOW_KINDS as string[]).includes(kind)
-
 /**
  * Flowchart shapes have fixed sizes; half the difference between any two is a multiple of 8 (the editor's
  * snap grid), so a shape centred under another stays centred and connectors run straight.
@@ -91,6 +88,10 @@ const FLOW_SIZE: Record<FlowKind, { w: number; h: number }> = {
   decision: { w: 160, h: 112 },
   io: { w: 176, h: 64 },
 }
+
+export const isFlowKind = (kind: NodeKind): kind is FlowKind => kind in FLOW_SIZE
+/** Classes and tables are edited in the side panel; every other kind is renamed in place. */
+export const sidePanelKind = (kind: NodeKind) => kind === 'class' || kind === 'table'
 
 const ROW = 20
 const lineCount = (text: string) => Math.max(1, text.split('\n').length)
@@ -129,7 +130,7 @@ export function flowOutline(kind: FlowKind): string {
   }
 }
 
-export function escapeHtml(text: string): string {
+function escapeHtml(text: string): string {
   return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 }
 
@@ -229,7 +230,7 @@ export function defaultEdgeKind(source: NodeKind, target: NodeKind): EdgeKind {
 export const SIDE_POSITION: Record<Side, Position> = { t: Position.Top, r: Position.Right, b: Position.Bottom, l: Position.Left }
 const NORMAL: Record<Side, [number, number]> = { t: [0, -1], r: [1, 0], b: [0, 1], l: [-1, 0] }
 
-export function anchor(node: DiagramNode, side: Side): [number, number] {
+function anchor(node: DiagramNode, side: Side): [number, number] {
   const { w, h } = nodeSize(node)
   if (side === 't') return [node.x + w / 2, node.y]
   if (side === 'b') return [node.x + w / 2, node.y + h]
@@ -261,12 +262,12 @@ const SIDES = ['t', 'r', 'b', 'l']
 const str = (v: unknown, max = 500) => (typeof v === 'string' ? v.slice(0, max) : '')
 const strList = (v: unknown) => (Array.isArray(v) ? v.slice(0, 100).map((x) => str(x)) : undefined)
 
-/** Parses and validates a diagram block (or a legacy flowchart block); malformed parts are dropped. */
+/** Parses and validates a diagram block; malformed parts are dropped. */
 export function parseDiagram(json: string): DiagramDoc {
   const raw = JSON.parse(json) as { nodes?: unknown[]; edges?: unknown[] }
   const nodes: DiagramNode[] = (raw.nodes ?? []).slice(0, 500).flatMap((n) => {
     const node = n as Record<string, unknown>
-    const kind = (node.kind ?? node.shape) as NodeKind // `shape` in legacy flowchart blocks
+    const kind = node.kind as NodeKind
     if (typeof node.id !== 'string' || !(kind in NODE_KINDS) || !Number.isFinite(node.x) || !Number.isFinite(node.y)) return []
     const out: DiagramNode = { id: node.id, kind, x: Number(node.x), y: Number(node.y), label: str(node.label, 5000) }
     if (kind === 'class') {

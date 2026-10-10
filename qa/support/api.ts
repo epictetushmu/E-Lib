@@ -23,22 +23,15 @@ export async function loginAsAdmin(
   email: string,
   password: string,
 ): Promise<string> {
-  const response = await request.post('/api/v1/login', { data: { email, password } });
-  const body = (await response.json()) as LoginResponse;
-
-  if (!response.ok() || body.status !== 'success' || !body.data?.token) {
-    throw new Error(
-      `QA_ADMIN_EMAIL/QA_ADMIN_PASSWORD login failed: ${response.status()} ${JSON.stringify(body)}`,
-    );
-  }
-  if (!body.data.user?.isAdmin) {
+  const { token, isAdmin } = await loginViaApi(request, email, password);
+  if (!isAdmin) {
     throw new Error(
       `"${email}" logged in but is not an admin. Provision one with: ` +
         `composer admin:create -- ${email} <password>`,
     );
   }
 
-  return body.data.token;
+  return token;
 }
 
 interface CreateBookResponse {
@@ -166,13 +159,17 @@ export async function deleteBooksByTitle(
 }
 
 /** POST /api/v1/login for any account; returns its JWT (for API-side setup/cleanup as that user). */
-export async function loginViaApi(request: APIRequestContext, email: string, password: string): Promise<string> {
+export async function loginViaApi(
+  request: APIRequestContext,
+  email: string,
+  password: string,
+): Promise<{ token: string; isAdmin: boolean }> {
   const response = await request.post('/api/v1/login', { data: { email, password } });
   const body = (await response.json()) as LoginResponse;
-  if (!response.ok() || !body.data?.token) {
-    throw new Error(`loginViaApi failed for ${email}: ${response.status()} ${JSON.stringify(body)}`);
+  if (!response.ok() || body.status !== 'success' || !body.data?.token) {
+    throw new Error(`Login failed for ${email}: ${response.status()} ${JSON.stringify(body)}`);
   }
-  return body.data.token;
+  return { token: body.data.token, isAdmin: !!body.data.user?.isAdmin };
 }
 
 /** A private highlight (has rects) or page note, as the annotations API returns it. */

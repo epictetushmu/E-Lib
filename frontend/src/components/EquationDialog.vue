@@ -128,14 +128,14 @@ onBeforeUnmount(() => {
   <!-- Esc closes this dialog only (MathLive cancels the native dialog cancel, so handle it here), never the popover underneath. -->
   <dialog
     ref="dialog"
-    class="equation-dialog"
+    class="equation-dialog dialog-shell"
     aria-labelledby="equation-dialog-title"
     @cancel.prevent="emit('close')"
     @keydown.esc.stop="emit('close')"
   >
-    <div class="equation-head">
+    <div class="equation-head dialog-head">
       <h2 id="equation-dialog-title">{{ editing ? 'Edit equation' : 'Equation' }}</h2>
-      <button type="button" class="equation-close" aria-label="Close" @click="emit('close')">&times;</button>
+      <button type="button" class="equation-close dialog-close" aria-label="Close" @click="emit('close')">&times;</button>
     </div>
 
     <!-- A click anywhere on the writing area, incl. its empty padding, lands in the field. -->

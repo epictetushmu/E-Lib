@@ -49,9 +49,9 @@ test.describe('Reader: layout and navigation', () => {
 
     const line = reader.pageLine(READER_PDF.page1Line);
     await expect(line).toBeVisible();
-    const pageBox = await reader.pageElement(1).boundingBox();
-    const lineBox = await line.boundingBox();
-    if (!pageBox || !lineBox) throw new Error('Page 1 or its text is not on screen');
+    // Both are on screen (toBeVisible above), so neither box is null.
+    const pageBox = (await reader.pageElement(1).boundingBox())!;
+    const lineBox = (await line.boundingBox())!;
     expect(lineBox.height).toBeGreaterThan(lineBox.width);
     expect(lineBox.x).toBeGreaterThanOrEqual(pageBox.x);
     expect(lineBox.x + lineBox.width).toBeLessThanOrEqual(pageBox.x + pageBox.width);

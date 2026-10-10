@@ -133,9 +133,9 @@ export class ReaderPage extends BasePage {
     await this.page.mouse.click(box.x + Math.min(12, box.width / 2), box.y + box.height / 2);
   }
 
-  /** The note editor inside an open highlight popover. */
-  popoverNoteEditor(popover: Locator): Locator {
-    return popover.getByLabel('Note', { exact: true });
+  /** The note editor inside a highlight popover or an entry being edited. */
+  noteEditor(scope: Locator): Locator {
+    return scope.getByLabel('Note', { exact: true });
   }
 
   async openNotes(): Promise<void> {
@@ -161,11 +161,6 @@ export class ReaderPage extends BasePage {
 
   deleteButton(item: Locator): Locator {
     return item.getByRole('button', { name: /^Delete (note|highlight)$/ });
-  }
-
-  /** The inline editor that replaces an entry while it's being edited. */
-  entryEditor(item: Locator): Locator {
-    return item.getByLabel('Note', { exact: true });
   }
 
   /** The note-editor toolbar button (Code, Equation, Diagram) next to an editor. */

@@ -7,18 +7,12 @@ import type { Locator, Page } from '@playwright/test';
 export class EquationDialog {
   readonly dialog: Locator;
   readonly field: Locator;
-  readonly inSentence: Locator;
-  readonly onOwnLine: Locator;
   readonly insert: Locator;
-  readonly cancel: Locator;
 
   constructor(private readonly page: Page) {
     this.dialog = page.getByRole('dialog', { name: /^(Equation|Edit equation)$/ });
     this.field = this.dialog.locator('math-field');
-    this.inSentence = this.dialog.getByText('In the sentence');
-    this.onOwnLine = this.dialog.getByText('On its own line');
     this.insert = this.dialog.getByRole('button', { name: /^(Insert|Update) equation$/ });
-    this.cancel = this.dialog.getByRole('button', { name: 'Cancel' });
   }
 
   /** A palette key by its name (e.g. "Fraction", "Square root", "pi"). */

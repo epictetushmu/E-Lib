@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { Handle, useVueFlow, type NodeProps } from '@vue-flow/core'
-import { SIDE_POSITION, flowOutline, isFlowKind, nodeHtml, nodeSize, type DiagramNode, type Side } from '@/utils/diagram'
+import { SIDE_POSITION, flowOutline, isFlowKind, nodeHtml, nodeSize, sidePanelKind, type DiagramNode, type Side } from '@/utils/diagram'
 
 /** Node data in the editor: the diagram node minus its id/position, plus an inline-rename flag. */
 export type DiagramNodeData = Omit<DiagramNode, 'id' | 'x' | 'y'> & { editing?: boolean }
@@ -10,10 +10,8 @@ const props = defineProps<NodeProps<DiagramNodeData>>()
 const { updateNodeData } = useVueFlow()
 
 const size = computed(() => nodeSize(props.data))
-const flow = computed(() => isFlowKind(props.data.kind))
 const html = computed(() => nodeHtml({ ...props.data, id: props.id, x: 0, y: 0 }, true))
-/** Classes and tables are edited in the side panel; everything else can be renamed in place. */
-const inlineEditable = computed(() => props.data.kind !== 'class' && props.data.kind !== 'table')
+const inlineEditable = computed(() => !sidePanelKind(props.data.kind))
 const draft = ref(props.data.label)
 const field = ref<HTMLTextAreaElement | null>(null)
 const sides: Side[] = ['t', 'r', 'b', 'l']
@@ -58,7 +56,7 @@ function cancel() {
     @dblclick="startEditing"
   >
     <!-- eslint-disable-next-line vue/no-v-html -- fixed outline markup -->
-    <svg v-if="flow && isFlowKind(data.kind)" class="dg-outline" :width="size.w" :height="size.h" aria-hidden="true" v-html="flowOutline(data.kind)"></svg>
+    <svg v-if="isFlowKind(data.kind)" class="dg-outline" :width="size.w" :height="size.h" aria-hidden="true" v-html="flowOutline(data.kind)"></svg>
     <textarea
       v-if="data.editing && inlineEditable"
       ref="field"
@@ -66,7 +64,7 @@ function cancel() {
       class="dg-inline-input nodrag nopan"
       :class="`dg-inline-${data.kind}`"
       aria-label="Shape text"
-      @keydown.enter.exact="flow && ($event.preventDefault(), commit())"
+      @keydown.enter.exact="isFlowKind(data.kind) && ($event.preventDefault(), commit())"
       @keydown.esc.stop.prevent="cancel"
       @blur="commit"
     ></textarea>

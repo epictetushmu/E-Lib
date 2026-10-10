@@ -2,7 +2,7 @@ import { expect, test } from '../../fixtures';
 import { EquationDialog } from '../../pages/EquationDialog';
 import { ReaderPage } from '../../pages/ReaderPage';
 
-test.describe('Reader: code, maths and diagrams in notes', () => {
+test.describe('Reader: code and maths in notes', () => {
   test('a code block in a note is shown highlighted', async ({ reader, readerBook }) => {
     const view = new ReaderPage(reader.page);
     await view.open(readerBook.id);
@@ -93,20 +93,5 @@ test.describe('Reader: code, maths and diagrams in notes', () => {
 
     await expect(equation.dialog).toBeHidden();
     await expect(view.selectionPopover).toBeVisible();
-  });
-
-  test('a typed Mermaid diagram is drawn, and opens full size', async ({ reader, readerBook }) => {
-    const view = new ReaderPage(reader.page);
-    await view.open(readerBook.id);
-    await view.openNotes();
-
-    await view.addPageNote('```mermaid\nflowchart LR\n  A[Read] --> B[Think]\n```');
-
-    const diagram = view.renderedNote(view.noteItems.first()).locator('.note-diagram');
-    await expect(diagram.locator('svg')).toBeVisible({ timeout: 15_000 });
-    await expect(diagram).toContainText('Think');
-
-    await diagram.click();
-    await expect(reader.page.getByRole('dialog', { name: 'Diagram' })).toBeVisible();
   });
 });

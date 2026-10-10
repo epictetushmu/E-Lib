@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { BaseEdge, EdgeLabelRenderer, Position, getSmoothStepPath, type EdgeProps } from '@vue-flow/core'
-import { EDITOR_MARKERS, edgeMarkers, endLabelPoint, type EdgeKind, type Side } from '@/utils/diagram'
+import { BaseEdge, EdgeLabelRenderer, Position, type EdgeProps } from '@vue-flow/core'
+import { EDITOR_MARKERS, edgeMarkers, edgePath, endLabelPoint, type EdgeKind, type Side } from '@/utils/diagram'
 
 export interface DiagramEdgeData {
   kind: EdgeKind
@@ -15,15 +15,7 @@ const props = defineProps<EdgeProps<DiagramEdgeData>>()
 const SIDE: Record<Position, Side> = { [Position.Top]: 't', [Position.Right]: 'r', [Position.Bottom]: 'b', [Position.Left]: 'l' }
 
 const path = computed(() =>
-  getSmoothStepPath({
-    sourceX: props.sourceX,
-    sourceY: props.sourceY,
-    sourcePosition: props.sourcePosition,
-    targetX: props.targetX,
-    targetY: props.targetY,
-    targetPosition: props.targetPosition,
-    borderRadius: 6,
-  }),
+  edgePath(props.sourceX, props.sourceY, SIDE[props.sourcePosition], props.targetX, props.targetY, SIDE[props.targetPosition]),
 )
 const markers = computed(() => edgeMarkers(props.data?.kind ?? 'arrow', EDITOR_MARKERS))
 const sourceEnd = computed(() => endLabelPoint(props.sourceX, props.sourceY, SIDE[props.sourcePosition]))

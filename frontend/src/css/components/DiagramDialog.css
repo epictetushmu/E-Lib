@@ -2,15 +2,6 @@
   width: min(80rem, calc(100vw - 2rem));
   max-height: calc(100vh - 2rem);
   padding: 1.1rem 1.25rem 1.1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: var(--shadow-md);
-}
-
-.diagram-editor::backdrop {
-  background: rgba(var(--color-navy-rgb), 0.55);
 }
 
 .dg-marker-defs {
@@ -19,25 +10,8 @@
   height: 0;
 }
 
-.dg-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-
 .dg-head h2 {
-  margin: 0 0 0.7rem;
-  font-size: 1.3rem;
-  color: var(--color-text);
-}
-
-.dg-close {
-  border: none;
-  background: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  color: var(--color-text-muted);
-  cursor: pointer;
+  margin-bottom: 0.7rem;
 }
 
 /* Toolbar: which set of shapes, the shapes in it, then text and notes (always available). */
@@ -447,12 +421,7 @@
 }
 
 .dg-foot .link-btn {
-  border: none;
-  background: none;
-  font-weight: 600;
   font-size: 0.9rem;
-  color: var(--color-text-muted);
-  cursor: pointer;
 }
 
 @media (max-width: 760px) {

@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { renderDiagrams, renderNote } from '@/utils/noteMarkdown'
+import { computed, ref } from 'vue'
+import { renderNote } from '@/utils/noteMarkdown'
 
 /** A rendered note: Markdown, maths, code and diagrams. */
 const props = defineProps<{ text: string }>()
 
-const root = ref<HTMLElement | null>(null)
 // Safe to bind as HTML: the renderer escapes any raw HTML in the note (markdown-it html: false).
 const html = computed(() => renderNote(props.text))
 
@@ -23,23 +22,15 @@ function openDiagram(event: MouseEvent | KeyboardEvent) {
   dialogSvg.value = block.innerHTML
   dialog.value?.showModal()
 }
-
-async function drawDiagrams() {
-  await nextTick()
-  if (root.value) await renderDiagrams(root.value)
-}
-
-onMounted(drawDiagrams)
-watch(html, drawDiagrams)
 </script>
 
 <template>
   <div class="note-content-wrap">
     <!-- eslint-disable-next-line vue/no-v-html -->
-    <div ref="root" class="note-content" @click="openDiagram" @keydown="openDiagram" v-html="html"></div>
-    <dialog ref="dialog" class="diagram-dialog" aria-label="Diagram" @click.self="dialog?.close()">
-      <button type="button" class="diagram-dialog-close" aria-label="Close diagram" @click="dialog?.close()">&times;</button>
-      <!-- Mermaid's own sanitised SVG output (securityLevel: strict), already shown in the note. -->
+    <div class="note-content" @click="openDiagram" @keydown="openDiagram" v-html="html"></div>
+    <dialog ref="dialog" class="diagram-dialog dialog-shell" aria-label="Diagram" @click.self="dialog?.close()">
+      <button type="button" class="diagram-dialog-close dialog-close" aria-label="Close diagram" @click="dialog?.close()">&times;</button>
+      <!-- The diagram's SVG from renderDiagramSvg() (user text escaped), already shown in the note. -->
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div class="diagram-dialog-body" v-html="dialogSvg"></div>
     </dialog>

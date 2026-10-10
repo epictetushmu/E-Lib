@@ -2,36 +2,6 @@
   width: min(44rem, calc(100vw - 2rem));
   max-height: calc(100vh - 2rem);
   padding: 1.25rem 1.4rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  box-shadow: var(--shadow-md);
-}
-
-.equation-dialog::backdrop {
-  background: rgba(var(--color-navy-rgb), 0.55);
-}
-
-.equation-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-
-.equation-head h2 {
-  margin: 0 0 0.75rem;
-  font-size: 1.3rem;
-  color: var(--color-text);
-}
-
-.equation-close {
-  border: none;
-  background: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  color: var(--color-text-muted);
-  cursor: pointer;
 }
 
 /* The writing surface: large, centred, set in the maths face, like a line on a blackboard slate. */
@@ -161,10 +131,5 @@
 }
 
 .equation-actions .link-btn {
-  border: none;
-  background: none;
-  font-weight: 600;
   font-size: 0.9rem;
-  color: var(--color-text-muted);
-  cursor: pointer;
 }

@@ -69,7 +69,6 @@ class AnnotationService
             return null;
         }
 
-        $existing = (array) $existing;
         $fields = [];
         if (array_key_exists('note', $input)) {
             $fields['note'] = $this->trimmed($input['note']);
@@ -105,25 +104,23 @@ class AnnotationService
     /**
      * BSON arrays from the driver come back as objects; validation and JSON want plain arrays.
      *
+     * @param iterable<iterable<int|float>> $rects
      * @return list<list<float>>
      */
-    private function plainRects(mixed $rects): array
+    private function plainRects(iterable $rects): array
     {
-        $out = [];
-        foreach ((array) (is_object($rects) && method_exists($rects, 'getArrayCopy') ? $rects->getArrayCopy() : $rects) as $rect) {
-            $rect = is_object($rect) && method_exists($rect, 'getArrayCopy') ? $rect->getArrayCopy() : (array) $rect;
-            $out[] = array_map('floatval', array_values($rect));
-        }
-        return $out;
+        return array_map(
+            fn (iterable $r) => array_map('floatval', array_values(iterator_to_array($r))),
+            array_values(iterator_to_array($rects))
+        );
     }
 
     /**
-     * @param array<string, mixed>|object $doc
+     * @param array<string, mixed> $doc
      * @return array<string, mixed>
      */
-    private function toClient(array|object $doc): array
+    private function toClient(array $doc): array
     {
-        $doc = (array) $doc;
         $createdAt = $doc['created_at'] ?? null;
 
         return [

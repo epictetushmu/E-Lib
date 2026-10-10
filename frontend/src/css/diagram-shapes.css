@@ -14,17 +14,17 @@
 
 .dg-shape-terminal .dg-outline > *,
 .dg-kind-icon.dg-shape-terminal > * {
-  fill: rgba(169, 191, 107, 0.38);
+  fill: color-mix(in srgb, var(--ink-olive) 38%, transparent);
 }
 
 .dg-shape-decision .dg-outline > *,
 .dg-kind-icon.dg-shape-decision > * {
-  fill: rgba(242, 201, 76, 0.4);
+  fill: color-mix(in srgb, var(--ink-saffron) 40%, transparent);
 }
 
 .dg-shape-io .dg-outline > *,
 .dg-kind-icon.dg-shape-io > * {
-  fill: rgba(127, 188, 214, 0.38);
+  fill: color-mix(in srgb, var(--ink-aegean) 38%, transparent);
 }
 
 /* Node contents (HTML, inside foreignObject in notes) */
@@ -85,7 +85,7 @@
   height: 32px;
   padding: 0 10px;
   border-bottom: 1.25px solid var(--color-text);
-  background: rgba(127, 188, 214, 0.22);
+  background: color-mix(in srgb, var(--ink-aegean) 22%, transparent);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -198,7 +198,7 @@
 
 .dg-note {
   padding: 12px 14px;
-  background: linear-gradient(225deg, transparent 12px, rgba(242, 201, 76, 0.45) 12px);
+  background: linear-gradient(225deg, transparent 12px, color-mix(in srgb, var(--ink-saffron) 45%, transparent) 12px);
   border-radius: 2px;
 }
 

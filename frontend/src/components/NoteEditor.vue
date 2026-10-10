@@ -16,11 +16,6 @@ const emit = defineEmits<{ submit: [] }>()
 const field = ref<HTMLTextAreaElement | null>(null)
 const previewing = ref(false)
 
-/** Each snippet's `select` part is pre-selected after insertion, so typing replaces the example. */
-const snippets = {
-  code: { label: 'Code', before: '```python\n', select: 'print("hello")', after: '\n```' },
-} as const
-
 /* Equations go through the visual editor rather than a LaTeX snippet. */
 
 interface MathSpan {
@@ -49,23 +44,10 @@ function openEquation() {
 }
 
 async function insertEquation(latex: string, display: boolean) {
-  const el = field.value
   const target = equation.value?.target
   equation.value = null
-  await nextTick()
-  if (!el) return
-
-  const text = model.value
-  const start = target?.start ?? el.selectionStart
-  const end = target?.end ?? el.selectionEnd
-  let piece = display ? `$$\n${latex}\n$$` : `$${latex}$`
-  // A display equation sits on its own lines.
-  if (display && start > 0 && text[start - 1] !== '\n') piece = '\n' + piece
-  if (display && end < text.length && text[end] !== '\n') piece += '\n'
-  model.value = text.slice(0, start) + piece + text.slice(end)
-  await nextTick()
-  el.focus()
-  el.setSelectionRange(start + piece.length, start + piece.length)
+  // A display equation sits on its own lines; an inline one goes exactly where the cursor is.
+  await placeBlock(display ? `$$\n${latex}\n$$` : `$${latex}$`, target, display)
 }
 
 /* Diagrams are drawn in the visual editor and stored as a ```diagram block. */
@@ -80,7 +62,7 @@ const diagram = ref<{ target: BlockSpan | null } | null>(null)
 
 /** The diagram block the cursor is in, so the Diagram button edits it instead of adding another. */
 function diagramAt(text: string, pos: number): BlockSpan | null {
-  for (const m of text.matchAll(/```(?:diagram|flowchart)\n([\s\S]*?)\n```/g)) {
+  for (const m of text.matchAll(/```diagram\n([\s\S]*?)\n```/g)) {
     const start = m.index ?? 0
     const end = start + m[0].length
     if (pos < start || pos > end) continue
@@ -105,8 +87,8 @@ async function insertDiagram(doc: DiagramDoc) {
   await placeBlock('```diagram\n' + JSON.stringify(doc) + '\n```', target)
 }
 
-/** Writes a block on its own lines at the cursor, or over `target` when re-editing one. */
-async function placeBlock(block: string, target?: { start: number; end: number } | null) {
+/** Writes a block on its own lines (unless `ownLines` is false) at the cursor, or over `target` when re-editing one. */
+async function placeBlock(block: string, target?: { start: number; end: number } | null, ownLines = true) {
   await nextTick()
   const el = field.value
   if (!el) return
@@ -114,26 +96,28 @@ async function placeBlock(block: string, target?: { start: number; end: number }
   const start = target?.start ?? el.selectionStart
   const end = target?.end ?? el.selectionEnd
   let piece = block
-  if (start > 0 && text[start - 1] !== '\n') piece = '\n' + piece
-  if (end < text.length && text[end] !== '\n') piece += '\n'
+  if (ownLines && start > 0 && text[start - 1] !== '\n') piece = '\n' + piece
+  if (ownLines && end < text.length && text[end] !== '\n') piece += '\n'
   model.value = text.slice(0, start) + piece + text.slice(end)
   await nextTick()
   el.focus()
   el.setSelectionRange(start + piece.length, start + piece.length)
 }
 
-async function insert(kind: keyof typeof snippets) {
+/** A code block around the selection, or an example that's pre-selected so typing replaces it. */
+async function insertCode() {
   previewing.value = false
   await nextTick()
   const el = field.value
   if (!el) return
-  const { before, select, after } = snippets[kind]
+  const before = '```python\n'
+  const after = '\n```'
   const start = el.selectionStart
   const end = el.selectionEnd
   const text = model.value
   // Start the block on its own line.
   const lead = start > 0 && text[start - 1] !== '\n' ? '\n' : ''
-  const chosen = text.slice(start, end) || select
+  const chosen = text.slice(start, end) || 'print("hello")'
   model.value = text.slice(0, start) + lead + before + chosen + after + text.slice(end)
   await nextTick()
   const from = start + lead.length + before.length
@@ -150,7 +134,7 @@ onMounted(() => {
   <div class="note-editor">
     <div class="note-editor-bar">
       <div class="note-editor-insert" role="group" aria-label="Insert">
-        <button type="button" @click="insert('code')">{{ snippets.code.label }}</button>
+        <button type="button" @click="insertCode">Code</button>
         <button type="button" @click="openEquation">Equation</button>
         <button type="button" @click="openDiagram">Diagram</button>
       </div>

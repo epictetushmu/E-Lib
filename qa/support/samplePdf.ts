@@ -1,3 +1,16 @@
+const escape = (s: string): string => s.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+
+/** Writes numbered PDF objects (in key order) plus a trailer pointing at object 1 as the catalog. */
+function serializePdf(objects: Record<number, string>): Buffer {
+  let pdf = '%PDF-1.4\n';
+  for (const [num, body] of Object.entries(objects)) {
+    pdf += `${num} 0 obj\n${body}\nendobj\n`;
+  }
+  pdf += 'trailer\n<< /Root 1 0 R >>\n';
+
+  return Buffer.from(pdf, 'latin1');
+}
+
 /**
  * Generates a minimal-but-valid single-page PDF in memory (a colored cover
  * with title/author text) — used for upload tests instead of a committed
@@ -5,8 +18,6 @@
  * generator in scripts/seed-sample-books.php).
  */
 export function buildSamplePdf(title = 'QA Sample PDF', author = 'QA Test Author'): Buffer {
-  const escape = (s: string): string => s.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
-
   const content =
     'q\n0.3 0.4 0.7 rg\n0 0 420 600 re f\nQ\n' +
     `BT /F1 22 Tf 1 0 0 1 30 520 Tm 1 1 1 rg (${escape(title)}) Tj ET\n` +
@@ -23,13 +34,7 @@ export function buildSamplePdf(title = 'QA Sample PDF', author = 'QA Test Author
     5: '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
   };
 
-  let pdf = '%PDF-1.4\n';
-  for (const [num, body] of Object.entries(objects)) {
-    pdf += `${num} 0 obj\n${body}\nendobj\n`;
-  }
-  pdf += 'trailer\n<< /Root 1 0 R >>\n';
-
-  return Buffer.from(pdf, 'latin1');
+  return serializePdf(objects);
 }
 
 /** Where the reader fixture's PDF mentions "library" (1-based page numbers), and how often in total. */
@@ -47,7 +52,6 @@ export const READER_PDF = {
  * spots listed in READER_PDF, so tests can assert exact match counts and pages.
  */
 export function buildReaderPdf(): Buffer {
-  const escape = (s: string): string => s.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
   const objects: Record<number, string> = {
     1: '<< /Type /Catalog /Pages 2 0 R >>',
     3: '<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman >>',
@@ -74,11 +78,5 @@ export function buildReaderPdf(): Buffer {
   }
   objects[2] = `<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${READER_PDF.pages} >>`;
 
-  let pdf = '%PDF-1.4\n';
-  for (const [num, body] of Object.entries(objects)) {
-    pdf += `${num} 0 obj\n${body}\nendobj\n`;
-  }
-  pdf += 'trailer\n<< /Root 1 0 R >>\n';
-
-  return Buffer.from(pdf, 'latin1');
+  return serializePdf(objects);
 }

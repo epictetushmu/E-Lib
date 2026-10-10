@@ -14,8 +14,10 @@ import {
   isFlowKind,
   markerDefs,
   nodeSize,
+  sidePanelKind,
   type Column,
   type DiagramDoc,
+  type DiagramEdge,
   type DiagramNode,
   type EdgeKind,
   type NodeKind,
@@ -39,7 +41,7 @@ function toNode(n: DiagramNode, editing = false): Node<DiagramNodeData> {
   return { id, type: 'diagram', position: { x, y }, data: { ...data, editing } }
 }
 
-function toEdge(e: { id: string; source: string; target: string; sourceHandle: Side; targetHandle: Side; kind: EdgeKind; label?: string; sourceLabel?: string; targetLabel?: string }): Edge<DiagramEdgeData> {
+function toEdge(e: DiagramEdge): Edge<DiagramEdgeData> {
   return {
     id: e.id,
     type: 'diagram',
@@ -150,26 +152,26 @@ function freshNode(kind: NodeKind, x: number, y: number, preset: Partial<Diagram
 async function addShape(kind: NodeKind, preset: Partial<DiagramNode> = {}) {
   const from = selectedNode.value
   const size = nodeSize({ kind, label: '', columns: kind === 'table' ? [{ name: '', type: '' }] : undefined })
-  let node: DiagramNode
+  let spot: { x: number; y: number }
+  let link: ReturnType<typeof placeAfter> | null = null
 
   if (from && isFlowKind(kind) && isFlowKind(from.data.kind)) {
-    const place = placeAfter(from, kind)
-    const spot = freeSpot(place.x, place.y, size.w, size.h)
-    node = freshNode(kind, spot.x, spot.y, preset)
-    addNodes(toNode(node, true))
-    addEdges(toEdge({ id: newId('e'), source: from.id, target: node.id, sourceHandle: place.sides[0], targetHandle: place.sides[1], kind: 'arrow', label: place.label }))
+    link = placeAfter(from, kind)
+    spot = freeSpot(link.x, link.y, size.w, size.h)
   } else if (from) {
     // Anything else goes beside the selection, unconnected.
-    const spot = freeSpot(from.position.x + nodeSize(from.data).w + 80, from.position.y, size.w, size.h)
-    node = freshNode(kind, spot.x, spot.y, preset)
-    addNodes(toNode(node, !['class', 'table'].includes(kind)))
+    spot = freeSpot(from.position.x + nodeSize(from.data).w + 80, from.position.y, size.w, size.h)
   } else {
     // Nothing selected: the middle of the view, or, if that's taken, the nearest clear spot to its right.
     const box = canvas.value?.getBoundingClientRect()
     const centre = box ? screenToFlowCoordinate({ x: box.left + box.width / 2, y: box.top + box.height / 2 }) : { x: 0, y: 0 }
-    const spot = freeSpot(centre.x - size.w / 2, centre.y - size.h / 2, size.w, size.h)
-    node = freshNode(kind, spot.x, spot.y, preset)
-    addNodes(toNode(node, !['class', 'table'].includes(kind)))
+    spot = freeSpot(centre.x - size.w / 2, centre.y - size.h / 2, size.w, size.h)
+  }
+
+  const node = freshNode(kind, spot.x, spot.y, preset)
+  addNodes(toNode(node, !sidePanelKind(kind)))
+  if (from && link) {
+    addEdges(toEdge({ id: newId('e'), source: from.id, target: node.id, sourceHandle: link.sides[0], targetHandle: link.sides[1], kind: 'arrow', label: link.label }))
   }
 
   await nextTick()
@@ -178,7 +180,7 @@ async function addShape(kind: NodeKind, preset: Partial<DiagramNode> = {}) {
   if (added) addSelectedNodes([added])
   fitView({ padding: 0.25, maxZoom: 1, duration: 200 })
   // Classes and tables are named in the side panel.
-  if (kind === 'class' || kind === 'table') focusName()
+  if (sidePanelKind(kind)) focusName()
 }
 
 async function focusName() {
@@ -321,7 +323,7 @@ function submit() {
 function onNodeDoubleClick() {
   // Other kinds rename in place; classes and tables are edited in the side panel.
   const kind = selectedNode.value?.data.kind
-  if (kind === 'class' || kind === 'table') focusName()
+  if (kind && sidePanelKind(kind)) focusName()
 }
 
 onMounted(() => dialog.value?.showModal())
@@ -331,7 +333,7 @@ onMounted(() => dialog.value?.showModal())
   <!-- Esc closes this dialog only, never the popover or note editor underneath. -->
   <dialog
     ref="dialog"
-    class="diagram-editor"
+    class="diagram-editor dialog-shell"
     aria-labelledby="diagram-editor-title"
     @cancel.prevent="emit('close')"
     @keydown.esc.stop="emit('close')"
@@ -340,9 +342,9 @@ onMounted(() => dialog.value?.showModal())
     <!-- eslint-disable-next-line vue/no-v-html -- fixed marker markup -->
     <svg class="dg-marker-defs" aria-hidden="true"><defs v-html="markers"></defs></svg>
 
-    <div class="dg-head">
+    <div class="dg-head dialog-head">
       <h2 id="diagram-editor-title">{{ editing ? 'Edit diagram' : 'Diagram' }}</h2>
-      <button type="button" class="dg-close" aria-label="Close" @click="emit('close')">&times;</button>
+      <button type="button" class="dg-close dialog-close" aria-label="Close" @click="emit('close')">&times;</button>
     </div>
 
     <div class="dg-toolbar">

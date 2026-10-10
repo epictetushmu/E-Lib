@@ -1,7 +1,7 @@
+import type { Page } from '@playwright/test';
 import { expect, test } from '../../fixtures';
 import { DiagramEditor } from '../../pages/DiagramEditor';
 import { ReaderPage } from '../../pages/ReaderPage';
-import { createAnnotation } from '../../support/api';
 
 /** The ```diagram JSON block a note editor holds, parsed. */
 function diagramIn(note: string): { nodes: Record<string, unknown>[]; edges: Record<string, unknown>[] } {
@@ -10,13 +10,19 @@ function diagramIn(note: string): { nodes: Record<string, unknown>[]; edges: Rec
   return JSON.parse(block[1]);
 }
 
+/** Opens the book's notes panel and the diagram editor from its toolbar. */
+async function openDiagramEditor(page: Page, bookId: string): Promise<{ view: ReaderPage; editor: DiagramEditor }> {
+  const view = new ReaderPage(page);
+  const editor = new DiagramEditor(page);
+  await view.open(bookId);
+  await view.openNotes();
+  await view.insertButton(view.notesPanel, 'Diagram').click();
+  return { view, editor };
+}
+
 test.describe('Reader: drawing diagrams in notes', () => {
   test('a flowchart is built by clicking shapes, each one following and connected to the last', async ({ reader, readerBook }) => {
-    const view = new ReaderPage(reader.page);
-    const editor = new DiagramEditor(reader.page);
-    await view.open(readerBook.id);
-    await view.openNotes();
-    await view.insertButton(view.notesPanel, 'Diagram').click();
+    const { view, editor } = await openDiagramEditor(reader.page, readerBook.id);
     await expect(editor.dialog).toBeVisible();
 
     await editor.addNamedShape('Start / end', 'Start');
@@ -46,11 +52,7 @@ test.describe('Reader: drawing diagrams in notes', () => {
   });
 
   test('putting the cursor in a diagram and pressing Diagram reopens it for editing', async ({ reader, readerBook }) => {
-    const view = new ReaderPage(reader.page);
-    const editor = new DiagramEditor(reader.page);
-    await view.open(readerBook.id);
-    await view.openNotes();
-    await view.insertButton(view.notesPanel, 'Diagram').click();
+    const { view, editor } = await openDiagramEditor(reader.page, readerBook.id);
     await editor.addNamedShape('Step', 'Only step');
     await editor.insert.click();
 
@@ -70,11 +72,7 @@ test.describe('Reader: drawing diagrams in notes', () => {
   });
 
   test('UML classes are filled in from the side panel and linked by inheritance', async ({ reader, readerBook }) => {
-    const view = new ReaderPage(reader.page);
-    const editor = new DiagramEditor(reader.page);
-    await view.open(readerBook.id);
-    await view.openNotes();
-    await view.insertButton(view.notesPanel, 'Diagram').click();
+    const { view, editor } = await openDiagramEditor(reader.page, readerBook.id);
     await editor.chooseSet('UML');
 
     await editor.shapeButton('Class').click();
@@ -109,11 +107,7 @@ test.describe('Reader: drawing diagrams in notes', () => {
   });
 
   test('database tables get columns and keys, and are joined one-to-many by default', async ({ reader, readerBook }) => {
-    const view = new ReaderPage(reader.page);
-    const editor = new DiagramEditor(reader.page);
-    await view.open(readerBook.id);
-    await view.openNotes();
-    await view.insertButton(view.notesPanel, 'Diagram').click();
+    const { view, editor } = await openDiagramEditor(reader.page, readerBook.id);
     await editor.chooseSet('Database');
 
     await editor.shapeButton('Table').click();
@@ -158,11 +152,7 @@ test.describe('Reader: drawing diagrams in notes', () => {
   });
 
   test('new shapes never land on top of existing ones', async ({ reader, readerBook }) => {
-    const view = new ReaderPage(reader.page);
-    const editor = new DiagramEditor(reader.page);
-    await view.open(readerBook.id);
-    await view.openNotes();
-    await view.insertButton(view.notesPanel, 'Diagram').click();
+    const { editor } = await openDiagramEditor(reader.page, readerBook.id);
 
     await editor.addNamedShape('Step', 'First');
     await editor.clearSelection();
@@ -172,30 +162,5 @@ test.describe('Reader: drawing diagrams in notes', () => {
 
     await expect(editor.shapes).toHaveCount(3);
     expect(await editor.overlappingShapes()).toEqual([]);
-  });
-
-  test('notes saved with the earlier ```flowchart format still show their chart', async ({ reader, readerBook }) => {
-    const legacy = {
-      nodes: [
-        { id: 'a', shape: 'terminal', label: 'Begin', x: 0, y: 0 },
-        { id: 'b', shape: 'step', label: 'Work', x: -16, y: 112 },
-      ],
-      edges: [{ id: 'e', source: 'a', target: 'b', sourceHandle: 'b', targetHandle: 't' }],
-    };
-    await createAnnotation(reader.api, reader.token, readerBook.id, {
-      page: 1,
-      rects: [],
-      quote: '',
-      note: '```flowchart\n' + JSON.stringify(legacy) + '\n```',
-      color: null,
-    });
-
-    const view = new ReaderPage(reader.page);
-    await view.open(readerBook.id);
-    await view.openNotes();
-
-    const drawn = view.renderedNote(view.noteItems.first()).locator('svg.diagram-svg');
-    await expect(drawn).toContainText('Begin');
-    await expect(drawn).toContainText('Work');
   });
 });

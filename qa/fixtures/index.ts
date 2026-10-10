@@ -82,26 +82,40 @@ interface Fixtures {
   otherReader: ReaderSession;
 }
 
-/** Signs up a fresh user and logs them in, in its own browser context (so two users can be open at once). */
-async function startReaderSession(
-  browser: Browser,
-  playwright: PlaywrightWorkerArgs['playwright'],
-  baseURL: string | undefined,
-  prefix: string,
-): Promise<{ session: ReaderSession; close: () => Promise<void> }> {
-  const user = buildTestUser(prefix);
-  const api = await playwright.request.newContext({ baseURL });
-  await registerViaApi(api, user);
-  const context = await browser.newContext({ baseURL });
-  const page = await context.newPage();
-  await loginViaUi(page, user);
-  const token = await loginViaApi(api, user.email, user.password);
-  return {
-    session: { page, user, api, token },
-    close: async () => {
-      await context.close();
-      await api.dispose();
+/**
+ * A logged-in reader of readerBook, signed up fresh and in its own browser context (so two
+ * users can be open at once). Their highlights/notes on it are removed afterwards through the
+ * real annotations API (the account itself stays, like every other e2e user — there's no
+ * delete-account API).
+ */
+function readerFixture(prefix: string) {
+  return async (
+    {
+      browser,
+      playwright,
+      baseURL,
+      readerBook,
+    }: {
+      browser: Browser;
+      playwright: PlaywrightWorkerArgs['playwright'];
+      baseURL: string | undefined;
+      readerBook: { id: string };
     },
+    use: (session: ReaderSession) => Promise<void>,
+  ): Promise<void> => {
+    const user = buildTestUser(prefix);
+    const api = await playwright.request.newContext({ baseURL });
+    await registerViaApi(api, user);
+    const context = await browser.newContext({ baseURL });
+    const page = await context.newPage();
+    await loginViaUi(page, user);
+    const { token } = await loginViaApi(api, user.email, user.password);
+
+    await use({ page, user, api, token });
+
+    await deleteAllAnnotations(api, token, readerBook.id);
+    await context.close();
+    await api.dispose();
   };
 }
 
@@ -171,23 +185,10 @@ export const test = base.extend<Fixtures>({
     await deleteBookViaApi(request, token, id);
   },
 
-  // A logged-in reader of readerBook. Their highlights/notes on it are removed
-  // afterwards through the real annotations API (the account itself stays, like
-  // every other e2e user — there's no delete-account API).
-  reader: async ({ browser, playwright, baseURL, readerBook }, use) => {
-    const { session, close } = await startReaderSession(browser, playwright, baseURL, 'qa_reader');
-    await use(session);
-    await deleteAllAnnotations(session.api, session.token, readerBook.id);
-    await close();
-  },
+  reader: readerFixture('qa_reader'),
 
   // A second, unrelated reader of the same book — for privacy checks.
-  otherReader: async ({ browser, playwright, baseURL, readerBook }, use) => {
-    const { session, close } = await startReaderSession(browser, playwright, baseURL, 'qa_other');
-    await use(session);
-    await deleteAllAnnotations(session.api, session.token, readerBook.id);
-    await close();
-  },
+  otherReader: readerFixture('qa_other'),
 });
 
 export { expect } from '@playwright/test';

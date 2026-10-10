@@ -6,7 +6,7 @@ import { useZoomRotate, DEFAULT_SCALE } from '@/composables/reader/useZoomRotate
 import { useReaderSearch } from '@/composables/reader/useReaderSearch'
 import { useAnnotations } from '@/composables/reader/useAnnotations'
 import { clientPointToPdf, clientRectToPdf, mergeLineRects } from '@/composables/reader/pdfGeometry'
-import { useReaderPersistence } from '@/composables/reader/useReaderPersistence'
+import { getSavedPanelWidth, setSavedPanelWidth, useReaderPersistence } from '@/composables/reader/useReaderPersistence'
 import { useToast } from '@/composables/useToast'
 import * as booksApi from '@/api/books'
 import type { Book } from '@/types/book'
@@ -59,28 +59,15 @@ const notesOpen = ref(false)
 /* Notes panel width: dragged by its left edge, remembered across books in this browser. */
 const PANEL_DEFAULT = 400
 const PANEL_MIN = 280
-const PANEL_WIDTH_KEY = 'elib_notes_panel_width'
-const panelWidth = ref(readPanelWidth())
+const savedPanelWidth = getSavedPanelWidth()
+const panelWidth = ref(savedPanelWidth !== null && savedPanelWidth >= PANEL_MIN ? savedPanelWidth : PANEL_DEFAULT)
 const resizingPanel = ref(false)
-
-function readPanelWidth(): number {
-  try {
-    const saved = Number(localStorage.getItem(PANEL_WIDTH_KEY))
-    return saved >= PANEL_MIN ? saved : PANEL_DEFAULT
-  } catch {
-    return PANEL_DEFAULT
-  }
-}
 
 /** Keeps at least a quarter of the reader for the book itself. */
 function setPanelWidth(width: number) {
   const max = Math.max(PANEL_MIN, (readerShell.value?.clientWidth ?? window.innerWidth) * 0.75)
   panelWidth.value = Math.round(Math.min(max, Math.max(PANEL_MIN, width)))
-  try {
-    localStorage.setItem(PANEL_WIDTH_KEY, String(panelWidth.value))
-  } catch {
-    // Storage unavailable: the width just won't be remembered.
-  }
+  setSavedPanelWidth(panelWidth.value)
 }
 
 function startPanelResize(event: PointerEvent) {
@@ -91,15 +78,14 @@ function startPanelResize(event: PointerEvent) {
   resizingPanel.value = true
   // The panel grows leftwards, so dragging left (negative dx) widens it.
   const move = (e: PointerEvent) => setPanelWidth(startWidth - (e.clientX - startX))
+  const listeners = new AbortController()
   const stop = () => {
     resizingPanel.value = false
-    handle.removeEventListener('pointermove', move)
-    handle.removeEventListener('pointerup', stop)
-    handle.removeEventListener('pointercancel', stop)
+    listeners.abort()
   }
-  handle.addEventListener('pointermove', move)
-  handle.addEventListener('pointerup', stop)
-  handle.addEventListener('pointercancel', stop)
+  handle.addEventListener('pointermove', move, { signal: listeners.signal })
+  handle.addEventListener('pointerup', stop, { signal: listeners.signal })
+  handle.addEventListener('pointercancel', stop, { signal: listeners.signal })
 }
 
 function handlePanelResizeKey(event: KeyboardEvent) {
@@ -598,7 +584,7 @@ onBeforeUnmount(() => {
             <li v-for="item in annotations.sorted.value" :key="item.id" class="note-item" data-testid="note-item">
               <button type="button" class="note-page" @click="pdf.goToPage(item.page)">p. {{ item.page }}</button>
               <div class="note-body">
-                <blockquote v-if="item.quote" :class="['note-quote', `quote-${item.color ?? 'saffron'}`]">{{ item.quote }}</blockquote>
+                <blockquote v-if="item.quote" :class="['note-quote', `hl-${item.color ?? 'saffron'}`]">{{ item.quote }}</blockquote>
                 <form v-if="editingId === item.id" class="note-edit" @submit.prevent="saveEdit(item)" @keydown.esc="editingId = null">
                   <label class="visually-hidden" :for="`note-edit-${item.id}`">Note</label>
                   <NoteEditor

@@ -478,32 +478,17 @@ svg {
   user-select: none;
 }
 
-.pdf-container :deep(.textLayer.selecting .endOfContent) {
-  top: 0;
-}
-
 /* Reader highlights: marker inks laid under the text (multiply keeps the print legible). */
 .pdf-container :deep(.user-highlight) {
   position: absolute;
   border-radius: 2px;
   mix-blend-mode: multiply;
   pointer-events: none;
+  background: color-mix(in srgb, var(--ink) 55%, transparent);
 }
 
-.pdf-container :deep(.hl-saffron) {
-  background: rgba(242, 201, 76, 0.55);
-}
-
-.pdf-container :deep(.hl-olive) {
-  background: rgba(169, 191, 107, 0.55);
-}
-
-.pdf-container :deep(.hl-aegean) {
-  background: rgba(127, 188, 214, 0.55);
-}
-
-.pdf-container :deep(.hl-rose) {
-  background: rgba(233, 160, 160, 0.6);
+.pdf-container :deep(.user-highlight.hl-rose) {
+  background: color-mix(in srgb, var(--ink) 60%, transparent);
 }
 
 .pdf-container :deep(.user-highlight.is-active) {
@@ -676,30 +661,6 @@ svg {
   font-size: 0.9rem;
 }
 
-.link-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.link-btn:hover:not(:disabled) {
-  color: var(--color-primary);
-  text-decoration: underline;
-}
-
-.link-btn-danger:hover:not(:disabled) {
-  color: var(--color-danger);
-}
-
-.link-btn:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
 .notes-empty {
   font-size: 0.85rem;
   color: var(--color-text-muted);
@@ -817,7 +778,7 @@ svg {
 .note-quote {
   margin: 0 0 0.3rem;
   padding-left: 0.6rem;
-  border-left: 3px solid #f2c94c;
+  border-left: 3px solid var(--ink);
   font-family: var(--font-serif);
   font-style: italic;
   font-size: 0.9rem;
@@ -826,18 +787,6 @@ svg {
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.quote-olive {
-  border-left-color: #a9bf6b;
-}
-
-.quote-aegean {
-  border-left-color: #7fbcd6;
-}
-
-.quote-rose {
-  border-left-color: #e9a0a0;
 }
 
 .note-quote + .note-text {

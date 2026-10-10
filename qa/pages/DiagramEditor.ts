@@ -98,8 +98,4 @@ export class DiagramEditor {
   field(label: string | RegExp): Locator {
     return this.panel.getByLabel(label);
   }
-
-  columnNames(): Locator {
-    return this.panel.getByLabel('Column name');
-  }
 }
