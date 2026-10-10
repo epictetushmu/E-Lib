@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePdfDocument } from '@/composables/reader/usePdfDocument'
 import { useZoomRotate, DEFAULT_SCALE } from '@/composables/reader/useZoomRotate'
@@ -13,6 +13,10 @@ import type { Book } from '@/types/book'
 import { isApiSuccess, requestErrorMessage } from '@/types/api'
 import type { Annotation, HighlightColor, NewAnnotation } from '@/types/annotation'
 import AnnotationPopover from '@/components/AnnotationPopover.vue'
+import NoteEditor from '@/components/NoteEditor.vue'
+
+// Markdown/maths/code rendering is a separate chunk, fetched once the notes panel shows a note.
+const NoteContent = defineAsyncComponent(() => import('@/components/NoteContent.vue'))
 
 const route = useRoute()
 const toast = useToast()
@@ -32,8 +36,6 @@ const pdf = usePdfDocument(bookId, {
 })
 const search = useReaderSearch(pdf.pdfDoc)
 const annotations = useAnnotations(bookId)
-/** Focuses the element when it appears (the note editor). */
-const vFocus = { mounted: (el: HTMLElement) => el.focus() }
 const loginPath = `/login?redirect=${encodeURIComponent(route.fullPath)}`
 
 const readerShell = ref<HTMLElement | null>(null)
@@ -53,7 +55,6 @@ const progress = computed(() => (pdf.numPages.value ? (pdf.currentPage.value / p
 
 const pageInput = ref(1)
 const notesOpen = ref(false)
-
 
 /* Notes panel width: dragged by its left edge, remembered across books in this browser. */
 const PANEL_DEFAULT = 400
@@ -110,6 +111,7 @@ function handlePanelResizeKey(event: KeyboardEvent) {
   event.preventDefault()
 }
 const noteText = ref('')
+
 const zoomPercent = computed(() => Math.round(zoomRotate.scale.value * 100))
 
 watch(pdf.currentPage, (page) => {
@@ -251,6 +253,8 @@ function closePopover() {
 }
 
 function handleDocumentPointerDown(event: PointerEvent) {
+  // While a dialog (e.g. the equation editor) is open, clicks belong to it, including MathLive's floating UI.
+  if (document.querySelector('dialog[open]')) return
   if (popover.value && !(event.target as HTMLElement).closest('.annotation-popover')) closePopover()
 }
 
@@ -566,7 +570,7 @@ onBeforeUnmount(() => {
         <template v-else>
           <div class="notes-add">
             <label for="reader-note-text">Note on page {{ pdf.currentPage.value }}</label>
-            <textarea id="reader-note-text" v-model="noteText" rows="3" placeholder="A thought about this page"></textarea>
+            <NoteEditor id="reader-note-text" v-model="noteText" placeholder="A thought, a formula, a snippet…" @submit="handleAddNote" />
             <div class="notes-actions">
               <button type="button" class="btn btn-primary" :disabled="!noteText.trim()" @click="handleAddNote">Add note</button>
             </div>
@@ -582,15 +586,13 @@ onBeforeUnmount(() => {
                 <blockquote v-if="item.quote" :class="['note-quote', `quote-${item.color ?? 'saffron'}`]">{{ item.quote }}</blockquote>
                 <form v-if="editingId === item.id" class="note-edit" @submit.prevent="saveEdit(item)" @keydown.esc="editingId = null">
                   <label class="visually-hidden" :for="`note-edit-${item.id}`">Note</label>
-                  <textarea
+                  <NoteEditor
                     :id="`note-edit-${item.id}`"
                     v-model="editText"
-                    v-focus
-                    rows="3"
+                    autofocus
                     :placeholder="item.rects.length ? 'Add a note to this highlight' : ''"
-                    @keydown.enter.ctrl.prevent="saveEdit(item)"
-                    @keydown.enter.meta.prevent="saveEdit(item)"
-                  ></textarea>
+                    @submit="saveEdit(item)"
+                  />
                   <div class="note-edit-actions">
                     <!-- A page note is nothing but its text, so it can't be saved empty (delete it instead). -->
                     <button type="submit" class="btn btn-primary" :disabled="savingEdit || (!item.rects.length && !editText.trim())">
@@ -599,7 +601,8 @@ onBeforeUnmount(() => {
                     <button type="button" class="link-btn" @click="editingId = null">Cancel</button>
                   </div>
                 </form>
-                <p v-else-if="item.note" class="note-text">{{ item.note }}</p>
+                <!-- Keyed by theme so diagrams redraw in the new colours. -->
+                <NoteContent v-else-if="item.note" :key="theme" class="note-text" :text="item.note" />
               </div>
               <div v-if="editingId !== item.id" class="note-actions">
                 <button

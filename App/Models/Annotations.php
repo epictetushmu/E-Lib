@@ -15,7 +15,7 @@ class Annotations extends BaseModel
     public const COLORS = ['saffron', 'olive', 'aegean', 'rose'];
     public const MAX_RECTS = 200;
     public const MAX_QUOTE = 2000;
-    public const MAX_NOTE = 5000;
+    public const MAX_NOTE = 20000;
 
     /**
      * @return list<array<string, mixed>>

@@ -1,0 +1,81 @@
+.note-editor {
+  display: flex;
+  flex-direction: column;
+}
+
+.note-editor-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.note-editor-insert {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.note-editor-bar button {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--color-text-muted);
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.note-editor-bar button:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.note-editor-toggle[aria-pressed='true'] {
+  background: var(--color-text);
+  border-color: var(--color-text);
+  color: var(--color-surface);
+}
+
+.note-editor textarea {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  padding: 0.55rem;
+  font-family: var(--font-serif);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  resize: vertical;
+  tab-size: 2;
+}
+
+.note-editor-preview {
+  min-height: 5.5rem;
+  max-height: 22rem;
+  overflow: auto;
+  padding: 0.55rem;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+}
+
+.note-editor-empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.note-editor-hint {
+  margin: 0.3rem 0 0;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.note-editor-hint code {
+  font-size: 0.7rem;
+  padding: 0 0.2rem;
+  border-radius: 3px;
+  background: var(--color-bg);
+}

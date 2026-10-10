@@ -102,18 +102,14 @@
   margin-top: 0.6rem;
 }
 
-.popover-note textarea {
-  width: 16rem;
-  max-width: 100%;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-bg);
-  color: var(--color-text);
-  padding: 0.5rem;
-  font-family: var(--font-serif);
-  font-size: 0.92rem;
-  line-height: 1.5;
-  resize: vertical;
+/* Room for the note editor's toolbar and code/maths once a note is being written. */
+.annotation-popover.with-note {
+  width: min(24rem, calc(100vw - 2rem));
+  max-width: none;
+}
+
+.popover-note .note-editor {
+  align-self: stretch;
 }
 
 .popover-note .btn {

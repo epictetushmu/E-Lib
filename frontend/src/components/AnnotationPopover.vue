@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { HIGHLIGHT_COLORS, type HighlightColor } from '@/types/annotation'
+import NoteEditor from '@/components/NoteEditor.vue'
 
 /**
  * new: a fresh selection — pick a colour to highlight, or add a note with it.
@@ -28,12 +29,12 @@ const emit = defineEmits<{
 const root = ref<HTMLElement | null>(null)
 const noteOpen = ref(props.mode === 'edit' && !!props.note)
 const noteText = ref(props.note ?? '')
-const noteField = ref<HTMLTextAreaElement | null>(null)
+// Focus the editor only when the reader asked for it ("Add note"), not when an existing note opens.
+const focusNote = ref(false)
 
-async function openNote() {
+function openNote() {
+  focusNote.value = true
   noteOpen.value = true
-  await nextTick()
-  noteField.value?.focus()
 }
 
 onMounted(() => {
@@ -45,7 +46,7 @@ onMounted(() => {
   <div
     ref="root"
     class="annotation-popover"
-    :class="{ above: placeAbove }"
+    :class="{ above: placeAbove, 'with-note': noteOpen }"
     :style="{ left: `${left}px`, top: `${top}px` }"
     role="dialog"
     :aria-label="mode === 'edit' ? 'Edit highlight' : 'Highlight selection'"
@@ -81,15 +82,14 @@ onMounted(() => {
 
       <form v-if="noteOpen" class="popover-note" @submit.prevent="emit('save', noteText)">
         <label class="visually-hidden" for="popover-note-text">Note</label>
-        <textarea
+        <NoteEditor
           id="popover-note-text"
-          ref="noteField"
           v-model="noteText"
-          rows="3"
+          :rows="3"
+          :autofocus="focusNote"
           placeholder="Why this passage matters"
-          @keydown.enter.ctrl.prevent="emit('save', noteText)"
-          @keydown.enter.meta.prevent="emit('save', noteText)"
-        ></textarea>
+          @submit="emit('save', noteText)"
+        />
         <button type="submit" class="btn btn-primary" :disabled="busy || (mode === 'new' && !noteText.trim())">
           {{ mode === 'edit' ? 'Save note' : 'Save highlight' }}
         </button>
