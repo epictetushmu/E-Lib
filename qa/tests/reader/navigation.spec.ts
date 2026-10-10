@@ -39,6 +39,26 @@ test.describe('Reader: layout and navigation', () => {
     await expect.poll(() => reader.pageOffsetFromTop(7)).toBe(0);
   });
 
+  // Was a bug: the selectable text layer stayed unrotated over the rotated page,
+  // so selections (and the highlights made from them) landed on the wrong text.
+  test('the selectable text turns with the page', async ({ page, readerBook }) => {
+    const reader = new ReaderPage(page);
+    await reader.open(readerBook.id);
+
+    await reader.rotate.click();
+
+    const line = reader.pageLine(READER_PDF.page1Line);
+    await expect(line).toBeVisible();
+    const pageBox = await reader.pageElement(1).boundingBox();
+    const lineBox = await line.boundingBox();
+    if (!pageBox || !lineBox) throw new Error('Page 1 or its text is not on screen');
+    expect(lineBox.height).toBeGreaterThan(lineBox.width);
+    expect(lineBox.x).toBeGreaterThanOrEqual(pageBox.x);
+    expect(lineBox.x + lineBox.width).toBeLessThanOrEqual(pageBox.x + pageBox.width);
+    expect(lineBox.y).toBeGreaterThanOrEqual(pageBox.y);
+    expect(lineBox.y + lineBox.height).toBeLessThanOrEqual(pageBox.y + pageBox.height);
+  });
+
   test('stays on the same page when zooming', async ({ page, readerBook }) => {
     const reader = new ReaderPage(page);
     await reader.open(readerBook.id);

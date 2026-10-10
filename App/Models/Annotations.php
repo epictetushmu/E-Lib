@@ -13,9 +13,9 @@ class Annotations extends BaseModel
     protected string $collection = 'Annotations';
 
     public const COLORS = ['saffron', 'olive', 'aegean', 'rose'];
-    public const MAX_RECTS = 200;
+    public const MAX_RECTS = 200; // Reader.vue collapses bigger selections to whole rows
     public const MAX_QUOTE = 2000;
-    public const MAX_NOTE = 20000;
+    public const MAX_NOTE = 200000; // diagrams are stored in the note as JSON
 
     /**
      * @return list<array<string, mixed>>

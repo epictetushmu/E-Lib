@@ -211,7 +211,9 @@ function openForSelection(range: Range) {
   const viewport = pdf.viewportFor(pageNumber)
   if (!viewport) return
   const pageBox = page.getBoundingClientRect()
-  const lines = mergeLineRects([...range.getClientRects()]).filter((r) => r.bottom > pageBox.top && r.top < pageBox.bottom)
+  let lines = mergeLineRects([...range.getClientRects()]).filter((r) => r.bottom > pageBox.top && r.top < pageBox.bottom)
+  // A table or columns leave many separate pieces per line; past the server's 200 (Annotations::MAX_RECTS), highlight whole rows.
+  if (lines.length > 200) lines = mergeLineRects(lines, true)
   if (!lines.length) return
 
   popover.value = {

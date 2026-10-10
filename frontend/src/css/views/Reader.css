@@ -423,6 +423,19 @@ svg {
   z-index: 0;
 }
 
+/* pdf.js lays text out unrotated and leaves rotating it to CSS (pdf_viewer.css's [data-main-rotation] rules). */
+.pdf-container :deep(.textLayer[data-main-rotation='90']) {
+  transform: rotate(90deg) translateY(-100%);
+}
+
+.pdf-container :deep(.textLayer[data-main-rotation='180']) {
+  transform: rotate(180deg) translate(-100%, -100%);
+}
+
+.pdf-container :deep(.textLayer[data-main-rotation='270']) {
+  transform: rotate(270deg) translateX(-100%);
+}
+
 .pdf-container :deep(.textLayer span),
 .pdf-container :deep(.textLayer br) {
   color: transparent;

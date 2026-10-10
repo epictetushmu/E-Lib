@@ -143,7 +143,8 @@ export function useReaderSearch(pdfDoc: Ref<PDFDocumentProxy | null>) {
 
   async function search() {
     const doc = pdfDoc.value
-    const query = foldQuery(term.value)
+    const searched = term.value
+    const query = foldQuery(searched)
     if (!doc || !query || searching.value) return
 
     searching.value = true
@@ -157,8 +158,10 @@ export function useReaderSearch(pdfDoc: Ref<PDFDocumentProxy | null>) {
           found.push({ page: pageNumber, rects: rectsFor(text, from, to) })
         }
       }
+      // The reader kept typing while the book was scanned: these hits are for a term no longer in the box.
+      if (term.value !== searched) return
       matches.value = found
-      searchedTerm.value = term.value
+      searchedTerm.value = searched
       current.value = found.length ? 0 : -1
     } finally {
       searching.value = false

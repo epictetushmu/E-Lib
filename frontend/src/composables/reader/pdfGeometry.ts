@@ -32,14 +32,15 @@ export function clientRectToPdf(r: DOMRect, wrapper: HTMLElement, viewport: Page
 /**
  * Selection rects arrive one per text span (plus duplicates for fully selected elements);
  * fold them into one box per line so a highlight reads as a single stroke.
+ * joinAcross also joins pieces of a line however far apart (table cells, columns) into one full row.
  */
-export function mergeLineRects(rects: DOMRect[]): DOMRect[] {
+export function mergeLineRects(rects: DOMRect[], joinAcross = false): DOMRect[] {
   const sorted = rects.filter((r) => r.width > 1 && r.height > 1).sort((a, b) => a.top - b.top || a.left - b.left)
   const lines: DOMRect[] = []
   for (const r of sorted) {
     const line = lines.find((l) => {
       const overlap = Math.min(l.bottom, r.bottom) - Math.max(l.top, r.top)
-      return overlap > Math.min(l.height, r.height) * 0.5 && r.left <= l.right + r.height && r.right >= l.left - r.height
+      return overlap > Math.min(l.height, r.height) * 0.5 && (joinAcross || (r.left <= l.right + r.height && r.right >= l.left - r.height))
     })
     if (line) {
       const left = Math.min(line.left, r.left)
