@@ -52,8 +52,8 @@ The suite drives a real instance of the app, so start one first — MongoDB is r
 # Option A: PHP built-in server (needs MONGO_URI set in .env, e.g. Atlas)
 php -S localhost:8000 -t public
 
-# Option B: Docker Compose (app + MongoDB)
-docker-compose up -d
+# Option B: Docker Compose with the dev overrides (app on :8081 + a throwaway MongoDB; see README)
+docker compose up -d
 ```
 
 Then, from the repo root:

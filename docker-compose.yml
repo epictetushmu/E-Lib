@@ -1,25 +1,25 @@
-version: '3'
-
+# Production stack: `docker compose up -d --build`.
+# Local development layers docker-compose.dev.yml on top (bind-mounted code, debug, a throwaway
+# MongoDB) — set COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml in your local .env.
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: elib-app
-    ports:
-      - "8081:80"
-    # NOTE: this bind-mount shadows the image-build-time public/dist/ (built by the
-    # Dockerfile's `npm run build`) with whatever's on the host. For local compose use, run
-    # `cd frontend && npm run build` on the host first (or `npm run dev` against the Vite
-    # proxy instead of this container) so public/dist/index.html actually exists.
-    volumes:
-      - .:/var/www/html
-      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
-    depends_on:
-      - mongo
+    restart: unless-stopped
     environment:
-      - APP_ENV=development
-      - APP_DEBUG=true
+      - APP_ENV=production
+      - APP_DEBUG=false
+    volumes:
+      # Mounted rather than passed via env_file: compose would try to interpolate the
+      # ${MONGO_PASSWORD} placeholder inside MONGO_URI, which App\Includes\Environment resolves itself.
+      # The file must exist before `up` — otherwise Docker creates an empty directory named .env.
+      - ./.env:/var/www/html/.env:ro
+      # Uploaded books and thumbnails must outlive image rebuilds. A named volume (not a host bind)
+      # so the first start seeds it with the placeholder thumbnails baked into the image.
+      - uploads:/var/www/html/public/assets/uploads
+      - logs:/var/www/html/storage/logs
     networks:
       - elib-network
 
@@ -41,31 +41,12 @@ services:
     networks:
       - elib-network
 
-  mongo:
-    image: mongo:latest
-    container_name: elib-mongo
-    restart: unless-stopped
-    ports:
-      # Bound to loopback only: the app container reaches mongo over the internal
-      # elib-network regardless of this mapping, which exists purely so a host-side
-      # client (Compass, mongosh) can connect for local debugging. Publishing to all
-      # interfaces (the Docker default for "27017:27017") would let anyone who can reach
-      # this host connect with the default root/example credentials below.
-      - "127.0.0.1:27017:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME:-root}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-example}
-      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE:-e_lib}
-    volumes:
-      - mongo-data:/data/db
-    networks:
-      - elib-network
-
 networks:
   elib-network:
     driver: bridge
 
 volumes:
-  mongo-data:
+  uploads:
+  logs:
   caddy-data:
   caddy-config:

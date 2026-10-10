@@ -260,27 +260,51 @@ To get started with the E-Lib project:
 
 ### Local Development with Docker
 
-1. **Clone the Repository**:
+`docker-compose.yml` is the production stack; `docker-compose.dev.yml` layers dev overrides on top
+(bind-mounted code, debug on, a throwaway local MongoDB, app published on port 8081).
+
+1. **Setup Environment**:
 
    ```bash
-   git clone https://github.com/epictetushmu/E-Lib.git
-   cd E-Lib
+   cp .env.example .env   # keeps COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml, so compose picks up the dev overrides
+   cd frontend && npm install && npm run build && cd ..   # the bind-mount hides the image's own SPA build
    ```
 
-2. **Setup Environment**:
+2. **Build and Start**:
 
    ```bash
-   cp .env.example .env
+   docker compose up -d --build
    ```
 
-3. **Build and Start the Docker Environment**:
+3. **Access the Application**: `http://localhost:8081` (or `https://localhost` through Caddy).
+
+To test against the throwaway database instead of Atlas, set `MONGO_URI=mongodb://root:example@mongo:27017` in `.env`.
+
+### Production Deployment
+
+Production runs the same images with `docker-compose.yml` alone (no dev overrides): Caddy terminates
+HTTPS and proxies to the app; uploaded books and thumbnails live in the `uploads` volume, so rebuilds
+and redeploys never touch them.
+
+1. On the server: install Docker with the compose plugin.
+2. Locally: `cp .env.example .env.production`, fill in production values (`APP_URL`, `DOMAIN`,
+   `MONGO_URI`, `JWT_SECRET_KEY`, ...) and **remove the `COMPOSE_FILE` line**.
+3. Deploy (syncs the code, builds, restarts, checks the app answers):
 
    ```bash
-   docker-compose up -d
+   DEPLOY_HOST=user@your-server DEPLOY_DIR=/srv/e-lib ./deploy.sh
    ```
 
-4. **Access the Application**:
-   Open your web browser and navigate to `http://localhost:8080`.
+4. **One-time: import existing uploads.** Book records in MongoDB point at files under
+   `/assets/uploads/...`, so copy your existing `public/assets/uploads/` into the volume once:
+
+   ```bash
+   rsync -az public/assets/uploads/ user@your-server:/tmp/elib-uploads/
+   ssh user@your-server 'cd /srv/e-lib \
+     && docker compose cp /tmp/elib-uploads/. app:/var/www/html/public/assets/uploads/ \
+     && docker compose exec -T app chown -R www-data:www-data /var/www/html/public/assets/uploads \
+     && rm -rf /tmp/elib-uploads'
+   ```
 
 ### Without Docker
 

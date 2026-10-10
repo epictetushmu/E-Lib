@@ -1,32 +1,42 @@
-# Ignore the Dockerfile and docker-compose files
+# Compose/Docker files aren't needed inside the image
 Dockerfile
-docker-compose.yml
+docker-compose*.yml
 
-# Ignore the README file
 README.md
+.git
+.gitignore
+.idea/
+.vscode/
 
-# Ignore the vendor directory if using Composer
+# Secrets never go into the image — compose mounts .env at runtime
+.env
+.env.*
+
+# Composer/npm reinstall inside the image; root/frontend each have their own package-lock.json
 vendor/
-
-# Ignore local node_modules — npm ci reinstalls inside the image, and root/frontend both
-# have their own package-lock.json (Playwright tooling vs. the Vue SPA build)
 node_modules/
 frontend/node_modules/
 
-# Ignore a locally-built SPA — the Dockerfile builds its own copy in-image
+# The Dockerfile builds its own copy of the SPA
 public/dist/
 
-# Ignore any log files
-*.log
+# Uploaded books/thumbnails live in the `uploads` volume, not the image — but keep the
+# placeholder images the app falls back to (the volume is seeded from the image on first start)
+public/assets/uploads/documents/*
+public/assets/uploads/thumbnails/*
+!public/assets/uploads/thumbnails/placeholder-*.jpg
+uploads/
 
-# Ignore temporary files
+# Runtime state and local tooling output
+storage/logs/*
+cache/*
+tests/
+qa/
+playwright-report/
+test-results/
+CLAUDE-SECURITY-*/
+*.log
 *.tmp
 *.temp
-
-# Ignore system files
 .DS_Store
 Thumbs.db
-
-# Ignore IDE specific files
-.idea/
-.vscode/

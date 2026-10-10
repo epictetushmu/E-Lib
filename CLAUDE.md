@@ -11,7 +11,8 @@ E-Lib is a PHP 8.2 digital library management app (Hellenic Mediterranean Univer
 ```bash
 composer install                       # install PHP deps
 php -S localhost:8000 -t public        # run dev server (serves from public/)
-docker-compose up -d                   # run app + MongoDB via Docker (http://localhost:8081)
+docker compose up -d --build           # local Docker: app + throwaway MongoDB (http://localhost:8081) — needs COMPOSE_FILE from .env.example
+DEPLOY_HOST=... DEPLOY_DIR=... ./deploy.sh   # production: rsync + `docker compose up -d --build` on the server
 
 composer run lint                      # PHPCS, PSR-12 (App/, public/index.php, scripts/, etc.)
 composer run lint:fix                  # PHPCBF autofix
@@ -60,6 +61,9 @@ Two mechanisms coexist: JWT bearer tokens (`JwtHelper`, checked by `JwtAuthMiddl
 
 ### File handling
 `App/Helpers/FileHelper.php` validates and stores uploaded documents (extension allowlist, not MIME-only) and drives thumbnail generation via ImageMagick (`pdftoppm`/`convert`) and LibreOffice (for Office format conversion) — see `MongoSchematics.png` and `docs/architecture/` for the data-model/refactor background.
+
+### Docker
+`docker-compose.yml` is the **production** stack (Caddy + app; uploads in the `uploads` named volume, `.env` mounted read-only, never baked into the image — see `.dockerignore`). `docker-compose.dev.yml` overrides it for local dev (bind-mounted code/uploads/logs, `APP_ENV=development`, a throwaway `mongo` container) and is selected via `COMPOSE_FILE` in the local `.env`; the server's `.env` must not set it (`deploy.sh` refuses). CI does not use compose — the GitHub workflows run their own `mongo:4.4` service container, so tests never touch Atlas.
 
 ## Conventions
 
