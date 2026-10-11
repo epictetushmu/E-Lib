@@ -48,6 +48,14 @@ export function downloadBook(bookId: string) {
   return client.get<Blob>(`/v1/books/${bookId}/download`, { responseType: 'blob' })
 }
 
+export function borrowBook(bookId: string) {
+  return client.post<ApiResponse<{ due_at: string }>>(`/v1/books/${bookId}/borrow`)
+}
+
+export function returnBook(bookId: string) {
+  return client.post<ApiResponse<string>>(`/v1/books/${bookId}/return`)
+}
+
 /** Raw PDF bytes for in-browser preview (Reader.vue passes this straight to pdfjs-dist). */
 export function getBookFile(bookId: string) {
   return client.get<ArrayBuffer>(`/v1/books/${bookId}/file`, { responseType: 'arraybuffer' })

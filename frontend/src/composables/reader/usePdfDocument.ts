@@ -1,6 +1,7 @@
 import { ref, shallowRef, type Ref } from 'vue'
 import { pdfjsLib } from '@/utils/pdfjs'
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, PageViewport } from 'pdfjs-dist'
+import axios from 'axios'
 import * as booksApi from '@/api/books'
 import { requestErrorMessage } from '@/types/api'
 import { scrollWithin } from '@/utils/dom'
@@ -188,7 +189,12 @@ export function usePdfDocument(bookId: string, options: UsePdfDocumentOptions) {
       numPages.value = doc.numPages
       await rebuildPages()
     } catch (err) {
-      error.value = requestErrorMessage(err, 'Error loading PDF')
+      // The body is an ArrayBuffer here, so the server's message can't be read; lent books answer 401/403.
+      const status = axios.isAxiosError(err) ? err.response?.status : undefined
+      error.value =
+        status === 401 || status === 403
+          ? 'This book is lent out: borrow it from its page to read it.'
+          : requestErrorMessage(err, 'Error loading PDF')
     } finally {
       loading.value = false
     }

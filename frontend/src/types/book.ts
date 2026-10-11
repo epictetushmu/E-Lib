@@ -17,6 +17,12 @@ export interface Book {
   status?: string
   featured?: boolean
   downloadable?: boolean
+  /** Copies lent at once; 0/absent = open access. Lent books are read only while borrowed. */
+  loan_copies?: number
+  /** Loan period in days (server defaults to 14). */
+  loan_days?: number
+  /** Lending state, only on GET /v1/books/{id} for lent books. */
+  loan?: { copies: number; available: number; loan_days: number; due_at: string | null }
   thumbnail?: string
   average_rating?: number
   review_count?: number

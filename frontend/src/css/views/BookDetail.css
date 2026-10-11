@@ -36,6 +36,12 @@
   width: 100%;
 }
 
+.loan-note {
+  margin: 0;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 .login-hint {
   margin-top: 1rem;
   font-size: 0.9rem;

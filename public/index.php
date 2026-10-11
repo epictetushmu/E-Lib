@@ -68,6 +68,8 @@ $router->addMiddleware(new JwtAuthMiddleware([
     ['path' => '/api/v1/downloaded-books', 'method' => 'GET'],
     ['path' => '/api/v1/reviews', 'method' => 'POST'],
     ['path' => '/api/v1/books/([0-9a-f]{24})/download', 'method' => 'GET'],
+    ['path' => '/api/v1/books/([0-9a-f]{24})/borrow', 'method' => 'POST'],
+    ['path' => '/api/v1/books/([0-9a-f]{24})/return', 'method' => 'POST'],
     // Private highlights and notes
     ['path' => '/api/v1/books/([0-9a-f]{24})/annotations', 'method' => 'GET'],
     ['path' => '/api/v1/books/([0-9a-f]{24})/annotations', 'method' => 'POST'],

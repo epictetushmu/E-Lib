@@ -244,6 +244,8 @@ const editForm = reactive({
   featured: false,
   isbn: '',
   downloadable: true,
+  loan_copies: 0,
+  loan_days: 14,
   categories: [] as string[],
 })
 const editSaving = ref(false)
@@ -280,6 +282,8 @@ function openEdit(book: Book) {
   editForm.featured = !!book.featured
   editForm.isbn = book.isbn ?? ''
   editForm.downloadable = book.downloadable !== false
+  editForm.loan_copies = book.loan_copies ?? 0
+  editForm.loan_days = book.loan_days ?? 14
   editForm.categories = [...(book.categories ?? [])]
   editError.value = ''
   editLookedUp.value = false
@@ -589,6 +593,30 @@ onMounted(loadBooks)
                 ><input v-model="editForm.downloadable" type="checkbox" data-testid="edit-downloadable-checkbox" />
                 Downloadable</label
               >
+            </div>
+            <div class="form-field">
+              <label for="edit-loan-copies">Copies to lend</label>
+              <input
+                id="edit-loan-copies"
+                v-model.number="editForm.loan_copies"
+                type="number"
+                min="0"
+                max="1000"
+                data-testid="edit-loan-copies"
+              />
+              <small class="text-muted">0 = open access. Above 0, readers must borrow it and can't download it.</small>
+            </div>
+            <div class="form-field">
+              <label for="edit-loan-days">Loan period (days)</label>
+              <input
+                id="edit-loan-days"
+                v-model.number="editForm.loan_days"
+                type="number"
+                min="1"
+                max="365"
+                :disabled="!editForm.loan_copies"
+                data-testid="edit-loan-days"
+              />
             </div>
             <div class="form-field span-2">
               <label for="edit-categories">Categories</label>

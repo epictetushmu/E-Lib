@@ -17,6 +17,8 @@ export interface BookUpdatePayload {
   featured?: boolean
   isbn?: string
   downloadable?: boolean
+  loan_copies?: number
+  loan_days?: number
 }
 
 export function updateBook(id: string, payload: BookUpdatePayload) {

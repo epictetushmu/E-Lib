@@ -29,7 +29,9 @@ const saved = ref(false)
 const downloading = ref(false)
 
 const cover = computed(() => book.value?.thumbnail || booksApi.thumbnailUrl(bookId))
-const isDownloadable = computed(() => book.value?.downloadable !== false)
+const loan = computed(() => book.value?.loan ?? null)
+const isDownloadable = computed(() => book.value?.downloadable !== false && !loan.value)
+const lending = ref(false)
 const myReview = computed(() => reviews.value.find((r) => r.user_id === auth.claims?.user_id))
 
 async function loadReviews() {
@@ -57,6 +59,38 @@ async function handleSave() {
     toast.error(requestErrorMessage(err, 'An error occurred while saving the book'))
   } finally {
     saving.value = false
+  }
+}
+
+async function handleBorrow() {
+  if (!book.value?.loan) return
+  lending.value = true
+  try {
+    const { data: body } = await booksApi.borrowBook(bookId)
+    if (isApiSuccess(body)) {
+      book.value.loan = { ...book.value.loan, due_at: body.data.due_at, available: book.value.loan.available - 1 }
+      toast.success('Borrowed — happy reading')
+    } else {
+      toast.error(apiErrorMessage(body as ApiError, 'Could not borrow this book'))
+    }
+  } catch (err) {
+    toast.error(requestErrorMessage(err, 'Could not borrow this book'))
+  } finally {
+    lending.value = false
+  }
+}
+
+async function handleReturn() {
+  if (!book.value?.loan) return
+  lending.value = true
+  try {
+    await booksApi.returnBook(bookId)
+    book.value.loan = { ...book.value.loan, due_at: null, available: book.value.loan.available + 1 }
+    toast.success('Book returned')
+  } catch (err) {
+    toast.error(requestErrorMessage(err, 'Could not return this book'))
+  } finally {
+    lending.value = false
   }
 }
 
@@ -106,7 +140,46 @@ onMounted(async () => {
         <img :src="cover" class="cover" :alt="`Cover of ${book.title}`" @error="onThumbnailError" />
 
         <div class="actions">
-          <RouterLink :to="`/read/${bookId}`" class="btn btn-outline full-width" data-testid="preview-button">
+          <template v-if="loan">
+            <template v-if="loan.due_at">
+              <RouterLink :to="`/read/${bookId}`" class="btn btn-primary full-width" data-testid="read-loan-button">
+                Read
+              </RouterLink>
+              <button
+                type="button"
+                class="btn btn-outline full-width"
+                :disabled="lending"
+                data-testid="return-button"
+                @click="handleReturn"
+              >
+                Return now
+              </button>
+              <p class="text-muted loan-note" data-testid="loan-due">
+                Borrowed until {{ new Date(loan.due_at).toLocaleDateString() }}
+              </p>
+            </template>
+            <template v-else>
+              <button
+                v-if="auth.isAuthenticated"
+                type="button"
+                class="btn btn-primary full-width"
+                :disabled="lending || loan.available < 1"
+                data-testid="borrow-button"
+                @click="handleBorrow"
+              >
+                {{ loan.available < 1 ? 'All copies on loan' : `Borrow for ${loan.loan_days} days` }}
+              </button>
+              <p class="text-muted loan-note" data-testid="loan-availability">
+                {{ loan.available }} of {{ loan.copies }} {{ loan.copies === 1 ? 'copy' : 'copies' }} available
+              </p>
+            </template>
+          </template>
+          <RouterLink
+            v-else
+            :to="`/read/${bookId}`"
+            class="btn btn-outline full-width"
+            data-testid="preview-button"
+          >
             Online Preview
           </RouterLink>
           <template v-if="auth.isAuthenticated">
@@ -134,7 +207,7 @@ onMounted(async () => {
               type="button"
               class="btn btn-outline full-width"
               disabled
-              title="This book is not available for download"
+              :title="loan ? 'Lent books can only be read online while borrowed' : 'This book is not available for download'"
               data-testid="download-disabled-button"
             >
               Download Disabled
@@ -142,7 +215,7 @@ onMounted(async () => {
           </template>
           <p v-else class="text-muted login-hint" data-testid="login-hint">
             <RouterLink :to="{ path: '/login', query: { redirect: route.fullPath } }">Log in</RouterLink>
-            to read online, save, or download this book.
+            to {{ loan ? 'borrow' : 'read online, save, or download' }} this book.
           </p>
         </div>
       </div>
