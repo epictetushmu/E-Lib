@@ -1,6 +1,6 @@
 import client from './client'
 import type { ApiResponse } from '@/types/api'
-import type { Book, ContentSearchResult } from '@/types/book'
+import type { Book, CatalogQuery, CatalogResult, ContentSearchResult } from '@/types/book'
 
 export function getFeaturedBooks() {
   return client.get<ApiResponse<Book[]>>('/v1/books/featured')
@@ -22,6 +22,11 @@ export function searchBooks(term: string) {
 /** Optional features this server has switched on. */
 export function getFeatures() {
   return client.get<ApiResponse<{ contentSearch: boolean }>>('/v1/features')
+}
+
+/** Title/author search with filters and per-filter counts; an empty query lists the whole catalog. */
+export function catalog(query: CatalogQuery) {
+  return client.get<ApiResponse<CatalogResult>>('/v1/catalog', { params: query })
 }
 
 /** Search inside books: pages matching the query by words or by meaning. */

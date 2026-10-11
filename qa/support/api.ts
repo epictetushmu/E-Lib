@@ -49,14 +49,14 @@ interface CreateBookResponse {
 export async function createBookViaApi(
   request: APIRequestContext,
   adminToken: string,
-  input: { title: string; author?: string; pdf: Buffer },
+  input: { title: string; author?: string; categories?: string[]; pdf: Buffer },
 ): Promise<string> {
   const response = await request.post('/api/v1/books', {
     headers: { Authorization: `Bearer ${adminToken}` },
     multipart: {
       title: input.title,
       author: input.author ?? 'QA Test Author',
-      categories: '[]',
+      categories: JSON.stringify(input.categories ?? []),
       downloadable: 'true',
       bookFile: {
         name: 'sample.pdf',

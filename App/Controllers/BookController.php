@@ -225,6 +225,26 @@ class BookController
         ResponseHandler::respond(true, ['contentSearch' => ContentSearchService::enabled()]);
     }
 
+    /**
+     * GET /api/v1/catalog — title/author search with subject, format, author and decade filters and
+     * facet counts. An empty query lists the whole catalog. Drafts only for admins.
+     */
+    public function catalog(): void
+    {
+        try {
+            $result = $this->bookService->catalog($_GET, !AuthenticatedUser::isAdmin());
+        } catch (\Exception $e) {
+            error_log('Catalog search failed: ' . $e->getMessage());
+            ResponseHandler::respond(false, 'Search is unavailable right now. Try again in a moment.', 503);
+            return;
+        }
+        foreach ($result['books'] as &$book) {
+            BookDisplayHelper::applyThumbnailForApi($book);
+        }
+        unset($book);
+        ResponseHandler::respond(true, $result);
+    }
+
     public function contentSearch(): void
     {
         if (!ContentSearchService::enabled()) {

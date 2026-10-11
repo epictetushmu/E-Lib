@@ -286,4 +286,58 @@ class BookServiceTest extends ServiceTestCase
 
         $this->assertSame($reviews, $this->service($books)->getBookReviews('book1'));
     }
+
+    public function testCatalogNormalisesUntrustedQueryParameters(): void
+    {
+        $books = $this->createMock(Books::class);
+        $books->expects($this->once())
+            ->method('catalog')
+            ->with(
+                'kurose',
+                [
+                    // Trimmed, de-duplicated, blanks and non-scalars dropped.
+                    'category' => ['Networking'],
+                    'format' => ['epub'],
+                    'author' => [],
+                    // Non-numeric decades dropped.
+                    'decade' => [2010],
+                ],
+                true,
+                'title', // unknown sort falls back to the default
+                0,       // page < 1 is page 1
+                BookService::CATALOG_PAGE_SIZE
+            )
+            ->willReturn(['books' => [], 'total' => 0, 'facets' => []]);
+
+        $result = $this->service($books)->catalog([
+            'q' => '  kurose ',
+            'category' => [' Networking', 'Networking', '', ['nested']],
+            'format' => 'EPUB',
+            'author' => [],
+            'decade' => ['2010', 'abc', '19x0'],
+            'sort' => 'bogus',
+            'page' => '-3',
+        ], true);
+
+        $this->assertSame(1, $result['page']);
+    }
+
+    public function testCatalogCapsFilterValuesAndPages(): void
+    {
+        $books = $this->createMock(Books::class);
+        $books->expects($this->once())
+            ->method('catalog')
+            ->with(
+                '',
+                $this->callback(fn (array $f) => count($f['author']) === 20 && mb_strlen($f['author'][0]) === 200),
+                false,
+                'views',
+                999 * BookService::CATALOG_PAGE_SIZE,
+                BookService::CATALOG_PAGE_SIZE
+            )
+            ->willReturn(['books' => [], 'total' => 0, 'facets' => []]);
+
+        $authors = array_map(fn ($i) => $i . str_repeat('x', 300), range(1, 50));
+        $this->service($books)->catalog(['author' => $authors, 'sort' => 'views', 'page' => '99999'], false);
+    }
 }

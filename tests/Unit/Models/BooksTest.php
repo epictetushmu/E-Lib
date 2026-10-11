@@ -262,4 +262,47 @@ class BooksTest extends ModelTestCase
 
         $this->assertNull($this->makeBooks($db)->claimNextForIndexing('model-b', 300, 3));
     }
+
+    public function testCatalogCountsEachFacetWithEveryFilterButItsOwn(): void
+    {
+        $db = $this->createMock(DatabaseInterface::class);
+        $pipeline = null;
+        $db->method('aggregate')->willReturnCallback(function (string $collection, array $p) use (&$pipeline) {
+            $pipeline = $p;
+            return [[
+                'books' => [['title' => 'A']],
+                'total' => [['n' => 7]],
+                'category' => [['value' => 'Networking', 'count' => 3]],
+                'format' => [],
+                'author' => [],
+                'decade' => [['value' => 2010, 'count' => 7]],
+            ]];
+        });
+
+        $result = $this->makeBooks($db)->catalog(
+            'kur(ose',
+            ['category' => ['Networking'], 'format' => [], 'author' => [], 'decade' => [2010]],
+            true,
+            'year_desc',
+            24,
+            24
+        );
+
+        $this->assertSame(7, $result['total']);
+        $this->assertSame([['title' => 'A']], $result['books']);
+        $this->assertSame([['value' => 2010, 'count' => 7]], $result['facets']['decade']);
+
+        $base = (array) $pipeline[0]['$match'];
+        $this->assertSame('public', $base['status']);
+        // The search term is matched literally, not as a regex.
+        $this->assertSame('kur\\(ose', $base['$or'][0]['title']->getPattern());
+
+        $facets = $pipeline[count($pipeline) - 1]['$facet'];
+        $match = fn (string $branch) => (array) $facets[$branch][0]['$match'];
+        $this->assertSame(['categories' => ['$in' => ['Networking']], 'decade' => ['$in' => [2010]]], $match('books'));
+        $this->assertSame(['decade' => ['$in' => [2010]]], $match('category'));
+        $this->assertSame(['categories' => ['$in' => ['Networking']]], $match('decade'));
+        $this->assertSame(['categories' => ['$in' => ['Networking']], 'decade' => ['$in' => [2010]]], $match('format'));
+        $this->assertSame([['$sort' => ['year_num' => -1, 'sort_title' => 1]], ['$skip' => 24]], array_slice($facets['books'], 1, 2));
+    }
 }

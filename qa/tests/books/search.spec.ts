@@ -33,6 +33,40 @@ test.describe('Book search', () => {
     }
   });
 
+  test('filters catalog results by subject and finds books by author', async ({ page, request, adminCredentials }) => {
+    const token = await loginAsAdmin(request, adminCredentials.email, adminCredentials.password);
+    // Unique subjects and author, so books other tests leave behind can't change the counts.
+    const tag = uniqueBookTitle('QA Facet');
+    const [subjectA, subjectB, author] = [`${tag} Optics`, `${tag} Botany`, `${tag} Author`];
+    const titleA = `${tag} Lenses`;
+    const titleB = `${tag} Ferns`;
+    const idA = await createBookViaApi(request, token, { title: titleA, author, categories: [subjectA], pdf: buildSamplePdf(titleA) });
+    const idB = await createBookViaApi(request, token, { title: titleB, author, categories: [subjectB], pdf: buildSamplePdf(titleB) });
+    await setBookVisibility(request, token, idA, { status: 'public' });
+    await setBookVisibility(request, token, idB, { status: 'public' });
+
+    try {
+      const results = new SearchResultsPage(page);
+      // The author's name matches both books, though neither title contains it.
+      await results.openWithTerm(author);
+      await expect(results.cardById(idA)).toBeVisible();
+      await expect(results.cardById(idB)).toBeVisible();
+
+      await page.getByTestId(`facet-category-${subjectA}`).check();
+      await expect(results.cardById(idB)).toHaveCount(0);
+      await expect(results.cardById(idA)).toBeVisible();
+      await expect(page).toHaveURL(/category=/);
+      // The other subject still shows how many books picking it would add.
+      await expect(page.getByTestId(`facet-category-${subjectB}`).locator('xpath=..')).toContainText('1');
+
+      await page.getByTestId('clear-filters').click();
+      await expect(results.cardById(idB)).toBeVisible();
+    } finally {
+      await deleteBookViaApi(request, token, idA);
+      await deleteBookViaApi(request, token, idB);
+    }
+  });
+
   test('shows a "no results" message for an unmatched multi-word search', async ({ page }) => {
     const results = new SearchResultsPage(page);
     const term = 'this title definitely does not exist anywhere';

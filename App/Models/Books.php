@@ -106,6 +106,99 @@ class Books extends BaseModel
         return $categories;
     }
 
+    /** Sort keys for catalog(); the first is the default. */
+    public const CATALOG_SORTS = [
+        'title' => ['sort_title' => 1],
+        'newest' => ['created_at' => -1],
+        'year_desc' => ['year_num' => -1, 'sort_title' => 1],
+        'year_asc' => ['year_num' => 1, 'sort_title' => 1],
+        'views' => ['views' => -1, 'sort_title' => 1],
+    ];
+
+    /**
+     * Catalog search: one page of books matching $text (title or author) and the selected filters,
+     * plus facet counts for subjects, formats, authors and decades. Each facet is counted with every
+     * filter applied except its own, so its options show what picking them would give.
+     *
+     * ponytail: computed fields ($convert, $toLower) mean a collection scan per query — fine for tens of
+     * thousands of books; beyond that, move to Atlas Search facets on a search index.
+     *
+     * @param array{category?: list<string>, format?: list<string>, author?: list<string>, decade?: list<int>} $filters
+     * @return array{books: list<array<string, mixed>>, total: int, facets: array<string, list<array{value: string|int, count: int}>>}
+     */
+    public function catalog(string $text, array $filters, bool $publicOnly, string $sort, int $skip, int $limit): array
+    {
+        $base = $publicOnly ? ['status' => 'public'] : [];
+        if ($text !== '') {
+            $regex = MongoHelper::createRegex(preg_quote($text), 'i');
+            $base['$or'] = [['title' => $regex], ['author' => $regex]];
+        }
+
+        // Filter field per facet, on the normalised fields added below.
+        $fields = ['category' => 'categories', 'format' => 'format', 'author' => 'author', 'decade' => 'decade'];
+        $matchExcept = function (?string $facet) use ($filters, $fields): array {
+            $match = [];
+            foreach ($filters as $name => $values) {
+                if ($name !== $facet && $values !== []) {
+                    $match[$fields[$name]] = ['$in' => $values];
+                }
+            }
+            return ['$match' => (object) $match];
+        };
+        $countBy = fn (string $facet, string $field, int $max) => [
+            $matchExcept($facet),
+            ...($field === 'categories' ? [['$unwind' => '$categories']] : []),
+            ['$match' => [$field => ['$nin' => [null, '']]]],
+            ['$group' => ['_id' => '$' . $field, 'count' => ['$sum' => 1]]],
+            ['$sort' => ['count' => -1, '_id' => 1]],
+            ['$limit' => $max],
+            ['$project' => ['_id' => 0, 'value' => '$_id', 'count' => 1]],
+        ];
+
+        $year = ['$convert' => ['input' => '$year', 'to' => 'int', 'onError' => null, 'onNull' => null]];
+        $result = $this->db->aggregate($this->collection, [
+            ['$match' => (object) $base],
+            ['$project' => ['reviews' => 0, 'file_path' => 0, 'pdf_path' => 0]],
+            ['$addFields' => [
+                'year_num' => $year,
+                // Books uploaded before file_extension existed were all PDFs.
+                // Nested, not 3-argument $ifNull: that needs MongoDB 5, CI runs 4.4.
+                'format' => ['$toLower' => ['$ifNull' => ['$file_extension', ['$ifNull' => ['$file_type', 'pdf']]]]],
+                'sort_title' => ['$toLower' => '$title'],
+            ]],
+            ['$addFields' => ['decade' => ['$cond' => [
+                ['$gt' => ['$year_num', 0]],
+                ['$multiply' => [['$floor' => ['$divide' => ['$year_num', 10]]], 10]],
+                null,
+            ]]]],
+            ['$facet' => [
+                'books' => [
+                    $matchExcept(null),
+                    ['$sort' => self::CATALOG_SORTS[$sort] ?? self::CATALOG_SORTS['title']],
+                    ['$skip' => $skip],
+                    ['$limit' => $limit],
+                    ['$project' => ['sort_title' => 0, 'year_num' => 0, 'decade' => 0]],
+                ],
+                'total' => [$matchExcept(null), ['$count' => 'n']],
+                'category' => $countBy('category', 'categories', 30),
+                'format' => $countBy('format', 'format', 10),
+                'author' => $countBy('author', 'author', 12),
+                'decade' => [...$countBy('decade', 'decade', 30), ['$sort' => ['value' => 1]]],
+            ]],
+        ])[0] ?? [];
+
+        return [
+            'books' => $result['books'] ?? [],
+            'total' => (int) ($result['total'][0]['n'] ?? 0),
+            'facets' => [
+                'category' => $result['category'] ?? [],
+                'format' => $result['format'] ?? [],
+                'author' => $result['author'] ?? [],
+                'decade' => $result['decade'] ?? [],
+            ],
+        ];
+    }
+
     /**
      * Save a user's review of a book: edits their existing review, or adds one if they have none.
      *

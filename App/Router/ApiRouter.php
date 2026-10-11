@@ -44,6 +44,7 @@ class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/search/([^/]+)', 'handler' => [new BookController(), 'searchBooks']],
             ['method' => 'GET', 'path' => '/api/v1/content-search', 'handler' => [new BookController(), 'contentSearch']],
             ['method' => 'GET', 'path' => '/api/v1/features', 'handler' => [new BookController(), 'features']],
+            ['method' => 'GET', 'path' => '/api/v1/catalog', 'handler' => [new BookController(), 'catalog']],
 
             ['method' => 'POST', 'path' => '/api/v1/reviews', 'handler' => [new BookController(), 'saveReview']],
             ['method' => 'GET', 'path' => '/api/v1/reviews/([0-9a-f]{24})', 'handler' => [new BookController(), 'getReviews']],
