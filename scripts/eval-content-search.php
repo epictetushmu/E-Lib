@@ -28,9 +28,10 @@ require_once $root . '/vendor/autoload.php';
 use App\Includes\Environment;
 use App\Services\ContentSearchService;
 
+// Before load(): .env never overrides a variable that's already set, and the app's EMBEDDING_TIMEOUT (2s)
+// would let a slow first embedding (model still loading) silently fall back to keyword-only and skew the numbers.
+putenv('EMBEDDING_TIMEOUT=60');
 Environment::load($root . '/.env');
-// A slow first embedding (model still loading) would silently fall back to keyword-only and skew the numbers.
-putenv('EMBEDDING_TIMEOUT=' . (getenv('EMBEDDING_TIMEOUT') ?: 60));
 
 $file = $argv[1] ?? $root . '/tests/Eval/content-search-queries.json';
 $cases = json_decode((string) file_get_contents($file), true);
