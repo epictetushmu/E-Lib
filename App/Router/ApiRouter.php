@@ -67,6 +67,14 @@ class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/books/([0-9a-f]{24})/download', 'handler' => [new BookController(), 'downloadBook']],
             ['method' => 'POST', 'path' => '/api/v1/books/([0-9a-f]{24})/borrow', 'handler' => [new BookController(), 'borrowBook']],
             ['method' => 'POST', 'path' => '/api/v1/books/([0-9a-f]{24})/return', 'handler' => [new BookController(), 'returnBook']],
+            ['method' => 'POST', 'path' => '/api/v1/books/([0-9a-f]{24})/renew', 'handler' => [new BookController(), 'renewBook']],
+            ['method' => 'POST', 'path' => '/api/v1/books/([0-9a-f]{24})/waitlist', 'handler' => [new BookController(), 'joinWaitlist']],
+            [
+                'method' => 'POST',
+                'path' => '/api/v1/books/([0-9a-f]{24})/waitlist/leave',
+                'handler' => [new BookController(), 'leaveWaitlist'],
+            ],
+            ['method' => 'POST', 'path' => '/api/v1/admin/loans/renew', 'handler' => [new BookController(), 'adminRenew']],
 
             ['method' => 'POST', 'path' => '/api/v1/signup', 'handler' => [new UserController(), 'handleSignup']],
             ['method' => 'POST', 'path' => '/api/v1/login', 'handler' => [new UserController(), 'handleLogin']],

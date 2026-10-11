@@ -12,6 +12,7 @@ class BookService
 {
     public const DEFAULT_AUTHOR = 'Unknown Author';
     public const DEFAULT_LOAN_DAYS = 14;
+    public const DUE_SOON_DAYS = 2;
 
     private Books $book;
     private Loans $loans;
@@ -57,23 +58,76 @@ class BookService
     }
 
     /**
-     * Reader takes a copy: a PDF loan starts now, a physical copy is held for pickup.
-     * Returns the slot (due_at / free_at as ISO 8601), or null when every copy is out.
+     * Reader takes a copy: a PDF loan starts now (or on the copy held for them), a physical copy is held
+     * for pickup. While anyone is waiting, free copies go to the waitlist first.
      *
      * @param array<string, mixed> $book
-     * @return array{due_at: ?string, pickup_by: ?string}|null
+     * @return array{due_at: ?string, pickup_by: ?string}|'full'|'queue' 'queue' = join the waitlist instead
      */
-    public function borrow(string $bookId, array $book, string $userId): ?array
+    public function borrow(string $bookId, array $book, string $userId): array|string
     {
+        if ($this->loans->activeFor($bookId, $userId) === null && $this->loans->waitlist($bookId) !== []) {
+            return 'queue';
+        }
         $copies = self::loanCopies($book);
         $slot = self::isPhysical($book)
             ? $this->loans->reserve($bookId, $userId, $copies)
             : $this->loans->borrow($bookId, $userId, $copies, self::loanDays($book));
         if ($slot === null) {
-            return null;
+            return 'full';
         }
         $due = self::isoDate($slot['due_at'] ?? null);
         return ['due_at' => $due, 'pickup_by' => $due === null ? self::isoDate($slot['free_at']) : null];
+    }
+
+    /**
+     * Queue for a book whose copies are all out. Null on success, else why not.
+     *
+     * @param array<string, mixed> $book
+     */
+    public function joinWaitlist(string $bookId, array $book, string $userId): ?string
+    {
+        if ($this->loans->activeFor($bookId, $userId) !== null) {
+            return 'You already have this book';
+        }
+        $free = self::loanCopies($book) - $this->loans->activeCount($bookId);
+        if ($free > 0 && $this->loans->waitlist($bookId) === []) {
+            return 'A copy is available: borrow it instead';
+        }
+        $this->loans->joinWaitlist($bookId, $userId);
+        return null;
+    }
+
+    public function leaveWaitlist(string $bookId, string $userId): void
+    {
+        $this->loans->leaveWaitlist($bookId, $userId);
+    }
+
+    /**
+     * Extend a loan by the book's loan period from today. Refused while someone is waiting for the book;
+     * overdue loans only by a librarian ($asAdmin).
+     *
+     * @param array<string, mixed> $book
+     * @return string|null The new due date, or why it can't be renewed (prefixed "!")
+     */
+    public function renew(string $bookId, array $book, string $userId, bool $asAdmin): ?string
+    {
+        if ($this->loans->waitlist($bookId) !== []) {
+            return '!Someone is waiting for this book, so it can\'t be renewed';
+        }
+        $loan = $this->loans->renew($bookId, $userId, self::loanDays($book), $asAdmin);
+        if (is_string($loan)) {
+            return '!' . $loan;
+        }
+        if (self::isPhysical($book)) {
+            $this->notifications->notify(
+                $userId,
+                $bookId,
+                'Renewed: ' . $book['title'],
+                sprintf('"%s" is renewed. It\'s now due back on %s.', $book['title'], self::humanDate($loan['due_at']))
+            );
+        }
+        return self::isoDate($loan['due_at']);
     }
 
     /**
@@ -119,7 +173,49 @@ class BookService
                 sprintf('"%s" was checked back in on %s. Thank you!', $title, self::humanDate($loan['returned_at']))
             );
         }
+        if ($book !== null) {
+            $this->promoteWaitlist($bookId, $book);
+        }
         return true;
+    }
+
+    /**
+     * Hold each free copy for the next reader in line and tell them. Runs after every return and, for
+     * copies that free themselves (lapsed holds, ended PDF loans), from the scheduler.
+     *
+     * @param array<string, mixed> $book
+     */
+    public function promoteWaitlist(string $bookId, array $book): int
+    {
+        $copies = self::loanCopies($book);
+        $physical = self::isPhysical($book);
+        $promoted = 0;
+        foreach ($this->loans->waitlist($bookId) as $entry) {
+            $userId = (string) $entry['user_id'];
+            if ($this->loans->activeFor($bookId, $userId) !== null) {
+                $this->loans->leaveWaitlist($bookId, $userId);
+                continue;
+            }
+            if ($copies - $this->loans->activeCount($bookId) < 1) {
+                break;
+            }
+            $slot = $this->loans->reserve($bookId, $userId, $copies, $physical ? 'physical' : 'digital');
+            if ($slot === null) {
+                break;
+            }
+            $this->loans->leaveWaitlist($bookId, $userId);
+            $until = self::humanDate($slot['free_at']);
+            $this->notifications->notify(
+                $userId,
+                $bookId,
+                'Ready for you: ' . $book['title'],
+                $physical
+                    ? sprintf('A copy of "%s" is waiting for you at the library desk until %s.', $book['title'], $until)
+                    : sprintf('A copy of "%s" is held for you until %s. Open the book to start reading.', $book['title'], $until)
+            );
+            $promoted++;
+        }
+        return $promoted;
     }
 
     /**
@@ -135,20 +231,27 @@ class BookService
      * What the book page shows about lending: copies, how many are free, and the caller's hold.
      *
      * @param array<string, mixed> $book
-     * @return array{copies: int, available: int, loan_days: int, due_at: ?string, pickup_by: ?string, pickup_days: int}
+     * @return array<string, mixed> copies, available, loan_days, pickup_days, waiting (queue length), and the
+     *   caller's due_at / pickup_by / renewals_left / position (1-based place in the queue, null if not in it)
      */
     public function loanStatus(string $bookId, array $book, ?string $userId): array
     {
         $copies = self::loanCopies($book);
         $mine = $userId === null ? null : $this->loans->activeFor($bookId, $userId);
         $due = self::isoDate($mine['due_at'] ?? null);
+        $queue = array_map(fn ($w) => (string) $w['user_id'], $this->loans->waitlist($bookId));
+        $place = $userId === null ? false : array_search($userId, $queue, true);
+        $history = $due === null ? null : $this->loans->findHistory((string) $mine['history_id']);
         return [
             'copies' => $copies,
             'available' => max(0, $copies - $this->loans->activeCount($bookId)),
             'loan_days' => self::loanDays($book),
+            'pickup_days' => self::isPhysical($book) ? Loans::PICKUP_DAYS : Loans::DIGITAL_HOLD_DAYS,
+            'waiting' => count($queue),
+            'position' => $place === false ? null : $place + 1,
             'due_at' => $due,
             'pickup_by' => $mine !== null && $due === null ? self::isoDate($mine['free_at']) : null,
-            'pickup_days' => Loans::PICKUP_DAYS,
+            'renewals_left' => $history === null ? null : max(0, Loans::MAX_RENEWALS - (int) ($history['renewals'] ?? 0)),
         ];
     }
 
@@ -201,31 +304,52 @@ class BookService
                 'due_at' => self::isoDate($loan['due_at'] ?? null),
                 'returned_at' => self::isoDate($loan['returned_at'] ?? null),
                 'cancelled_at' => self::isoDate($loan['cancelled_at'] ?? null),
+                'renewals' => (int) ($loan['renewals'] ?? 0),
                 'status' => self::loanState($loan),
             ];
         }, $loans);
     }
 
     /**
-     * Email + in-app notice for each physical loan that has gone overdue, once per loan.
-     * Run by scripts/notify-overdue.php.
+     * Everything time-driven, run every minute by scripts/scheduler.php: hand freed copies to the
+     * waitlist, remind readers of due dates and overdue books (once per loan), and send queued emails.
+     *
+     * @return array<string, int> How much of each was done
      */
-    public function notifyOverdue(): int
+    public function runScheduledTasks(): array
     {
-        $sent = 0;
-        foreach ($this->loans->overdueUnnotified() as $loan) {
-            $book = $this->book->getBookDetails((string) $loan['book_id']);
-            $title = $book['title'] ?? 'a library book';
-            $this->notifications->notify(
-                (string) $loan['user_id'],
-                (string) $loan['book_id'],
-                'Overdue: ' . $title,
-                sprintf('"%s" was due back on %s. Please return it to the library.', $title, self::humanDate($loan['due_at']))
-            );
-            $this->loans->markOverdueNotified((string) $loan['_id']);
-            $sent++;
+        $done = ['promoted' => 0, 'due_soon' => 0, 'overdue' => 0];
+        foreach ($this->loans->waitedForBookIds() as $bookId) {
+            $book = $this->book->getBookDetails($bookId);
+            if ($book === null) {
+                continue;
+            }
+            $done['promoted'] += $this->promoteWaitlist($bookId, $book);
         }
-        return $sent;
+
+        $remind = [
+            'due_soon' => [$this->loans->dueSoonUnnotified(self::DUE_SOON_DAYS), 'due_soon_notified_at', 'Due soon: %s',
+                '"%s" is due back on %s. Renew it from the book page if you need longer.'],
+            'overdue' => [$this->loans->overdueUnnotified(), 'overdue_notified_at', 'Overdue: %s',
+                '"%s" was due back on %s. Please return it to the library.'],
+        ];
+        foreach ($remind as $key => [$loans, $field, $subject, $text]) {
+            foreach ($loans as $loan) {
+                $book = $this->book->getBookDetails((string) $loan['book_id']);
+                $title = (string) ($book['title'] ?? 'a library book');
+                $this->notifications->notify(
+                    (string) $loan['user_id'],
+                    (string) $loan['book_id'],
+                    sprintf($subject, $title),
+                    sprintf($text, $title, self::humanDate($loan['due_at']))
+                );
+                $this->loans->markNotified((string) $loan['_id'], $field);
+                $done[$key]++;
+            }
+        }
+
+        $done['emails'] = $this->notifications->sendPendingEmails();
+        return $done;
     }
 
     /**
@@ -414,7 +538,8 @@ class BookService
         string $status,
         int $copies,
         int $loanDays,
-        string $shelfLocation
+        string $shelfLocation,
+        ?string $thumbnail = null
     ): array {
         return $this->book->addBook([
             'title' => $title,
@@ -426,7 +551,7 @@ class BookService
             'file_path' => null,
             'file_type' => 'physical',
             'file_extension' => 'physical',
-            'thumbnail' => null,
+            'thumbnail' => $thumbnail,
             'created_at' => new UTCDateTime(),
             'updated_at' => new UTCDateTime(),
             'status' => $status === 'public' ? 'public' : 'draft',

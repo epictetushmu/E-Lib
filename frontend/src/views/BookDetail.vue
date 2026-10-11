@@ -98,6 +98,19 @@ const handleReturn = () =>
     'Something went wrong. Please try again.',
   )
 
+const handleRenew = () =>
+  lendingAction(() => booksApi.renewBook(bookId), 'Renewed', 'Could not renew this loan')
+
+const handleJoinWaitlist = () =>
+  lendingAction(
+    () => booksApi.joinWaitlist(bookId),
+    "You're on the waitlist. We'll notify you when a copy is free.",
+    'Could not join the waitlist',
+  )
+
+const handleLeaveWaitlist = () =>
+  lendingAction(() => booksApi.leaveWaitlist(bookId), 'You left the waitlist', 'Something went wrong. Please try again.')
+
 const handleCheckout = () =>
   lendingAction(
     () => adminApi.checkOut(bookId, checkoutEmail.value.trim()),
@@ -154,20 +167,63 @@ onMounted(async () => {
         <img :src="cover" class="cover" :alt="`Cover of ${book.title}`" @error="onThumbnailError" />
 
         <div class="actions">
-          <template v-if="isPhysical">
-            <p class="loan-note" data-testid="physical-note">
+          <template v-if="isPhysical || loan">
+            <p v-if="isPhysical" class="loan-note" data-testid="physical-note">
               <strong>Physical book</strong><template v-if="book.shelf_location"> · Shelf {{ book.shelf_location }}</template>
             </p>
             <p v-if="!loan" class="text-muted loan-note">Reference only: read it in the library.</p>
+
             <template v-else-if="loan.due_at">
+              <RouterLink v-if="!isPhysical" :to="`/read/${bookId}`" class="btn btn-primary full-width" data-testid="read-loan-button">
+                Read
+              </RouterLink>
               <p class="loan-note" data-testid="loan-due">
-                You have this book. Please return it to the library desk by {{ shortDate(loan.due_at) }}.
+                {{
+                  isPhysical
+                    ? `You have this book. Please return it to the library desk by ${shortDate(loan.due_at)}.`
+                    : `Borrowed until ${shortDate(loan.due_at)}.`
+                }}
               </p>
+              <button
+                v-if="loan.renewals_left"
+                type="button"
+                class="btn btn-outline full-width"
+                :disabled="lending"
+                data-testid="renew-button"
+                @click="handleRenew"
+              >
+                Renew for {{ loan.loan_days }} days ({{ loan.renewals_left }} left)
+              </button>
+              <button
+                v-if="!isPhysical"
+                type="button"
+                class="btn btn-outline full-width"
+                :disabled="lending"
+                data-testid="return-button"
+                @click="handleReturn"
+              >
+                Return now
+              </button>
             </template>
+
             <template v-else-if="loan.pickup_by">
               <p class="loan-note" data-testid="loan-reserved">
-                Reserved for you. Pick it up at the library desk by {{ shortDate(loan.pickup_by) }}.
+                {{
+                  isPhysical
+                    ? `Reserved for you. Pick it up at the library desk by ${shortDate(loan.pickup_by)}.`
+                    : `A copy is held for you until ${shortDate(loan.pickup_by)}.`
+                }}
               </p>
+              <button
+                v-if="!isPhysical"
+                type="button"
+                class="btn btn-primary full-width"
+                :disabled="lending"
+                data-testid="start-reading-button"
+                @click="handleBorrow"
+              >
+                Start reading
+              </button>
               <button
                 type="button"
                 class="btn btn-outline full-width"
@@ -175,28 +231,62 @@ onMounted(async () => {
                 data-testid="cancel-reservation-button"
                 @click="handleReturn"
               >
-                Cancel reservation
+                {{ isPhysical ? 'Cancel reservation' : 'Let it go' }}
               </button>
             </template>
-            <template v-else>
+
+            <template v-else-if="loan.position">
+              <p class="loan-note" data-testid="waitlist-position">
+                You're #{{ loan.position }} in line. We'll let you know when a copy is
+                {{ isPhysical ? 'ready to pick up' : 'free' }}.
+              </p>
               <button
-                v-if="auth.isAuthenticated"
                 type="button"
-                class="btn btn-primary full-width"
-                :disabled="lending || loan.available < 1"
-                data-testid="reserve-button"
-                @click="handleBorrow"
+                class="btn btn-outline full-width"
+                :disabled="lending"
+                data-testid="leave-waitlist-button"
+                @click="handleLeaveWaitlist"
               >
-                {{ loan.available < 1 ? 'All copies on loan' : 'Reserve for pickup' }}
+                Leave the waitlist
               </button>
-              <p class="text-muted loan-note" data-testid="loan-availability">
-                {{ loan.available }} of {{ loan.copies }} on the shelf · {{ loan.loan_days }}-day loan<template
-                  v-if="auth.isAuthenticated && loan.available > 0"
-                  >, held {{ loan.pickup_days }} days for pickup</template
+            </template>
+
+            <template v-else>
+              <template v-if="auth.isAuthenticated">
+                <button
+                  v-if="loan.available > 0 && !loan.waiting"
+                  type="button"
+                  class="btn btn-primary full-width"
+                  :disabled="lending"
+                  :data-testid="isPhysical ? 'reserve-button' : 'borrow-button'"
+                  @click="handleBorrow"
                 >
+                  {{ isPhysical ? 'Reserve for pickup' : `Borrow for ${loan.loan_days} days` }}
+                </button>
+                <button
+                  v-else
+                  type="button"
+                  class="btn btn-outline full-width"
+                  :disabled="lending"
+                  data-testid="join-waitlist-button"
+                  @click="handleJoinWaitlist"
+                >
+                  All copies are out: join the waitlist
+                </button>
+              </template>
+              <p class="text-muted loan-note" data-testid="loan-availability">
+                {{ loan.available }} of {{ loan.copies }}
+                {{ isPhysical ? 'on the shelf' : loan.copies === 1 ? 'copy available' : 'copies available' }} ·
+                {{ loan.loan_days }}-day loan<template v-if="loan.waiting"> · {{ loan.waiting }} waiting</template>
               </p>
             </template>
-            <form v-if="auth.isAdmin && loan" class="checkout-form" data-testid="checkout-form" @submit.prevent="handleCheckout">
+
+            <form
+              v-if="auth.isAdmin && isPhysical && loan"
+              class="checkout-form"
+              data-testid="checkout-form"
+              @submit.prevent="handleCheckout"
+            >
               <label for="checkout-email">Check out at the desk</label>
               <input
                 id="checkout-email"
@@ -208,40 +298,6 @@ onMounted(async () => {
               />
               <button type="submit" class="btn btn-outline full-width" :disabled="lending">Check out</button>
             </form>
-          </template>
-          <template v-else-if="loan">
-            <template v-if="loan.due_at">
-              <RouterLink :to="`/read/${bookId}`" class="btn btn-primary full-width" data-testid="read-loan-button">
-                Read
-              </RouterLink>
-              <button
-                type="button"
-                class="btn btn-outline full-width"
-                :disabled="lending"
-                data-testid="return-button"
-                @click="handleReturn"
-              >
-                Return now
-              </button>
-              <p class="text-muted loan-note" data-testid="loan-due">
-                Borrowed until {{ new Date(loan.due_at).toLocaleDateString() }}
-              </p>
-            </template>
-            <template v-else>
-              <button
-                v-if="auth.isAuthenticated"
-                type="button"
-                class="btn btn-primary full-width"
-                :disabled="lending || loan.available < 1"
-                data-testid="borrow-button"
-                @click="handleBorrow"
-              >
-                {{ loan.available < 1 ? 'All copies on loan' : `Borrow for ${loan.loan_days} days` }}
-              </button>
-              <p class="text-muted loan-note" data-testid="loan-availability">
-                {{ loan.available }} of {{ loan.copies }} {{ loan.copies === 1 ? 'copy' : 'copies' }} available
-              </p>
-            </template>
           </template>
           <RouterLink
             v-else

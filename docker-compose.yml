@@ -52,11 +52,11 @@ services:
     networks:
       - elib-network
 
-  # Hourly overdue-loan notices (scripts/notify-overdue.php). Each loan is notified once, so a restart
-  # or a missed hour is harmless.
+  # Library jobs every minute (scripts/scheduler.php): waitlist holds, due-soon/overdue notices, queued
+  # emails. Every job is idempotent, so a restart or a missed run is harmless.
   scheduler:
     image: e-lib-app
-    command: ["sh", "-c", "while true; do php scripts/notify-overdue.php; sleep 3600; done"]
+    command: ["sh", "-c", "while true; do php scripts/scheduler.php; sleep 60; done"]
     restart: unless-stopped
     environment:
       - APP_ENV=production

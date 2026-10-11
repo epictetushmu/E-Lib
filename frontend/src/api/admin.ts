@@ -118,6 +118,11 @@ export function checkOut(bookId: string, email: string) {
   })
 }
 
+/** Renew a reader's loan at the desk (overdue loans too). */
+export function renewLoan(bookId: string, userId: string) {
+  return client.post<ApiResponse<{ due_at: string }>>('/v1/admin/loans/renew', { book_id: bookId, user_id: userId })
+}
+
 /** A copy is back on the shelf (also ends a reservation or PDF loan early). */
 export function checkIn(bookId: string, userId: string) {
   return client.post<ApiResponse<string>>('/v1/admin/loans/checkin', { book_id: bookId, user_id: userId })

@@ -33,7 +33,13 @@ export interface Book {
     loan_days: number
     due_at: string | null
     pickup_by: string | null
+    /** Days a held copy waits: for pickup (physical) or to start reading (PDF off the waitlist). */
     pickup_days: number
+    /** Readers in the queue, and the caller's place in it (1-based, null if not queued). */
+    waiting: number
+    position: number | null
+    /** Renewals the caller has left on their loan (null without a loan). */
+    renewals_left: number | null
   }
   thumbnail?: string
   average_rating?: number
@@ -69,13 +75,14 @@ export interface LoanRecord {
   due_at: string | null
   returned_at: string | null
   cancelled_at: string | null
+  renewals: number
   status: 'active' | 'expired' | 'reserved' | 'not_collected' | 'cancelled' | 'out' | 'overdue' | 'returned'
 }
 
 export const LOAN_STATUS_LABELS: Record<LoanRecord['status'], string> = {
   active: 'Reading (PDF)',
   expired: 'Ended',
-  reserved: 'Reserved',
+  reserved: 'Held for pickup',
   not_collected: 'Not picked up',
   cancelled: 'Cancelled',
   out: 'On loan',

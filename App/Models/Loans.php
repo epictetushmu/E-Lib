@@ -13,18 +13,22 @@ use MongoDB\Driver\Exception\ServerException;
  * again. The copy limit is enforced by the unique _id index alone: taking a copy is one upsert that only
  * matches a slot whose `free_at` has passed, and fails with a duplicate-key error while the slot is held.
  * - PDF loan:          free_at = due_at, so it ends by itself.
- * - Physical reserve:  free_at = pickup deadline; not collected in time → the copy frees itself.
+ * - Hold:              free_at = pickup deadline, due_at = null. A physical reservation, or a copy kept
+ *                      for the head of the waitlist (PDF too); not taken up in time → the copy frees itself.
  * - Physical loan:     free_at = never, until a librarian checks it in. Past due_at it's overdue.
  * Slots are reused, so every loan is also a LoanHistory document (slot.history_id), the record
- * admins and readers see.
+ * admins and readers see. When every copy is out, readers queue in Waitlist (_id "<bookId>:<userId>").
  */
 class Loans extends BaseModel
 {
     protected string $collection = 'Loans';
 
     public const PICKUP_DAYS = 3;
+    public const DIGITAL_HOLD_DAYS = 1;
+    public const MAX_RENEWALS = 2;
 
     private const HISTORY = 'LoanHistory';
+    private const WAITLIST = 'Waitlist';
     private const DUPLICATE_KEY = 11000;
     private const NEVER = 253402300799000; // 9999-12-31, ms
 
@@ -57,31 +61,101 @@ class Loans extends BaseModel
      */
     public function borrow(string $bookId, string $userId, int $copies, int $days): ?array
     {
+        $due = self::inDays($days);
         $existing = $this->activeFor($bookId, $userId);
+        if ($existing !== null && $existing['due_at'] === null) {
+            // A copy held for them off the waitlist: start the loan on it.
+            $this->db->update($this->collection, ['_id' => $existing['_id']], ['$set' => ['free_at' => $due, 'due_at' => $due]]);
+            $this->setHistory((string) $existing['history_id'], ['borrowed_at' => new UTCDateTime(), 'due_at' => $due]);
+            return $this->activeFor($bookId, $userId);
+        }
         if ($existing !== null) {
             return $existing;
         }
-        $due = self::inDays($days);
         return $this->take($bookId, $userId, $copies, ['free_at' => $due, 'due_at' => $due], [
             'kind' => 'digital', 'borrowed_at' => new UTCDateTime(), 'due_at' => $due,
         ]);
     }
 
     /**
-     * Hold a physical copy for pickup.
+     * Hold a copy for the user: a physical reservation, or (PDF) a copy kept for the head of the waitlist.
      *
+     * @param 'physical'|'digital' $kind
      * @return array<string, mixed>|null The slot, or null when every copy is out
      */
-    public function reserve(string $bookId, string $userId, int $copies): ?array
+    public function reserve(string $bookId, string $userId, int $copies, string $kind = 'physical'): ?array
     {
         $existing = $this->activeFor($bookId, $userId);
         if ($existing !== null) {
             return $existing;
         }
-        $pickupBy = self::inDays(self::PICKUP_DAYS);
+        $pickupBy = self::inDays($kind === 'physical' ? self::PICKUP_DAYS : self::DIGITAL_HOLD_DAYS);
         return $this->take($bookId, $userId, $copies, ['free_at' => $pickupBy, 'due_at' => null], [
-            'kind' => 'physical', 'reserved_at' => new UTCDateTime(), 'pickup_by' => $pickupBy, 'due_at' => null,
+            'kind' => $kind, 'reserved_at' => new UTCDateTime(), 'pickup_by' => $pickupBy, 'due_at' => null,
         ]);
+    }
+
+    /**
+     * Extend the user's loan to $days from now. Fails (with the reason) past MAX_RENEWALS, or when
+     * overdue unless $allowOverdue (librarian).
+     *
+     * @return array<string, mixed>|string The updated history document, or why it can't be renewed
+     */
+    public function renew(string $bookId, string $userId, int $days, bool $allowOverdue): array|string
+    {
+        $slot = $this->activeFor($bookId, $userId);
+        $history = $slot === null || $slot['due_at'] === null ? null : $this->findHistory((string) $slot['history_id']);
+        if ($slot === null || $history === null) {
+            return 'There is no loan to renew';
+        }
+        if ((int) ($history['renewals'] ?? 0) >= self::MAX_RENEWALS) {
+            return 'This loan has already been renewed ' . self::MAX_RENEWALS . ' times';
+        }
+        $currentDue = (int) (string) $slot['due_at'];
+        if (!$allowOverdue && $currentDue < time() * 1000) {
+            return 'Overdue books can only be renewed at the library desk';
+        }
+        $due = new UTCDateTime(max($currentDue, (time() + $days * 86400) * 1000));
+        $physical = ($history['kind'] ?? 'digital') === 'physical';
+        $this->db->update($this->collection, ['_id' => $slot['_id']], [
+            '$set' => ['due_at' => $due] + ($physical ? [] : ['free_at' => $due]),
+        ]);
+        $this->db->update(self::HISTORY, ['_id' => $history['_id']], [
+            '$set' => ['due_at' => $due, 'overdue_notified_at' => null, 'due_soon_notified_at' => null],
+            '$inc' => ['renewals' => 1],
+        ]);
+        return $this->findHistory((string) $history['_id']) ?? 'There is no loan to renew';
+    }
+
+    // --- Waitlist ---
+
+    public function joinWaitlist(string $bookId, string $userId): void
+    {
+        // Joining twice is a duplicate _id, which insert() reports instead of throwing: already in line.
+        $this->db->insert(self::WAITLIST, [
+            '_id' => "$bookId:$userId", 'book_id' => $bookId, 'user_id' => $userId, 'joined_at' => new UTCDateTime(),
+        ]);
+    }
+
+    public function leaveWaitlist(string $bookId, string $userId): void
+    {
+        $this->db->delete(self::WAITLIST, ['_id' => "$bookId:$userId"]);
+    }
+
+    /**
+     * @return list<array<string, mixed>> Oldest first
+     */
+    public function waitlist(string $bookId): array
+    {
+        return $this->db->find(self::WAITLIST, ['book_id' => $bookId], ['sort' => ['joined_at' => 1], 'limit' => 0]);
+    }
+
+    /**
+     * @return list<string> Books someone is waiting for
+     */
+    public function waitedForBookIds(): array
+    {
+        return array_map('strval', $this->db->distinct(self::WAITLIST, 'book_id'));
     }
 
     /**
@@ -152,14 +226,33 @@ class Loans extends BaseModel
         ], 0);
     }
 
-    public function markOverdueNotified(string $historyId): void
+    /**
+     * Physical loans due within $days whose reader hasn't been reminded yet.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function dueSoonUnnotified(int $days): array
     {
-        $this->setHistory($historyId, ['overdue_notified_at' => new UTCDateTime()]);
+        return $this->history([
+            'kind' => 'physical',
+            'returned_at' => null,
+            'due_at' => ['$ne' => null, '$gte' => new UTCDateTime(), '$lt' => self::inDays($days)],
+            'due_soon_notified_at' => null,
+        ], 0);
+    }
+
+    /**
+     * @param 'overdue_notified_at'|'due_soon_notified_at' $field
+     */
+    public function markNotified(string $historyId, string $field): void
+    {
+        $this->setHistory($historyId, [$field => new UTCDateTime()]);
     }
 
     public function deleteForBook(string $bookId): void
     {
         $this->db->delete($this->collection, ['book_id' => $bookId]);
+        $this->db->delete(self::WAITLIST, ['book_id' => $bookId]);
     }
 
     /**
@@ -194,7 +287,8 @@ class Loans extends BaseModel
                 );
                 if ($taken !== null) {
                     $this->db->insert(self::HISTORY, ['_id' => $historyId] + $owner + $historyFields + [
-                        'returned_at' => null, 'cancelled_at' => null, 'overdue_notified_at' => null,
+                        'returned_at' => null, 'cancelled_at' => null, 'renewals' => 0,
+                        'overdue_notified_at' => null, 'due_soon_notified_at' => null,
                     ]);
                     return $taken;
                 }
@@ -220,7 +314,7 @@ class Loans extends BaseModel
     /**
      * @return array<string, mixed>|null
      */
-    private function findHistory(string $historyId): ?array
+    public function findHistory(string $historyId): ?array
     {
         return $this->db->findOne(self::HISTORY, ['_id' => new ObjectId($historyId)]);
     }

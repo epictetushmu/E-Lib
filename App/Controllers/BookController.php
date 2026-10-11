@@ -228,11 +228,84 @@ class BookController
             return;
         }
         $hold = $this->bookService->borrow($id, $book, $userId);
-        if ($hold === null) {
-            ResponseHandler::respond(false, 'All copies are on loan. Try again later.', 409);
+        if (is_string($hold)) {
+            $why = $hold === 'queue' ? 'Others are waiting for this book.' : 'All copies are on loan.';
+            ResponseHandler::respond(false, "$why Join the waitlist to get the next copy.", 409);
             return;
         }
         ResponseHandler::respond(true, $hold);
+    }
+
+    /**
+     * POST /api/v1/books/{id}/waitlist — queue for a book whose copies are all out.
+     */
+    public function joinWaitlist(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        $book = $userId === null ? null : $this->bookService->getBookDetails($id);
+        if ($userId === null || !$book || $this->isHiddenFromCaller($book) || BookService::loanCopies($book) === 0) {
+            ResponseHandler::respond(false, 'Book not found', 404);
+            return;
+        }
+        $error = $this->bookService->joinWaitlist($id, $book, $userId);
+        ResponseHandler::respond($error === null, $error ?? 'You\'re on the waitlist', $error === null ? 200 : 409);
+    }
+
+    /**
+     * POST /api/v1/books/{id}/waitlist/leave
+     */
+    public function leaveWaitlist(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        $this->bookService->leaveWaitlist($id, $userId);
+        ResponseHandler::respond(true, 'You left the waitlist');
+    }
+
+    /**
+     * POST /api/v1/books/{id}/renew — extend the caller's own loan.
+     */
+    public function renewBook(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        $book = $userId === null ? null : $this->bookService->getBookDetails($id);
+        if ($userId === null || !$book) {
+            ResponseHandler::respond(false, 'Book not found', 404);
+            return;
+        }
+        $this->respondRenewal($this->bookService->renew($id, $book, $userId, false));
+    }
+
+    /**
+     * POST /api/v1/admin/loans/renew {book_id, user_id} — renew at the desk (overdue loans too).
+     */
+    public function adminRenew(): void
+    {
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+        $data = $this->jsonBody();
+        $bookId = (string) ($data['book_id'] ?? '');
+        $userId = (string) ($data['user_id'] ?? '');
+        $book = preg_match('/^[0-9a-f]{24}$/', $bookId) ? $this->bookService->getBookDetails($bookId) : null;
+        if (!$book || !preg_match('/^[0-9a-f]{24}$/', $userId)) {
+            ResponseHandler::respond(false, 'Invalid book or user', 400);
+            return;
+        }
+        $this->respondRenewal($this->bookService->renew($bookId, $book, $userId, true));
+    }
+
+    private function respondRenewal(?string $result): void
+    {
+        if ($result === null || str_starts_with($result, '!')) {
+            ResponseHandler::respond(false, $result === null ? 'Could not renew' : substr($result, 1), 409);
+            return;
+        }
+        ResponseHandler::respond(true, ['due_at' => $result]);
     }
 
     /**
@@ -349,6 +422,8 @@ class BookController
             is_array($data['categories'] ?? null) ? $data['categories'] : [],
             'is_string'
         ));
+        // Physical books have no PDF to render a thumbnail from: use Open Library's cover when there is one.
+        $cover = $text('isbn') === '' ? null : (new BookMetadataService())->coverImage($text('isbn'));
         try {
             $response = $this->bookService->addPhysicalBook(
                 $text('title'),
@@ -360,7 +435,8 @@ class BookController
                 $text('status'),
                 min(1000, max(0, (int) ($data['loan_copies'] ?? 1))),
                 min(365, max(1, (int) ($data['loan_days'] ?? BookService::DEFAULT_LOAN_DAYS))),
-                $text('shelf_location')
+                $text('shelf_location'),
+                $cover === null ? null : FileHelper::storeCover($cover)
             );
         } catch (\InvalidArgumentException $e) {
             ResponseHandler::respond(false, json_decode($e->getMessage(), true) ?: $e->getMessage(), 400);

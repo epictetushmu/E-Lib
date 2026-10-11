@@ -59,13 +59,18 @@ async function load() {
 }
 
 /** Picked up: a reservation becomes a loan (checkout by the reader's email). */
-async function act(l: LoanRecord, action: 'pickup' | 'checkin') {
+async function act(l: LoanRecord, action: 'pickup' | 'checkin' | 'renew') {
   busy.value = l.id
   try {
     const { data: body } =
-      action === 'pickup' ? await adminApi.checkOut(l.book_id, l.email ?? '') : await adminApi.checkIn(l.book_id, l.user_id)
+      action === 'pickup'
+        ? await adminApi.checkOut(l.book_id, l.email ?? '')
+        : action === 'renew'
+          ? await adminApi.renewLoan(l.book_id, l.user_id)
+          : await adminApi.checkIn(l.book_id, l.user_id)
     if (isApiSuccess(body as ApiError)) {
-      toast.success(action === 'pickup' ? 'Checked out' : l.status === 'reserved' ? 'Reservation cancelled' : 'Checked in')
+      const done = { pickup: 'Checked out', renew: 'Renewed', checkin: l.status === 'reserved' ? 'Reservation cancelled' : 'Checked in' }
+      toast.success(done[action])
       await load()
     } else {
       toast.error(apiErrorMessage(body as ApiError, 'That did not work'))
@@ -153,11 +158,14 @@ onMounted(load)
                 <div v-if="l.status === 'reserved'" class="text-muted">pick up by {{ date(l.pickup_by) }}</div>
               </td>
               <td>{{ date(l.borrowed_at) }}</td>
-              <td>{{ date(l.due_at) }}</td>
+              <td>
+                {{ date(l.due_at) }}
+                <div v-if="l.renewals" class="text-muted">renewed {{ l.renewals }}×</div>
+              </td>
               <td>{{ date(l.returned_at ?? l.cancelled_at) }}</td>
               <td :class="{ 'status-overdue': l.status === 'overdue' }">{{ LOAN_STATUS_LABELS[l.status] }}</td>
               <td class="row-actions">
-                <template v-if="l.status === 'reserved'">
+                <template v-if="l.status === 'reserved' && l.kind === 'physical'">
                   <button type="button" class="link-btn" :disabled="busy === l.id || !l.email" @click="act(l, 'pickup')">
                     Picked up
                   </button>
@@ -165,15 +173,18 @@ onMounted(load)
                     Cancel
                   </button>
                 </template>
-                <button
-                  v-else-if="l.status === 'out' || l.status === 'overdue'"
-                  type="button"
-                  class="link-btn"
-                  :disabled="busy === l.id"
-                  @click="act(l, 'checkin')"
-                >
-                  Check in
-                </button>
+                <template v-else-if="l.status === 'out' || l.status === 'overdue'">
+                  <button type="button" class="link-btn" :disabled="busy === l.id" @click="act(l, 'checkin')">Check in</button>
+                  <button
+                    type="button"
+                    class="link-btn"
+                    :disabled="busy === l.id || l.renewals >= 2"
+                    :title="l.renewals >= 2 ? 'Already renewed twice' : ''"
+                    @click="act(l, 'renew')"
+                  >
+                    Renew
+                  </button>
+                </template>
               </td>
             </tr>
           </tbody>

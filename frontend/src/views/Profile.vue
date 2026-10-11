@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import * as usersApi from '@/api/users'
+import * as booksApi from '@/api/books'
 import { isApiSuccess, apiErrorMessage, requestErrorMessage, type ApiError } from '@/types/api'
 import type { Book } from '@/types/book'
 import { idToString, LOAN_STATUS_LABELS, type LoanRecord } from '@/types/book'
@@ -115,6 +116,20 @@ async function loadLoans() {
     loans.value = isApiSuccess(body) ? body.data : []
   } catch {
     loans.value = []
+  }
+}
+
+async function renewLoan(l: LoanRecord) {
+  try {
+    const { data: body } = await booksApi.renewBook(l.book_id)
+    if (isApiSuccess(body)) {
+      toast.success(`Renewed until ${shortDate(body.data.due_at)}`)
+      await loadLoans()
+    } else {
+      toast.error(apiErrorMessage(body as ApiError, 'Could not renew'))
+    }
+  } catch (err) {
+    toast.error(requestErrorMessage(err, 'Could not renew'))
   }
 }
 
@@ -306,7 +321,10 @@ onMounted(() => {
           </div>
           <div class="text-muted small">
             <template v-if="l.status === 'reserved'">Pick up at the library desk by {{ shortDate(l.pickup_by) }}</template>
-            <template v-else-if="l.status === 'out' || l.status === 'active'">Due {{ shortDate(l.due_at) }}</template>
+            <template v-else-if="l.status === 'out' || l.status === 'active'">
+              Due {{ shortDate(l.due_at) }}
+              <button v-if="l.renewals < 2" type="button" class="link-btn" @click="renewLoan(l)">Renew</button>
+            </template>
             <template v-else-if="l.status === 'overdue'">Was due {{ shortDate(l.due_at) }}: please return it</template>
             <template v-else-if="l.returned_at">Returned {{ shortDate(l.returned_at) }}</template>
             <template v-else>{{ shortDate(l.borrowed_at ?? l.reserved_at) }}</template>
