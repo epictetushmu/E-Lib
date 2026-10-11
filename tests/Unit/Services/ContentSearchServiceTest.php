@@ -8,6 +8,7 @@ use App\Models\Books;
 use App\Services\ContentSearchService;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\TransferException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Request;
@@ -250,7 +251,8 @@ class ContentSearchServiceTest extends ServiceTestCase
     public function testIndexNextBookRecordsFailureWithBackoff(): void
     {
         $books = $this->createMock(Books::class);
-        $books->method('claimNextForIndexing')->willReturn(self::book(['index_attempts' => 1]));
+        // As returned by the claim, which already counted this (second) attempt.
+        $books->method('claimNextForIndexing')->willReturn(self::book(['index_attempts' => 2]));
         $files = $this->createMock(FileHelper::class);
         $files->method('extractPageTexts')->willThrowException(new \RuntimeException('corrupt PDF'));
         $books->expects($this->atLeastOnce())
@@ -258,7 +260,7 @@ class ContentSearchServiceTest extends ServiceTestCase
             ->willReturnCallback(function (string $id, array $set, array $inc = []) {
                 if (($set['index_status'] ?? null) === 'failed') {
                     $this->assertSame('corrupt PDF', $set['index_error']);
-                    $this->assertSame(['index_attempts' => 1], $inc);
+                    $this->assertSame([], $inc, 'The claim already counted the attempt');
                     // Second failure → 2^2 = 4 minutes.
                     $this->assertEqualsWithDelta(time() + 240, $set['index_retry_at']->toDateTime()->getTimestamp(), 5);
                 }
@@ -268,23 +270,38 @@ class ContentSearchServiceTest extends ServiceTestCase
         $this->assertTrue($this->service($books, null, $files)->indexNextBook());
     }
 
-    public function testIndexNextBookReleasesTheBookWhenTheEmbedderIsDown(): void
+    /**
+     * @return array<string, array{Response|\Throwable}>
+     */
+    public static function embedderFailures(): array
+    {
+        return [
+            'unreachable' => [new ConnectException('Connection refused', new Request('POST', '/embed'))],
+            'erroring (model loading / out of memory)' => [new Response(500, [], 'llama runner process has terminated')],
+            'model not pulled yet' => [new Response(404, [], '{"error":"model not found"}')],
+            'garbage response' => [new Response(200, [], '{}')],
+        ];
+    }
+
+    /**
+     * @dataProvider embedderFailures
+     */
+    public function testIndexNextBookReleasesTheBookWhenTheEmbedderFails(Response|\Throwable $failure): void
     {
         $books = $this->createMock(Books::class);
-        $books->method('claimNextForIndexing')->willReturn(self::book());
-        $statuses = [];
-        $books->method('updateIndexState')->willReturnCallback(function (string $id, array $set, array $inc = []) use (&$statuses) {
-            $this->assertSame([], $inc, 'An embedder outage must not count as a failed attempt');
-            $statuses[] = $set['index_status'] ?? null;
+        $books->method('claimNextForIndexing')->willReturn(self::book(['index_attempts' => 1]));
+        $states = [];
+        $books->method('updateIndexState')->willReturnCallback(function (string $id, array $set, array $inc = []) use (&$states) {
+            $states[] = [$set['index_status'] ?? null, $inc];
             return [];
         });
-        $down = new ConnectException('Connection refused', new Request('POST', '/embed'));
 
-        $this->expectException(ConnectException::class);
+        $this->expectException(TransferException::class);
         try {
-            $this->service($books, null, $this->files(['text']), [$down])->indexNextBook();
+            $this->service($books, null, $this->files(['text']), [$failure])->indexNextBook();
         } finally {
-            $this->assertSame('pending', end($statuses));
+            // Back in the queue, with the attempt the claim took given back.
+            $this->assertSame(['pending', ['index_attempts' => -1]], end($states));
         }
     }
 
@@ -303,6 +320,33 @@ class ContentSearchServiceTest extends ServiceTestCase
 
         $this->assertCount(1, $results);
         $this->assertSame([['page' => 3, 'snippet' => 'hit']], $results[0]['matches']);
+    }
+
+    public function testSearchFallsBackToKeywordResultsWhenVectorSearchFails(): void
+    {
+        // E.g. the vector index is still building right after db-setup.
+        $chunks = $this->createMock(BookChunks::class);
+        $chunks->method('keywordSearch')->willReturn([['book_id' => self::BOOK_ID, 'page' => 3, 'snippet' => 'hit']]);
+        $chunks->method('vectorSearch')->willThrowException(new \RuntimeException('index not ready'));
+        $books = $this->createMock(Books::class);
+        $books->method('findAll')->willReturn([self::book()]);
+
+        $results = $this->service($books, $chunks, null, [self::vectors(1)])->search('stoicism', true);
+
+        $this->assertSame([['page' => 3, 'snippet' => 'hit']], $results[0]['matches']);
+    }
+
+    public function testSearchStillAnswersByMeaningWhenKeywordSearchFails(): void
+    {
+        $chunks = $this->createMock(BookChunks::class);
+        $chunks->method('keywordSearch')->willThrowException(new \RuntimeException('index not ready'));
+        $chunks->method('vectorSearch')->willReturn([['book_id' => self::BOOK_ID, 'page' => 2, 'snippet' => 'sem', 'similarity' => 0.8]]);
+        $books = $this->createMock(Books::class);
+        $books->method('findAll')->willReturn([self::book()]);
+
+        $results = $this->service($books, $chunks, null, [self::vectors(1)])->search('stoicism', true);
+
+        $this->assertSame([['page' => 2, 'snippet' => 'sem']], $results[0]['matches']);
     }
 
     public function testSearchDropsBooksThatAreNoLongerPublicForPublicCallers(): void

@@ -57,6 +57,7 @@ interface DatabaseInterface
     /**
      * @param array<int, array<string, mixed>> $pipeline
      * @return array<int, mixed>
+     * @throws \Exception When the pipeline fails (unlike the other methods, which return [] / an error array)
      */
     public function aggregate(string $collection, array $pipeline): array;
 

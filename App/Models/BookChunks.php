@@ -64,6 +64,14 @@ class BookChunks extends BaseModel
     /**
      * @return array<string, mixed>
      */
+    public function deleteForBook(string $bookId): array
+    {
+        return $this->db->delete($this->collection, ['book_id' => $bookId]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function setStatusForBook(string $bookId, string $status): array
     {
         return $this->db->update($this->collection, ['book_id' => $bookId], ['$set' => ['status' => $status]]);

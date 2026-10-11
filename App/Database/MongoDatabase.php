@@ -29,7 +29,7 @@ class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface
             $result = $this->db->selectCollection($collection)->insertOne($data);
             return ['insertedId' => (string)$result->getInsertedId()];
         } catch (Exception $e) {
-            echo("MongoDB Insert Error: " . $e->getMessage());
+            error_log("MongoDB Insert Error: " . $e->getMessage());
             return ['error' => $e->getMessage()];
         }
     }
@@ -72,7 +72,7 @@ class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface
 
             return $results;
         } catch (Exception $e) {
-            echo("MongoDB Find Error: " . $e->getMessage());
+            error_log("MongoDB Find Error: " . $e->getMessage());
             return [];
         }
     }
@@ -97,7 +97,7 @@ class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface
             );
             return ['modifiedCount' => $result->getModifiedCount()];
         } catch (Exception $e) {
-            echo("MongoDB Update Error: " . $e->getMessage());
+            error_log("MongoDB Update Error: " . $e->getMessage());
             return ['error' => $e->getMessage()];
         }
     }
@@ -108,7 +108,7 @@ class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface
             $result = $this->db->selectCollection($collection)->deleteMany($filter);
             return ['deletedCount' => $result->getDeletedCount()];
         } catch (Exception $e) {
-            echo("MongoDB Delete Error: " . $e->getMessage());
+            error_log("MongoDB Delete Error: " . $e->getMessage());
             return ['error' => $e->getMessage()];
         }
     }
@@ -130,7 +130,7 @@ class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface
                 yield (array)$document;
             }
         } catch (Exception $e) {
-            echo("MongoDB Find Error: " . $e->getMessage());
+            error_log("MongoDB Find Error: " . $e->getMessage());
             return;
         }
     }
@@ -148,12 +148,10 @@ class MongoDatabase extends MongoConnectionFactory implements DatabaseInterface
                 $result[] = $document;
             }
             return $result;
-
-            // Alternatively, if you're using mongodb/mongodb library:
-            // return $cursor->toArray();
         } catch (Exception $e) {
+            // Rethrown, not swallowed: content search must tell "no matches" from "the search failed".
             error_log("MongoDB Aggregate Error: " . $e->getMessage());
-            return [];
+            throw $e;
         }
     }
 

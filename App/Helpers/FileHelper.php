@@ -2,6 +2,8 @@
 
 namespace App\Helpers;
 
+use App\Includes\Environment;
+
 class FileHelper
 {
     private ?string $filePath;
@@ -130,7 +132,7 @@ class FileHelper
      */
     private function resolvePopplerBinary(string $name): ?string
     {
-        $env = getenv(strtoupper($name) . '_PATH');
+        $env = Environment::get(strtoupper($name) . '_PATH');
         if (is_string($env) && $env !== '' && is_executable($env)) {
             return $env;
         }

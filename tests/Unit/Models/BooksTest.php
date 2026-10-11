@@ -241,12 +241,24 @@ class BooksTest extends ModelTestCase
                     $modelChange = $filter['$or'][4];
                     $this->assertSame(['$ne' => 'model-b'], $modelChange['index_model']);
                     $this->assertSame(['$lt' => 3], $filter['$or'][3]['index_attempts']);
+                    // A lapsed lease is only re-claimed while attempts remain.
+                    $this->assertSame(['$lt' => 3], $filter['$or'][2]['index_attempts']);
+                    // Only PDFs.
+                    $this->assertSame(1, preg_match('/' . $filter['file_path']->getPattern() . '/i', '/x/doc_1.PDF'));
+                    $this->assertSame(0, preg_match('/' . $filter['file_path']->getPattern() . '/i', '/x/doc_1.docx'));
                     return true;
                 }),
                 $this->callback(fn (array $update) => $update['$set']['index_status'] === 'indexing'
-                    && $update['$set']['index_lease_until']->toDateTime()->getTimestamp() >= time() + 299)
+                    && $update['$set']['index_lease_until']->toDateTime()->getTimestamp() >= time() + 299
+                    // Every claim counts as an attempt, so a book that kills the worker runs out of them.
+                    && $update['$inc'] === ['index_attempts' => 1])
             )
             ->willReturn(null);
+        // Books whose worker died on every attempt are retired as failed.
+        $db->expects($this->once())
+            ->method('update')
+            ->with('Books', $this->callback(fn (array $filter) => $filter['index_status'] === 'indexing'
+                && $filter['index_attempts'] === ['$gte' => 3]), $this->callback(fn (array $update) => $update['$set']['index_status'] === 'failed'));
 
         $this->assertNull($this->makeBooks($db)->claimNextForIndexing('model-b', 300, 3));
     }

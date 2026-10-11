@@ -108,6 +108,8 @@ async function showOnShelf(id: string) {
 
 /** Content-search indexing state, shown only when it needs attention or is still in progress. */
 function indexLabel(book: Book): string {
+  // The worker only extracts text from PDFs; books uploaded before file_extension existed are PDFs.
+  if ((book.file_extension ?? 'pdf').toLowerCase() !== 'pdf') return 'Not searchable: only PDFs are indexed'
   switch (book.index_status) {
     case 'done':
       return ''

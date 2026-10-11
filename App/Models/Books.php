@@ -62,7 +62,11 @@ class Books extends BaseModel
             ['$match' => ['featured' => true, 'status' => 'public']],
             ['$sample' => ['size' => $limit]]
         ];
-        return $this->db->aggregate($this->collection, $pipeline);
+        try {
+            return $this->db->aggregate($this->collection, $pipeline);
+        } catch (\Exception $e) {
+            return []; // Already logged; the home page just shows no featured books.
+        }
     }
 
     /**
@@ -193,9 +197,8 @@ class Books extends BaseModel
     public function deleteBook(string $id): array
     {
         $result = $this->deleteById($id);
-        // Its search chunks go with it (written directly: models share one connection, and this keeps
-        // the cascade in the one place every delete goes through).
-        $this->db->delete(BookChunks::COLLECTION, ['book_id' => $id]);
+        // Its search chunks go with it — here, the one place every delete goes through.
+        (new BookChunks($this->db))->deleteForBook($id);
         return $result;
     }
 
@@ -220,7 +223,7 @@ class Books extends BaseModel
         $result = $this->updateById($id, $filteredBook);
         // Chunks carry a copy of the status so content search can hide drafts before ranking.
         if (isset($filteredBook['status'])) {
-            $this->db->update(BookChunks::COLLECTION, ['book_id' => $id], ['$set' => ['status' => $filteredBook['status']]]);
+            (new BookChunks($this->db))->setStatusForBook($id, (string) $filteredBook['status']);
         }
         return $result;
     }
@@ -235,22 +238,34 @@ class Books extends BaseModel
     public function claimNextForIndexing(string $model, int $leaseSeconds, int $maxAttempts): ?array
     {
         $now = new UTCDateTime();
+        // A lapsed lease means the worker died mid-book. If that keeps happening (e.g. a PDF that blows
+        // the memory limit), stop handing the book out instead of crashing a worker every lease period.
+        $this->db->update(
+            $this->collection,
+            ['index_status' => 'indexing', 'index_lease_until' => ['$lt' => $now], 'index_attempts' => ['$gte' => $maxAttempts]],
+            ['$set' => ['index_status' => 'failed', 'index_error' => 'The indexing worker crashed on this book']]
+        );
         return $this->db->findOneAndUpdate(
             $this->collection,
             [
-                'file_path' => ['$nin' => [null, '']],
+                // Only PDFs: text extraction is pdftotext. Other formats stay unindexed.
+                'file_path' => MongoHelper::createRegex('\\.pdf$', 'i'),
                 '$or' => [
                     ['index_status' => ['$exists' => false]],
                     ['index_status' => 'pending'],
-                    ['index_status' => 'indexing', 'index_lease_until' => ['$lt' => $now]],
+                    ['index_status' => 'indexing', 'index_lease_until' => ['$lt' => $now], 'index_attempts' => ['$lt' => $maxAttempts]],
                     ['index_status' => 'failed', 'index_attempts' => ['$lt' => $maxAttempts], 'index_retry_at' => ['$lt' => $now]],
                     ['index_status' => ['$in' => ['done', 'no_text']], 'index_model' => ['$ne' => $model]],
                 ],
             ],
-            ['$set' => [
-                'index_status' => 'indexing',
-                'index_lease_until' => new UTCDateTime((time() + $leaseSeconds) * 1000),
-            ]],
+            [
+                '$set' => [
+                    'index_status' => 'indexing',
+                    'index_lease_until' => new UTCDateTime((time() + $leaseSeconds) * 1000),
+                ],
+                // Counted at claim time, so a worker that dies mid-book still uses up an attempt.
+                '$inc' => ['index_attempts' => 1],
+            ],
             ['sort' => ['created_at' => 1]]
         );
     }

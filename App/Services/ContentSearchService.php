@@ -9,7 +9,7 @@ use App\Models\Books;
 use App\Helpers\Database\MongoHelper;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\TransferException;
 use MongoDB\BSON\Binary;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\BSON\VectorType;
@@ -55,7 +55,7 @@ class ContentSearchService
     /**
      * Claim and index one book. Returns false when there was nothing to do.
      *
-     * @throws ConnectException When the embedder is unreachable (the book is released, not failed)
+     * @throws TransferException When the embedder is down or broken (the book is released, not failed)
      */
     public function indexNextBook(): bool
     {
@@ -68,19 +68,23 @@ class ContentSearchService
         $id = (string) $book['_id'];
         try {
             $this->indexBook($id, $book, $model);
-        } catch (ConnectException $e) {
-            // The embedder being down says nothing about this book — don't burn its attempts.
-            $this->books->updateIndexState($id, ['index_status' => 'pending']);
+        } catch (TransferException $e) {
+            // Embedder unreachable, erroring (5xx while loading/out of memory, 404 before the model is
+            // pulled) or answering garbage: says nothing about this book, so give back its attempt.
+            // ponytail: a page that makes the embedder fail every time would be retried forever (one try
+            // per WORKER_POLL_SECONDS); unlikely with truncate:true — cap releases if it ever happens.
+            $this->books->updateIndexState($id, ['index_status' => 'pending'], ['index_attempts' => -1]);
             throw $e;
         } catch (\Throwable $e) {
-            $attempts = (int) ($book['index_attempts'] ?? 0) + 1;
+            // The claim already counted this attempt.
+            $attempts = (int) ($book['index_attempts'] ?? 1);
             error_log("Indexing book $id failed (attempt $attempts): " . $e->getMessage());
             $this->books->updateIndexState($id, [
                 'index_status' => 'failed',
                 'index_error' => mb_substr($e->getMessage(), 0, 500),
                 // Back off 2, 4, 8... minutes between attempts.
                 'index_retry_at' => new UTCDateTime((time() + 60 * 2 ** $attempts) * 1000),
-            ], ['index_attempts' => 1]);
+            ]);
         }
         return true;
     }
@@ -192,7 +196,12 @@ class ContentSearchService
      */
     public function search(string $query, bool $publicOnly, int $limit = 20): array
     {
-        $keyword = $this->chunks->keywordSearch($query, $publicOnly, self::CANDIDATES);
+        try {
+            $keyword = $this->chunks->keywordSearch($query, $publicOnly, self::CANDIDATES);
+        } catch (\Throwable $e) {
+            error_log('Content search: keyword search failed: ' . $e->getMessage());
+            $keyword = [];
+        }
 
         try {
             $timeout = (float) Environment::get('EMBEDDING_TIMEOUT', 2);
@@ -292,7 +301,8 @@ class ContentSearchService
         ]);
         $vectors = json_decode((string) $response->getBody(), true)['embeddings'] ?? null;
         if (!is_array($vectors) || count($vectors) !== count($texts)) {
-            throw new RuntimeException('Unexpected response from the embedder');
+            // A TransferException like any other embedder failure, so the worker releases the book.
+            throw new TransferException('Unexpected response from the embedder');
         }
         return $vectors;
     }
