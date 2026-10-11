@@ -6,6 +6,7 @@ import { isApiSuccess } from '@/types/api'
 import type { CatalogResult, ContentSearchResult, FacetOption } from '@/types/book'
 import { idToString } from '@/types/book'
 import BookCard from '@/components/BookCard.vue'
+import { useContentSearchEnabled } from '@/composables/useContentSearchEnabled'
 
 type Mode = 'title' | 'content'
 type Facet = 'category' | 'format' | 'author'
@@ -33,7 +34,9 @@ function list(key: string): string[] {
 }
 
 const searchTerm = ref('')
-const mode = computed<Mode>(() => (route.query.mode === 'content' ? 'content' : 'title'))
+const contentSearchEnabled = useContentSearchEnabled()
+// With content search switched off, an old ?mode=content link just shows catalog results.
+const mode = computed<Mode>(() => (contentSearchEnabled.value && route.query.mode === 'content' ? 'content' : 'title'))
 const selected = computed<Record<Facet, string[]>>(() => ({
   category: list('category'),
   format: list('format'),
@@ -128,7 +131,11 @@ function setMode(next: Mode) {
   go({ mode: next === 'content' ? 'content' : undefined }, false)
 }
 
+/** Bumped per search; a response for anything but the latest search is dropped, so a slow earlier one can't overwrite it. */
+let latestSearch = 0
+
 async function runCatalog() {
+  const id = ++latestSearch
   loading.value = true
   error.value = ''
   try {
@@ -140,35 +147,42 @@ async function runCatalog() {
       sort: sort.value,
       page: page.value,
     })
+    if (id !== latestSearch) return
     if (isApiSuccess(data)) catalog.value = data.data
     else error.value = 'Search is unavailable right now. Try again in a moment.'
   } catch {
-    error.value = 'Search is unavailable right now. Try again in a moment.'
+    if (id === latestSearch) error.value = 'Search is unavailable right now. Try again in a moment.'
   } finally {
-    loading.value = false
+    if (id === latestSearch) loading.value = false
   }
 }
 
 async function runContent() {
+  const id = ++latestSearch
   contentResults.value = []
   const trimmed = searchTerm.value.trim()
   hasSearched.value = trimmed !== ''
   error.value = ''
-  if (!trimmed) return
+  if (!trimmed) {
+    loading.value = false
+    return
+  }
   loading.value = true
   try {
     const { data } = await booksApi.contentSearch(trimmed)
+    if (id !== latestSearch) return
     contentResults.value = isApiSuccess(data) ? data.data : []
     if (!contentResults.value.length) error.value = `No pages found for "${trimmed}".`
   } catch {
-    error.value = 'An error occurred while searching.'
+    if (id === latestSearch) error.value = 'An error occurred while searching.'
   } finally {
-    loading.value = false
+    if (id === latestSearch) loading.value = false
   }
 }
 
 watch(
-  () => route.fullPath,
+  // mode too: it can flip without a URL change, when the content-search setting finishes loading.
+  () => [route.fullPath, mode.value],
   () => {
     if (route.path !== '/search') return
     searchTerm.value = typeof route.query.q === 'string' ? route.query.q : ''
@@ -183,7 +197,7 @@ watch(
 <template>
   <div class="container search-page" data-testid="search-page">
     <h1>Search</h1>
-    <div class="search-modes" role="group" aria-label="What to search">
+    <div v-if="contentSearchEnabled" class="search-modes" role="group" aria-label="What to search">
       <button
         type="button"
         class="mode-btn"
