@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # E-Lib deployment: sync the code to the server and (re)build the Docker stack there.
 #
 #   DEPLOY_HOST=user@server DEPLOY_DIR=/srv/e-lib ./deploy.sh
