@@ -64,6 +64,8 @@ class ApiRouter
             ['method' => 'DELETE', 'path' => '/api/v1/annotations/([0-9a-f]{24})', 'handler' => [new AnnotationController(), 'delete']],
 
             ['method' => 'GET', 'path' => '/api/v1/books/([0-9a-f]{24})/download', 'handler' => [new BookController(), 'downloadBook']],
+            ['method' => 'POST', 'path' => '/api/v1/books/([0-9a-f]{24})/borrow', 'handler' => [new BookController(), 'borrowBook']],
+            ['method' => 'POST', 'path' => '/api/v1/books/([0-9a-f]{24})/return', 'handler' => [new BookController(), 'returnBook']],
 
             ['method' => 'POST', 'path' => '/api/v1/signup', 'handler' => [new UserController(), 'handleSignup']],
             ['method' => 'POST', 'path' => '/api/v1/login', 'handler' => [new UserController(), 'handleLogin']],

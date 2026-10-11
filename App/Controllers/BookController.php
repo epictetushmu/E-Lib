@@ -94,6 +94,9 @@ class BookController
         $downloadable = isset($data['downloadable']) ?
             ($data['downloadable'] === 'yes' || $data['downloadable'] === true || $data['downloadable'] === 'true') :
             ($currentBook['downloadable'] ?? true);
+        // Absent = keep what's stored (null is skipped by Books::updateBook); 0 copies = open access.
+        $loanCopies = isset($data['loan_copies']) ? min(1000, max(0, (int) $data['loan_copies'])) : null;
+        $loanDays = isset($data['loan_days']) ? min(365, max(1, (int) $data['loan_days'])) : null;
 
         // Check if categories are being updated
         $categories = [];
@@ -122,7 +125,9 @@ class BookController
             $status,
             $featured,
             $isbn,
-            $downloadable
+            $downloadable,
+            $loanCopies,
+            $loanDays
         );
 
         if ($response) {
@@ -191,10 +196,54 @@ class BookController
         if ($book) {
             unset($book['pdf_path'], $book['file_path']);
             BookDisplayHelper::applyThumbnailForApi($book);
+            if (BookService::loanCopies($book) > 0) {
+                $book['loan'] = $this->bookService->loanStatus($id, $book, AuthenticatedUser::id());
+            }
             ResponseHandler::respond(true, $book);
         } else {
             ResponseHandler::respond(false, 'Book not found', 404);
         }
+    }
+
+    /**
+     * POST /api/v1/books/{id}/borrow — take one of a lent book's copies for its loan period.
+     */
+    public function borrowBook(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        $book = $this->bookService->getBookDetails($id);
+        if (!$book || $this->isHiddenFromCaller($book)) {
+            ResponseHandler::respond(false, 'Book not found', 404);
+            return;
+        }
+        if (BookService::loanCopies($book) === 0) {
+            ResponseHandler::respond(false, 'This book is open access and does not need borrowing', 400);
+            return;
+        }
+        $dueAt = $this->bookService->borrow($id, $book, $userId);
+        if ($dueAt === null) {
+            ResponseHandler::respond(false, 'All copies are on loan. Try again later.', 409);
+            return;
+        }
+        ResponseHandler::respond(true, ['due_at' => $dueAt]);
+    }
+
+    /**
+     * POST /api/v1/books/{id}/return — give the caller's copy back early.
+     */
+    public function returnBook(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        $this->bookService->returnBook($id, $userId);
+        ResponseHandler::respond(true, 'Book returned');
     }
 
     public function searchBooks(string $search): void
@@ -417,8 +466,8 @@ class BookController
             return;
         }
 
-        // Check if the book is downloadable
-        if (isset($book['downloadable']) && $book['downloadable'] === false) {
+        // Lent books can only be read while borrowed, so a download would outlive the loan.
+        if ((isset($book['downloadable']) && $book['downloadable'] === false) || BookService::loanCopies($book) > 0) {
             ResponseHandler::respond(false, 'This book is not available for download', 403);
             return;
         }
@@ -849,6 +898,19 @@ class BookController
         if (!$book || $relativePath === '') {
             ResponseHandler::respond(false, 'Book not found or has no file', 404);
             return;
+        }
+
+        // Lent books: the PDF only goes to someone holding a copy.
+        if (BookService::loanCopies($book) > 0 && !AuthenticatedUser::isAdmin()) {
+            $userId = AuthenticatedUser::id();
+            if ($userId === null) {
+                ResponseHandler::respond(false, 'Log in and borrow this book to read it', 401);
+                return;
+            }
+            if (!$this->bookService->hasActiveLoan($bookId, $userId)) {
+                ResponseHandler::respond(false, 'Borrow this book to read it', 403);
+                return;
+            }
         }
 
         $filePath = $this->resolveStoredPublicFile($relativePath);

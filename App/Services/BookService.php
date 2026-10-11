@@ -3,17 +3,77 @@
 namespace App\Services;
 
 use App\Models\Books;
+use App\Models\Loans;
 use MongoDB\BSON\UTCDateTime;
 
 class BookService
 {
     public const DEFAULT_AUTHOR = 'Unknown Author';
+    public const DEFAULT_LOAN_DAYS = 14;
 
     private Books $book;
+    private Loans $loans;
 
     public function __construct()
     {
         $this->book = new Books();
+        $this->loans = new Loans();
+    }
+
+    /**
+     * Copies a book is lent with. 0 = open access; anything more means it can only be read while
+     * borrowed, and is never downloadable.
+     *
+     * @param array<string, mixed> $book
+     */
+    public static function loanCopies(array $book): int
+    {
+        return max(0, (int) ($book['loan_copies'] ?? 0));
+    }
+
+    public function hasActiveLoan(string $bookId, string $userId): bool
+    {
+        return $this->loans->activeFor($bookId, $userId) !== null;
+    }
+
+    /**
+     * Borrow a copy of a lent book. Returns the due date (ISO 8601), or null when every copy is out.
+     *
+     * @param array<string, mixed> $book
+     */
+    public function borrow(string $bookId, array $book, string $userId): ?string
+    {
+        $days = (int) ($book['loan_days'] ?? 0) ?: self::DEFAULT_LOAN_DAYS;
+        $loan = $this->loans->borrow($bookId, $userId, self::loanCopies($book), $days);
+        return $loan === null ? null : self::isoDate($loan['due_at']);
+    }
+
+    public function returnBook(string $bookId, string $userId): void
+    {
+        $this->loans->returnBook($bookId, $userId);
+    }
+
+    /**
+     * What the book page shows about lending: copies, how many are free, and the caller's due date.
+     *
+     * @param array<string, mixed> $book
+     * @return array{copies: int, available: int, loan_days: int, due_at: ?string}
+     */
+    public function loanStatus(string $bookId, array $book, ?string $userId): array
+    {
+        $copies = self::loanCopies($book);
+        $mine = $userId === null ? null : $this->loans->activeFor($bookId, $userId);
+        return [
+            'copies' => $copies,
+            'available' => max(0, $copies - $this->loans->activeCount($bookId)),
+            'loan_days' => (int) ($book['loan_days'] ?? 0) ?: self::DEFAULT_LOAN_DAYS,
+            'due_at' => $mine === null ? null : self::isoDate($mine['due_at']),
+        ];
+    }
+
+    private static function isoDate(mixed $date): ?string
+    {
+        return $date instanceof UTCDateTime ? $date->toDateTime()->format(DATE_ATOM) : null;
     }
 
     /**
@@ -110,7 +170,9 @@ class BookService
         string $status,
         mixed $featured,
         string $isbn,
-        bool $downloadable = true
+        bool $downloadable = true,
+        ?int $loanCopies = null,
+        ?int $loanDays = null
     ): array|false {
         // Add validation here
 
@@ -128,6 +190,8 @@ class BookService
             'categories' => $categories,
             'isbn' => $isbn,
             'downloadable' => $downloadable,
+            'loan_copies' => $loanCopies,
+            'loan_days' => $loanDays,
             'featured' => $featuredBool,
             'status' => $status,
             'updated_at' => new UTCDateTime()
