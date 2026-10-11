@@ -60,14 +60,11 @@ cd e-lib
 
 3. Edit the `.env` file with your configuration:
    ```env
-   # Database Configuration
-   DB_CONNECTION=mongo
-   DB_HOST=localhost
-   DB_PORT=27017
-   DB_DATABASE=e_lib
+   # Database (the only DB setting the app reads; the database name is always LibraryDb)
+   MONGO_URI='mongodb://root:example@mongo:27017/?directConnection=true'
    
    # JWT Configuration
-   JWT_SECRET=your_secure_jwt_secret
+   JWT_SECRET_KEY=your_secure_jwt_secret
    
    # Application URL
    APP_URL=http://localhost:8000
