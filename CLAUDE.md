@@ -20,6 +20,7 @@ composer run analyse                   # PHPStan (level 6, App/ only)
 composer run check                     # lint + analyse + phpunit (what CI runs)
 
 php scripts/mongo-ping.php             # verify MongoDB connectivity from the CLI (use when DB init fails)
+php scripts/eval-content-search.php    # content-search quality (hit@1/MRR/precision) on tests/Eval/*.json — read-only, needs Atlas + embedder
 
 cd frontend && npm install             # install frontend deps (Vue 3 + Vite + TS)
 cd frontend && npm run dev             # Vite dev server on :5173, proxies /api to localhost:8000

@@ -339,6 +339,20 @@ To turn them off again: empty the variable and `docker compose stop worker embed
 worker writes search data to whichever database `MONGO_URI` names — then run
 `php scripts/db-setup.php` against it once.
 
+**Measuring quality:** `scripts/eval-content-search.php` runs labelled queries
+(`tests/Eval/content-search-queries.json`: query → title of the book that should come first, or `null`
+for "nothing in the library answers this") through the real search and prints hit@1, MRR, precision and
+how many unanswerable queries still returned results. It only reads, so it's safe against production —
+that's where to tune `SEMANTIC_MIN_SCORE` / `SEMANTIC_MARGIN`. Write queries for your own library first;
+the bundled ones match five sample books.
+
+```bash
+docker compose exec app php scripts/eval-content-search.php
+docker compose exec -e SEMANTIC_MIN_SCORE=0.76 app php scripts/eval-content-search.php   # try a threshold
+```
+
+It isn't in CI: it needs Atlas Search, indexed books and the embedder (CI's plain `mongo:4.4` has none).
+
 
 
 1. **Requirements**:

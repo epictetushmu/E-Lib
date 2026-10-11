@@ -216,9 +216,9 @@ class ContentSearchService
         try {
             $timeout = (float) Environment::get('EMBEDDING_TIMEOUT', 2);
             $vector = self::toVector($this->embed([$query], $timeout)[0]);
-            // ponytail: fixed thresholds on bge-m3 cosine scores, tuned on
+            // ponytail: fixed thresholds on bge-m3 cosine scores, tuned with scripts/eval-content-search.php on
             // 5 real books (correct book's best page 0.76-0.86, best page for a query the library can't
-            // answer <= 0.74). Re-tune on the real library.
+            // answer <= 0.74). Re-run the eval and re-tune on the real library.
             $minScore = (float) Environment::get('SEMANTIC_MIN_SCORE', 0.75);
             $semantic = $this->chunks->vectorSearch($vector, self::model(), $publicOnly, self::CANDIDATES, $minScore);
         } catch (\Throwable $e) {
