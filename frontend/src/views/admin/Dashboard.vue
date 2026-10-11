@@ -9,6 +9,7 @@ import { useCategoryOptions } from '@/composables/useCategoryOptions'
 import { thumbnailUrl } from '@/api/books'
 import { onThumbnailError } from '@/utils/dom'
 import CategoryPicker from '@/components/CategoryPicker.vue'
+import { useContentSearchEnabled } from '@/composables/useContentSearchEnabled'
 
 const toast = useToast()
 
@@ -17,6 +18,7 @@ const loading = ref(true)
 const loadError = ref('')
 const busyIds = ref<Set<string>>(new Set())
 const availableCategories = useCategoryOptions()
+const contentSearchEnabled = useContentSearchEnabled()
 
 async function loadBooks() {
   loading.value = true
@@ -104,6 +106,26 @@ async function showOnShelf(id: string) {
   setTimeout(() => {
     if (flashedId.value === id) flashedId.value = ''
   }, 1600)
+}
+
+/** Content-search indexing state, shown only when it needs attention or is still in progress. */
+function indexLabel(book: Book): string {
+  // Nothing indexes books while content search is off, so "waiting" labels would never clear.
+  if (!contentSearchEnabled.value) return ''
+  // The worker only extracts text from PDFs; books uploaded before file_extension existed are PDFs.
+  if ((book.file_extension ?? 'pdf').toLowerCase() !== 'pdf') return 'Not searchable: only PDFs are indexed'
+  switch (book.index_status) {
+    case 'done':
+      return ''
+    case 'failed':
+      return 'Not searchable: indexing failed'
+    case 'no_text':
+      return 'Not searchable: no text layer (scanned PDF)'
+    case 'indexing':
+      return 'Indexing for search…'
+    default:
+      return 'Waiting to be indexed for search'
+  }
 }
 
 function isBusy(id: string) {
@@ -330,6 +352,14 @@ onMounted(loadBooks)
                       }}<template v-if="book.year">, {{ book.year }}</template></span
                     >
                     <span v-if="book.categories?.length" class="book-categories">{{ book.categories.join(', ') }}</span>
+                    <span
+                      v-if="indexLabel(book)"
+                      class="book-index"
+                      :class="{ 'is-problem': book.index_status === 'failed' || book.index_status === 'no_text' }"
+                      :title="book.index_error"
+                      :data-testid="`index-status-${idToString(book._id)}`"
+                      >{{ indexLabel(book) }}</span
+                    >
                   </div>
                 </div>
               </td>

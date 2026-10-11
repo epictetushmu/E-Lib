@@ -11,7 +11,8 @@ E-Lib is a PHP 8.2 digital library management app (Hellenic Mediterranean Univer
 ```bash
 composer install                       # install PHP deps
 php -S localhost:8000 -t public        # run dev server (serves from public/)
-docker-compose up -d                   # run app + MongoDB via Docker (http://localhost:8081)
+docker compose up -d --build           # local Docker: app + throwaway MongoDB (http://localhost:8081) — needs COMPOSE_FILE from .env.example
+DEPLOY_HOST=... DEPLOY_DIR=... ./deploy.sh   # production: rsync + `docker compose up -d --build` on the server
 
 composer run lint                      # PHPCS, PSR-12 (App/, public/index.php, scripts/, etc.)
 composer run lint:fix                  # PHPCBF autofix
@@ -19,6 +20,7 @@ composer run analyse                   # PHPStan (level 6, App/ only)
 composer run check                     # lint + analyse + phpunit (what CI runs)
 
 php scripts/mongo-ping.php             # verify MongoDB connectivity from the CLI (use when DB init fails)
+php scripts/eval-content-search.php    # content-search quality (hit@1/MRR/precision) on tests/Eval/*.json — read-only, needs Atlas + embedder
 
 cd frontend && npm install             # install frontend deps (Vue 3 + Vite + TS)
 cd frontend && npm run dev             # Vite dev server on :5173, proxies /api to localhost:8000
@@ -60,6 +62,15 @@ Two mechanisms coexist: JWT bearer tokens (`JwtHelper`, checked by `JwtAuthMiddl
 
 ### File handling
 `App/Helpers/FileHelper.php` validates and stores uploaded documents (extension allowlist, not MIME-only) and drives thumbnail generation via ImageMagick (`pdftoppm`/`convert`) and LibreOffice (for Office format conversion) — see `MongoSchematics.png` and `docs/architecture/` for the data-model/refactor background.
+
+### Catalog search
+`GET /api/v1/catalog` (`BookService::catalog` → `Books::catalog`) backs the search page's "Catalog" mode: title-or-author substring match (escaped, not regex) plus subject/author/format filters and a published-year range, one `$facet` aggregation returning a page of books, per-filter counts and the year span (range placeholders). Each facet is counted with every filter except its own, so options show what picking them gives. Filters live in the URL (`?category=a&category=b&year_from=2005`). Plain MongoDB (works on CI's 4.4 — keep it that way, e.g. no 3-argument `$ifNull`).
+
+### Content search ("search inside books")
+`GET /api/v1/content-search?q=` (public; drafts only for admins) fuses two Atlas searches over the `BookChunks` collection (one doc per PDF page: `book_id, page, text, embedding, embedding_model, status`) with Reciprocal Rank Fusion in `ContentSearchService::fuse()`: `$search` (BM25, Greek+English analyzers) and `$vectorSearch` (int8 BSON vectors from a self-hosted bge-m3 `embedder` container; only books whose best page scores ≥ `SEMANTIC_MIN_SCORE` and within `SEMANTIC_MARGIN` of the top page are shown — keyword hits only rank pages inside them, since BM25 matches common words in every book; contents/index pages are skipped at indexing via `isNavigationPage()`). If the embedder is down/slow (`EMBEDDING_TIMEOUT`), search degrades to keyword-only. Indexing never happens in a web request: `scripts/index-worker.php` (the `worker` compose service, scalable) claims books atomically via `Books::claimNextForIndexing()` (Mongo is the job queue; `index_*` fields on the book are the state: lease, progress for resume, attempts/backoff, `no_text` for scanned PDFs) — existing books need no backfill, and changing `EMBEDDING_MODEL` re-embeds everything in the background. `Books::deleteBook`/`updateBook` cascade deletes/status changes to the chunks. The Atlas indexes are created by `scripts/db-setup.php` (needs Atlas or the `mongodb/mongodb-atlas-local` dev image; plain mongo — e.g. CI's `mongo:4.4` — just gets a warning, so content search has no e2e coverage in CI).
+
+### Docker
+`docker-compose.yml` is the **production** stack (Caddy + app; uploads in the `uploads` named volume, `.env` mounted read-only, never baked into the image — see `.dockerignore`). The content-search `worker` + `embedder` services are behind the `search` profile — on only with `COMPOSE_PROFILES=search` in `.env` (set it in production). The app reads the same variable (`ContentSearchService::enabled()`, exposed to the SPA via `GET /api/v1/features`): off, the content-search API 404s and the UI hides it. `docker-compose.dev.yml` overrides it for local dev (bind-mounted code/uploads/logs, `APP_ENV=development`, a throwaway `mongo` container) and is selected via `COMPOSE_FILE` in the local `.env`; the server's `.env` must not set it (`deploy.sh` refuses). CI does not use compose — the GitHub workflows run their own `mongo:4.4` service container, so tests never touch Atlas.
 
 ## Conventions
 

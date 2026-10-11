@@ -10,3 +10,8 @@ parameters:
             # to keep working once updateProfile() grows more updatable fields.
             message: '#^Offset .username. on array\{username: non-falsy-string\} in isset\(\) always exists and is not nullable\.$#'
             path: App/Controllers/UserController.php
+        -
+            # BSON vectors exist in the ext-mongodb the Dockerfile installs (latest PECL), but PHPStan's
+            # bundled extension stubs predate them.
+            message: '#^Call to an undefined static method MongoDB\\BSON\\Binary::fromVector\(\)\.$#'
+            path: App/Services/ContentSearchService.php

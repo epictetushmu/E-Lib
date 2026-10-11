@@ -65,7 +65,7 @@ async function handleLogout() {
           <input
             v-model="searchTerm"
             type="search"
-            placeholder="Search titles…"
+            placeholder="Title or author…"
             aria-label="Search books"
             data-testid="nav-search-input"
           />

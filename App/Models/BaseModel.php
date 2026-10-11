@@ -19,9 +19,9 @@ abstract class BaseModel
     /**
      * Constructor
      */
-    public function __construct()
+    public function __construct(?DatabaseInterface $db = null)
     {
-        $this->db = DatabaseFactory::getDatabase();
+        $this->db = $db ?? DatabaseFactory::getDatabase();
     }
 
     /**

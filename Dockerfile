@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     openssl \
     libssl-dev \
     imagemagick \
+    poppler-utils \
     default-jre \
     fonts-liberation \
     fontconfig \
@@ -64,6 +65,10 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install curl \
     && docker-php-ext-enable curl
 
+# Production php.ini defaults plus the app's upload/memory limits
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+COPY docker/php/prod.ini "$PHP_INI_DIR/conf.d/prod.ini"
+
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
@@ -80,8 +85,8 @@ RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available
 # Copy composer files first for better caching
 COPY composer.json composer.lock* ./
 
-# Install dependencies
-RUN composer install
+# Install dependencies (no dev tools in the production image)
+RUN composer install --no-dev --no-scripts --no-autoloader
 
 # Create necessary directories with proper permissions
 RUN mkdir -p /var/www/html/storage/logs \
@@ -111,7 +116,7 @@ COPY . .
 RUN cd frontend && npm ci && npm run build
 
 # Generate optimized autoloader
-RUN composer dump-autoload --optimize
+RUN composer dump-autoload --optimize --no-dev
 
 # Environment variable indicating we're in Docker
 ENV DOCKER_ENV=true

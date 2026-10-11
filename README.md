@@ -60,14 +60,11 @@ cd e-lib
 
 3. Edit the `.env` file with your configuration:
    ```env
-   # Database Configuration
-   DB_CONNECTION=mongo
-   DB_HOST=localhost
-   DB_PORT=27017
-   DB_DATABASE=e_lib
+   # Database (the only DB setting the app reads; the database name is always LibraryDb)
+   MONGO_URI='mongodb://root:example@mongo:27017/?directConnection=true'
    
    # JWT Configuration
-   JWT_SECRET=your_secure_jwt_secret
+   JWT_SECRET_KEY=your_secure_jwt_secret
    
    # Application URL
    APP_URL=http://localhost:8000
@@ -260,29 +257,103 @@ To get started with the E-Lib project:
 
 ### Local Development with Docker
 
-1. **Clone the Repository**:
+`docker-compose.yml` is the production stack; `docker-compose.dev.yml` layers dev overrides on top
+(bind-mounted code, debug on, a throwaway local MongoDB, app published on port 8081).
+
+1. **Setup Environment**:
 
    ```bash
-   git clone https://github.com/epictetushmu/E-Lib.git
-   cd E-Lib
+   cp .env.example .env   # keeps COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml, so compose picks up the dev overrides
+   cd frontend && npm install && npm run build && cd ..   # the bind-mount hides the image's own SPA build
    ```
 
-2. **Setup Environment**:
+2. **Build and Start**:
 
    ```bash
-   cp .env.example .env
+   docker compose up -d --build
    ```
 
-3. **Build and Start the Docker Environment**:
+3. **Access the Application**: `http://localhost:8081` (or `https://localhost` through Caddy).
+
+To test against the throwaway database instead of Atlas, set `MONGO_URI=mongodb://root:example@mongo:27017` in `.env`.
+
+### Production Deployment
+
+Production runs the same images with `docker-compose.yml` alone (no dev overrides): Caddy terminates
+HTTPS and proxies to the app; uploaded books and thumbnails live in the `uploads` volume, so rebuilds
+and redeploys never touch them.
+
+1. On the server: install Docker with the compose plugin.
+2. Locally: `cp .env.example .env.production`, fill in production values (`APP_URL`, `DOMAIN`,
+   `MONGO_URI`, `JWT_SECRET_KEY`, ...) and **remove the `COMPOSE_FILE` line**.
+3. Deploy (syncs the code, builds, restarts, checks the app answers):
 
    ```bash
-   docker-compose up -d
+   DEPLOY_HOST=user@your-server DEPLOY_DIR=/srv/e-lib ./deploy.sh
    ```
 
-4. **Access the Application**:
-   Open your web browser and navigate to `http://localhost:8080`.
+4. **One-time: import existing uploads.** Book records in MongoDB point at files under
+   `/assets/uploads/...`, so copy your existing `public/assets/uploads/` into the volume once:
 
-### Without Docker
+   ```bash
+   rsync -az public/assets/uploads/ user@your-server:/tmp/elib-uploads/
+   ssh user@your-server 'cd /srv/e-lib \
+     && docker compose cp /tmp/elib-uploads/. app:/var/www/html/public/assets/uploads/ \
+     && docker compose exec -T app chown -R www-data:www-data /var/www/html/public/assets/uploads \
+     && rm -rf /tmp/elib-uploads'
+   ```
+
+### Content Search ("search inside books")
+
+Readers can search the *text* of every PDF, in Greek or English, by words or by meaning; results link
+straight to the matching page in the reader. Two extra containers power it, both running on your own
+server — no external AI service, no API keys, no per-request cost:
+
+- `embedder` — Ollama serving the `bge-m3` model (~2GB RAM; downloads 1.2GB on first start).
+- `worker` — the app image running `scripts/index-worker.php`, which indexes books in the background.
+  Existing books are indexed automatically; the admin dashboard shows books that aren't searchable yet.
+
+**Production:** after the first deploy, create the Atlas Search indexes once (they need Atlas; the free
+M0 tier works):
+
+```bash
+ssh user@your-server 'cd /srv/e-lib && docker compose exec -T app php scripts/db-setup.php'
+```
+
+and make sure the server's `.env` (`.env.production`) has `COMPOSE_PROFILES=search`, or the indexing
+worker and the model never start:
+
+```bash
+COMPOSE_PROFILES=search
+```
+
+Server sizing: ~4GB RAM total (app + LibreOffice + embedder). Indexing a 300-page book takes a few minutes
+on CPU; to index faster, run more workers: `docker compose up -d --scale worker=3`.
+
+**On/off:** the two containers only run with `COMPOSE_PROFILES=search` in `.env`, then
+`docker compose up -d`. Set it on the server. Leave it empty on a laptop that can't spare ~2GB RAM: the
+app reads the same setting, so with it off the "Inside books" search is hidden and everything else works.
+To turn them off again: empty the variable and `docker compose stop worker embedder`.
+
+**Local:** before turning it on, point `MONGO_URI` at the local `mongo` container (see above) — the
+worker writes search data to whichever database `MONGO_URI` names — then run
+`php scripts/db-setup.php` against it once.
+
+**Measuring quality:** `scripts/eval-content-search.php` runs labelled queries
+(`tests/Eval/content-search-queries.json`: query → title of the book that should come first, or `null`
+for "nothing in the library answers this") through the real search and prints hit@1, MRR, precision and
+how many unanswerable queries still returned results. It only reads, so it's safe against production —
+that's where to tune `SEMANTIC_MIN_SCORE` / `SEMANTIC_MARGIN`. Write queries for your own library first;
+the bundled ones match five sample books.
+
+```bash
+docker compose exec app php scripts/eval-content-search.php
+docker compose exec -e SEMANTIC_MIN_SCORE=0.76 app php scripts/eval-content-search.php   # try a threshold
+```
+
+It isn't in CI: it needs Atlas Search, indexed books and the embedder (CI's plain `mongo:4.4` has none).
+
+
 
 1. **Requirements**:
    - PHP 8.2+

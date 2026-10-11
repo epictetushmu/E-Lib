@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Services\BookService;
+use App\Services\ContentSearchService;
 use App\Services\UserService;
 use App\Includes\AuthenticatedUser;
 use App\Includes\ResponseHandler;
@@ -12,11 +13,16 @@ use App\Helpers\Database\MongoHelper;
 
 class BookController
 {
+    /** Longer queries add nothing to search quality and only cost embedder time. */
+    private const MAX_CONTENT_QUERY_LENGTH = 300;
+
     private BookService $bookService;
+    private ContentSearchService $contentSearchService;
 
     public function __construct()
     {
         $this->bookService = new BookService();
+        $this->contentSearchService = new ContentSearchService();
     }
 
     public function featuredBooks(): void
@@ -204,6 +210,64 @@ class BookController
         }
         unset($book);
         ResponseHandler::respond(true, $books);
+    }
+
+    /**
+     * GET /api/v1/content-search?q=... — books whose pages match the query by words or meaning,
+     * each with its best pages (page number + snippet) for deep-linking into the reader.
+     */
+    /**
+     * GET /api/v1/features — optional features this deployment has switched on, so the SPA can hide
+     * what isn't available.
+     */
+    public function features(): void
+    {
+        ResponseHandler::respond(true, ['contentSearch' => ContentSearchService::enabled()]);
+    }
+
+    /**
+     * GET /api/v1/catalog — title/author search with subject, format, author and decade filters and
+     * facet counts. An empty query lists the whole catalog. Drafts only for admins.
+     */
+    public function catalog(): void
+    {
+        try {
+            $result = $this->bookService->catalog($_GET, !AuthenticatedUser::isAdmin());
+        } catch (\Exception $e) {
+            error_log('Catalog search failed: ' . $e->getMessage());
+            ResponseHandler::respond(false, 'Search is unavailable right now. Try again in a moment.', 503);
+            return;
+        }
+        foreach ($result['books'] as &$book) {
+            BookDisplayHelper::applyThumbnailForApi($book);
+        }
+        unset($book);
+        ResponseHandler::respond(true, $result);
+    }
+
+    public function contentSearch(): void
+    {
+        if (!ContentSearchService::enabled()) {
+            ResponseHandler::respond(false, 'Content search is turned off on this server', 404);
+            return;
+        }
+        $query = trim((string) ($_GET['q'] ?? ''));
+        if ($query === '') {
+            ResponseHandler::respond(true, []);
+            return;
+        }
+        if (mb_strlen($query) > self::MAX_CONTENT_QUERY_LENGTH) {
+            ResponseHandler::respond(false, 'Search query is too long (max ' . self::MAX_CONTENT_QUERY_LENGTH . ' characters)', 400);
+            return;
+        }
+
+        $results = $this->contentSearchService->search($query, !AuthenticatedUser::isAdmin());
+        foreach ($results as &$result) {
+            unset($result['book']['pdf_path'], $result['book']['file_path'], $result['book']['reviews']);
+            BookDisplayHelper::applyThumbnailForApi($result['book']);
+        }
+        unset($result);
+        ResponseHandler::respond(true, $results);
     }
 
     public function addBook(): void

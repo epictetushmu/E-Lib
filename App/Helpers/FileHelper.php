@@ -2,6 +2,8 @@
 
 namespace App\Helpers;
 
+use App\Includes\Environment;
+
 class FileHelper
 {
     private ?string $filePath;
@@ -126,15 +128,15 @@ class FileHelper
     }
 
     /**
-     * First page → JPEG using Poppler's pdftoppm (works when PHP imagick is missing).
+     * Locate a Poppler binary (pdftoppm, pdftotext); PDFTOPPM_PATH / PDFTOTEXT_PATH override the search.
      */
-    private function resolvePdftoppmBinary(): ?string
+    private function resolvePopplerBinary(string $name): ?string
     {
-        $env = getenv('PDFTOPPM_PATH');
+        $env = Environment::get(strtoupper($name) . '_PATH');
         if (is_string($env) && $env !== '' && is_executable($env)) {
             return $env;
         }
-        foreach (['/opt/homebrew/bin/pdftoppm', '/usr/local/bin/pdftoppm', '/usr/bin/pdftoppm'] as $p) {
+        foreach (["/opt/homebrew/bin/$name", "/usr/local/bin/$name", "/usr/bin/$name"] as $p) {
             if (is_executable($p)) {
                 return $p;
             }
@@ -142,7 +144,7 @@ class FileHelper
         if (!function_exists('shell_exec')) {
             return null;
         }
-        $which = shell_exec('command -v pdftoppm 2>/dev/null');
+        $which = shell_exec('command -v ' . escapeshellarg($name) . ' 2>/dev/null');
         if (is_string($which)) {
             $w = trim($which);
             if ($w !== '' && is_executable($w)) {
@@ -152,9 +154,43 @@ class FileHelper
         return null;
     }
 
+    /**
+     * Text of every page of a PDF, in page order (index 0 = page 1). Pages without a text layer
+     * (scanned images) come back as empty strings so page numbers stay aligned with the PDF.
+     *
+     * @return list<string>
+     * @throws \RuntimeException When pdftotext is missing or fails
+     */
+    public function extractPageTexts(string $pdfPath): array
+    {
+        $bin = $this->resolvePopplerBinary('pdftotext');
+        if ($bin === null) {
+            throw new \RuntimeException('pdftotext (poppler-utils) is not installed');
+        }
+        // Written to a file rather than read through exec(): exec() strips trailing whitespace from
+        // every line, which eats the form feeds pdftotext uses as page separators.
+        $out = tempnam(sys_get_temp_dir(), 'elib_text_');
+        try {
+            $lines = [];
+            $code = 0;
+            exec(sprintf('%s -enc UTF-8 %s %s 2>&1', escapeshellarg($bin), escapeshellarg($pdfPath), escapeshellarg($out)), $lines, $code);
+            $text = file_get_contents($out);
+            if ($code !== 0 || $text === false) {
+                error_log("pdftotext failed for $pdfPath (code $code): " . implode(' ', $lines));
+                throw new \RuntimeException("Could not read the PDF's text (pdftotext exit code $code)");
+            }
+        } finally {
+            @unlink($out);
+        }
+        // Every page ends with a form feed, so the piece after the last one is always empty.
+        $pages = explode("\f", $text);
+        array_pop($pages);
+        return array_map('trim', $pages);
+    }
+
     private function extractPdfThumbnailWithPdftoppm(string $pdfPath, string $outputPath): bool
     {
-        $bin = $this->resolvePdftoppmBinary();
+        $bin = $this->resolvePopplerBinary('pdftoppm');
         if ($bin === null) {
             return false;
         }
