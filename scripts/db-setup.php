@@ -150,6 +150,43 @@ $indexPlan = [
             'options' => ['name' => 'idx_user_book_page'],
         ],
     ],
+    'Loans' => [
+        [
+            // "Does this reader hold a copy?" and per-book active counts (book_id prefix; a book has few slots).
+            'key' => ['book_id' => 1, 'user_id' => 1, 'free_at' => 1],
+            'options' => ['name' => 'idx_book_user_free'],
+        ],
+    ],
+    'LoanHistory' => [
+        [
+            // The scheduler's every-minute overdue / due-soon scans: open physical loans by due date.
+            'key' => ['kind' => 1, 'returned_at' => 1, 'due_at' => 1],
+            'options' => ['name' => 'idx_kind_returned_due'],
+        ],
+        [
+            // A reader's own loans, newest first (profile → Loans).
+            'key' => ['user_id' => 1, '_id' => -1],
+            'options' => ['name' => 'idx_user_newest'],
+        ],
+    ],
+    'Waitlist' => [
+        [
+            // The queue for a book, in order; also serves the scheduler's distinct book_id.
+            'key' => ['book_id' => 1, 'joined_at' => 1],
+            'options' => ['name' => 'idx_book_joined'],
+        ],
+    ],
+    'Notifications' => [
+        [
+            'key' => ['user_id' => 1, 'created_at' => -1],
+            'options' => ['name' => 'idx_user_created'],
+        ],
+        [
+            // The scheduler's queued-email pickup.
+            'key' => ['email_status' => 1, 'created_at' => 1],
+            'options' => ['name' => 'idx_email_status_created'],
+        ],
+    ],
 ];
 
 foreach ($indexPlan as $collectionName => $indexes) {
