@@ -49,9 +49,12 @@ test.describe('Admin dashboard (/admin)', () => {
     let tag: string;
     let publicId: string;
     let draftId: string;
+    // Books a test deleted itself, so cleanup doesn't fail on them.
+    let deleted: string[];
 
     test.beforeEach(async ({ request, adminCredentials }) => {
       token = await loginAsAdmin(request, adminCredentials.email, adminCredentials.password);
+      deleted = [];
       tag = uniqueBookTitle('QAFind').replace(' ', '');
       const publicTitle = `${tag} Public`;
       const draftTitle = `${tag} Draft`;
@@ -62,8 +65,9 @@ test.describe('Admin dashboard (/admin)', () => {
     });
 
     test.afterEach(async ({ request }) => {
-      await deleteBookViaApi(request, token, publicId);
-      await deleteBookViaApi(request, token, draftId);
+      for (const id of [publicId, draftId].filter((id) => !deleted.includes(id))) {
+        await deleteBookViaApi(request, token, id);
+      }
     });
 
     test('status filters and search narrow the table', async ({ adminPage }) => {
@@ -104,6 +108,25 @@ test.describe('Admin dashboard (/admin)', () => {
       await expect(dashboard.filter('All')).toHaveAttribute('aria-pressed', 'true');
       await expect(dashboard.rowById(publicId)).toBeInViewport();
       await expect(dashboard.rowById(publicId)).toHaveClass(/flash/);
+    });
+
+    test('bulk delete removes only the selected books the filters show', async ({ adminPage }) => {
+      const dashboard = new DashboardPage(adminPage);
+      await dashboard.open();
+      await dashboard.searchInput.fill(tag.toLowerCase());
+      await dashboard.filter('Drafts').click();
+      await expect(adminPage.locator('[data-testid^="book-row-"]')).toHaveCount(1);
+
+      await adminPage.getByTestId('select-all-books').check();
+      adminPage.once('dialog', (dialog) => dialog.accept());
+      await adminPage.getByTestId('bulk-delete-button').click();
+      deleted.push(draftId);
+
+      await expect(dashboard.rowById(draftId)).toHaveCount(0);
+      await expect(adminPage.getByTestId('bulk-delete-button')).toHaveCount(0);
+      // The public book matched the search but was hidden by the Drafts filter: it must survive.
+      await dashboard.filter('All').click();
+      await expect(dashboard.rowById(publicId)).toBeVisible();
     });
   });
 });

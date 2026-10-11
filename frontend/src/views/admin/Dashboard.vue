@@ -188,6 +188,51 @@ async function handleDelete(book: Book) {
   }
 }
 
+// --- Selection: only books the current filters show, so a hidden book is never deleted by accident ---
+const selected = ref<Set<string>>(new Set())
+const selectedVisible = computed(() => visibleBooks.value.filter((b) => selected.value.has(idToString(b._id))))
+const allVisibleSelected = computed(
+  () => visibleBooks.value.length > 0 && selectedVisible.value.length === visibleBooks.value.length,
+)
+const bulkDeleting = ref(false)
+
+function toggleSelected(id: string) {
+  if (!selected.value.delete(id)) selected.value.add(id)
+}
+
+function toggleSelectAll() {
+  const select = !allVisibleSelected.value
+  for (const book of visibleBooks.value) {
+    if (select) selected.value.add(idToString(book._id))
+    else selected.value.delete(idToString(book._id))
+  }
+}
+
+async function deleteSelected() {
+  const targets = selectedVisible.value
+  const n = targets.length
+  if (!n || !confirm(`Delete ${n} ${n === 1 ? 'book' : 'books'}? This action can't be undone.`)) return
+  bulkDeleting.value = true
+  const ids = targets.map((b) => idToString(b._id))
+  ids.forEach((id) => busyIds.value.add(id))
+  // One request per book through the existing endpoint; fine for the tens an admin selects at once.
+  const results = await Promise.allSettled(ids.map((id) => adminApi.deleteBook(id)))
+  const deleted = new Set(
+    ids.filter((_, i) => {
+      const result = results[i]
+      return result.status === 'fulfilled' && isApiSuccess(result.value.data)
+    }),
+  )
+  books.value = books.value.filter((b) => !deleted.has(idToString(b._id)))
+  ids.forEach((id) => {
+    busyIds.value.delete(id)
+    if (deleted.has(id)) selected.value.delete(id)
+  })
+  bulkDeleting.value = false
+  if (deleted.size) toast.success(`${deleted.size} ${deleted.size === 1 ? 'book' : 'books'} deleted.`)
+  if (deleted.size < n) toast.error(`${n - deleted.size} couldn't be deleted. They're still selected; try again.`)
+}
+
 // --- Edit modal ---
 const editing = ref<Book | null>(null)
 const editForm = reactive({
@@ -339,7 +384,19 @@ onMounted(loadBooks)
         <table class="admin-table" data-testid="books-table">
           <thead>
             <tr>
-              <th scope="col">Book</th>
+              <th scope="col">
+                <label class="select-all">
+                  <input
+                    type="checkbox"
+                    :checked="allVisibleSelected"
+                    :indeterminate="selectedVisible.length > 0 && !allVisibleSelected"
+                    aria-label="Select all shown books"
+                    data-testid="select-all-books"
+                    @change="toggleSelectAll"
+                  />
+                  Book
+                </label>
+              </th>
               <th scope="col">Status</th>
               <th scope="col"><span class="visually-hidden">Featured</span></th>
               <th scope="col" class="num">Views</th>
@@ -358,6 +415,14 @@ onMounted(loadBooks)
             >
               <td>
                 <div class="book-cell">
+                  <input
+                    type="checkbox"
+                    class="select-book"
+                    :checked="selected.has(idToString(book._id))"
+                    :aria-label="`Select ${book.title}`"
+                    :data-testid="`select-book-${idToString(book._id)}`"
+                    @change="toggleSelected(idToString(book._id))"
+                  />
                   <img
                     class="cover"
                     :src="book.thumbnail || thumbnailUrl(idToString(book._id))"
@@ -463,6 +528,20 @@ onMounted(loadBooks)
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div v-if="selectedVisible.length" class="bulk-bar" role="region" aria-label="Selected books">
+        <span class="bulk-count">{{ selectedVisible.length }} selected</span>
+        <button type="button" class="link-btn" @click="selected.clear()">Clear</button>
+        <button
+          type="button"
+          class="btn bulk-delete"
+          :disabled="bulkDeleting"
+          data-testid="bulk-delete-button"
+          @click="deleteSelected"
+        >
+          {{ bulkDeleting ? 'Deleting…' : `Delete ${selectedVisible.length} ${selectedVisible.length === 1 ? 'book' : 'books'}` }}
+        </button>
       </div>
     </template>
 
