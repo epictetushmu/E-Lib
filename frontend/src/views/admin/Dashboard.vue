@@ -9,6 +9,7 @@ import { useCategoryOptions } from '@/composables/useCategoryOptions'
 import { thumbnailUrl } from '@/api/books'
 import { onThumbnailError } from '@/utils/dom'
 import CategoryPicker from '@/components/CategoryPicker.vue'
+import { useContentSearchEnabled } from '@/composables/useContentSearchEnabled'
 
 const toast = useToast()
 
@@ -17,6 +18,7 @@ const loading = ref(true)
 const loadError = ref('')
 const busyIds = ref<Set<string>>(new Set())
 const availableCategories = useCategoryOptions()
+const contentSearchEnabled = useContentSearchEnabled()
 
 async function loadBooks() {
   loading.value = true
@@ -108,6 +110,8 @@ async function showOnShelf(id: string) {
 
 /** Content-search indexing state, shown only when it needs attention or is still in progress. */
 function indexLabel(book: Book): string {
+  // Nothing indexes books while content search is off, so "waiting" labels would never clear.
+  if (!contentSearchEnabled.value) return ''
   // The worker only extracts text from PDFs; books uploaded before file_extension existed are PDFs.
   if ((book.file_extension ?? 'pdf').toLowerCase() !== 'pdf') return 'Not searchable: only PDFs are indexed'
   switch (book.index_status) {

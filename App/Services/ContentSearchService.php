@@ -44,6 +44,16 @@ class ContentSearchService
     }
 
     /**
+     * Whether content search is switched on: the same COMPOSE_PROFILES=search in .env that starts the
+     * worker and embedder containers, so the feature and its containers can't disagree.
+     */
+    public static function enabled(): bool
+    {
+        $profiles = array_map('trim', explode(',', (string) Environment::get('COMPOSE_PROFILES', '')));
+        return in_array('search', $profiles, true);
+    }
+
+    /**
      * The Ollama model tag to embed with — also stored on every vector. Changing it makes the worker
      * re-embed every book in the background; vectors from different models never mix.
      */

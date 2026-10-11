@@ -19,6 +19,11 @@ export function searchBooks(term: string) {
   return client.get<ApiResponse<Book[]>>(`/v1/search/${encodeURIComponent(term)}`)
 }
 
+/** Optional features this server has switched on. */
+export function getFeatures() {
+  return client.get<ApiResponse<{ contentSearch: boolean }>>('/v1/features')
+}
+
 /** Search inside books: pages matching the query by words or by meaning. */
 export function contentSearch(query: string) {
   return client.get<ApiResponse<ContentSearchResult[]>>('/v1/content-search', { params: { q: query } })

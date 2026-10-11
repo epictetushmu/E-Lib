@@ -6,6 +6,7 @@ import { isApiSuccess } from '@/types/api'
 import type { Book, ContentSearchResult } from '@/types/book'
 import { idToString } from '@/types/book'
 import BookCard from '@/components/BookCard.vue'
+import { useContentSearchEnabled } from '@/composables/useContentSearchEnabled'
 
 type Mode = 'title' | 'content'
 
@@ -13,20 +14,27 @@ const route = useRoute()
 const router = useRouter()
 
 const searchTerm = ref(typeof route.query.q === 'string' ? route.query.q : '')
-const mode = computed<Mode>(() => (route.query.mode === 'content' ? 'content' : 'title'))
+const contentSearchEnabled = useContentSearchEnabled()
+// With content search switched off, an old ?mode=content link just shows title results.
+const mode = computed<Mode>(() => (contentSearchEnabled.value && route.query.mode === 'content' ? 'content' : 'title'))
 const books = ref<Book[]>([])
 const contentResults = ref<ContentSearchResult[]>([])
 const loading = ref(false)
 const error = ref('')
 const hasSearched = ref(false)
 
+/** Bumped per search; a response for anything but the latest search is dropped, so a slow earlier one can't overwrite it. */
+let latestSearch = 0
+
 async function runSearch(term: string, searchMode: Mode) {
+  const id = ++latestSearch
   const trimmed = term.trim()
   books.value = []
   contentResults.value = []
   if (!trimmed) {
     hasSearched.value = false
     error.value = ''
+    loading.value = false
     return
   }
   loading.value = true
@@ -35,17 +43,19 @@ async function runSearch(term: string, searchMode: Mode) {
   try {
     if (searchMode === 'content') {
       const { data } = await booksApi.contentSearch(trimmed)
+      if (id !== latestSearch) return
       contentResults.value = isApiSuccess(data) ? data.data : []
       if (!contentResults.value.length) error.value = `No pages found for "${trimmed}".`
     } else {
       const { data } = await booksApi.searchBooks(trimmed)
+      if (id !== latestSearch) return
       books.value = isApiSuccess(data) ? data.data : []
       if (!books.value.length) error.value = `No books found for "${trimmed}".`
     }
   } catch {
-    error.value = 'An error occurred while searching.'
+    if (id === latestSearch) error.value = 'An error occurred while searching.'
   } finally {
-    loading.value = false
+    if (id === latestSearch) loading.value = false
   }
 }
 
@@ -70,7 +80,7 @@ watch(
 <template>
   <div class="container search-page" data-testid="search-page">
     <h1>Search</h1>
-    <div class="search-modes" role="group" aria-label="What to search">
+    <div v-if="contentSearchEnabled" class="search-modes" role="group" aria-label="What to search">
       <button
         type="button"
         class="mode-btn"

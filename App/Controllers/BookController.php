@@ -216,8 +216,21 @@ class BookController
      * GET /api/v1/content-search?q=... — books whose pages match the query by words or meaning,
      * each with its best pages (page number + snippet) for deep-linking into the reader.
      */
+    /**
+     * GET /api/v1/features — optional features this deployment has switched on, so the SPA can hide
+     * what isn't available.
+     */
+    public function features(): void
+    {
+        ResponseHandler::respond(true, ['contentSearch' => ContentSearchService::enabled()]);
+    }
+
     public function contentSearch(): void
     {
+        if (!ContentSearchService::enabled()) {
+            ResponseHandler::respond(false, 'Content search is turned off on this server', 404);
+            return;
+        }
         $query = trim((string) ($_GET['q'] ?? ''));
         if ($query === '') {
             ResponseHandler::respond(true, []);

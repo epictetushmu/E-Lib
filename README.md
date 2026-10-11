@@ -332,7 +332,7 @@ on CPU; to index faster, run more workers: `docker compose up -d --scale worker=
 
 **On/off:** the two containers only run with `COMPOSE_PROFILES=search` in `.env`, then
 `docker compose up -d`. Set it on the server. Leave it empty on a laptop that can't spare ~2GB RAM: the
-app works without them, and "Inside books" falls back to keyword matches on pages already indexed.
+app reads the same setting, so with it off the "Inside books" search is hidden and everything else works.
 To turn them off again: empty the variable and `docker compose stop worker embedder`.
 
 **Local:** before turning it on, point `MONGO_URI` at the local `mongo` container (see above) — the

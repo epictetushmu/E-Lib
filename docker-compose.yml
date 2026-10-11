@@ -25,8 +25,8 @@ services:
       - elib-network
 
   # Content search ("search inside books") runs in the next two services, which only start when the
-  # "search" profile is on: COMPOSE_PROFILES=search in .env (production should set it). Off, the app
-  # still works and "Inside books" falls back to keyword matches on whatever is already indexed.
+  # "search" profile is on: COMPOSE_PROFILES=search in .env (production should set it). The app reads
+  # the same variable: off, the "Inside books" search is hidden and its API answers 404.
 
   # Content-search indexing (scripts/index-worker.php): the app image running a loop instead of Apache.
   # No container_name, so it can scale: `docker compose up -d --scale worker=4`.

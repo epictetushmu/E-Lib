@@ -70,6 +70,36 @@ class ContentSearchServiceTest extends ServiceTestCase
         return $extra + ['_id' => self::BOOK_ID, 'file_path' => self::FILE, 'status' => 'public'];
     }
 
+    // --- enabled() ---
+
+    /**
+     * @return array<string, array{string|null, bool}>
+     */
+    public static function profiles(): array
+    {
+        return [
+            'on' => ['search', true],
+            'one of several' => ['monitoring, search', true],
+            'empty' => ['', false],
+            'unset' => [null, false],
+            'other profile only' => ['monitoring', false],
+            'not a substring match' => ['searching', false],
+        ];
+    }
+
+    /**
+     * @dataProvider profiles
+     */
+    public function testEnabledFollowsTheSearchComposeProfile(?string $profiles, bool $expected): void
+    {
+        putenv($profiles === null ? 'COMPOSE_PROFILES' : "COMPOSE_PROFILES=$profiles");
+        try {
+            $this->assertSame($expected, ContentSearchService::enabled());
+        } finally {
+            putenv('COMPOSE_PROFILES');
+        }
+    }
+
     // --- fuse() ---
 
     public function testFuseRanksPagesFoundByBothSearchesFirst(): void
