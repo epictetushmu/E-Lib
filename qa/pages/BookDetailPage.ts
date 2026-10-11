@@ -16,6 +16,20 @@ export class BookDetailPage extends BasePage {
   readonly reviewComment: Locator;
   readonly submitReview: Locator;
 
+  // Lending panel (lent PDFs and physical books)
+  readonly loanPanel: Locator;
+  readonly borrowButton: Locator;
+  readonly reserveButton: Locator;
+  readonly readLoanButton: Locator;
+  readonly renewButton: Locator;
+  readonly returnButton: Locator;
+  readonly startReadingButton: Locator;
+  readonly cancelReservationButton: Locator;
+  readonly joinWaitlistButton: Locator;
+  readonly leaveWaitlistButton: Locator;
+  readonly checkoutEmail: Locator;
+  readonly checkoutButton: Locator;
+
   constructor(page: Page) {
     super(page);
     this.header = new HeaderComponent(page);
@@ -30,6 +44,33 @@ export class BookDetailPage extends BasePage {
     this.reviewComment = this.reviewForm.getByLabel('Comment');
     // 'Submit Review' for a new review, 'Update Review' when editing the user's existing one.
     this.submitReview = this.reviewForm.getByRole('button', { name: /^(Submit|Update) Review$/ });
+
+    this.loanPanel = page.getByTestId('loan-panel');
+    this.borrowButton = page.getByTestId('borrow-button');
+    this.reserveButton = page.getByTestId('reserve-button');
+    this.readLoanButton = page.getByTestId('read-loan-button');
+    this.renewButton = page.getByTestId('renew-button');
+    this.returnButton = page.getByTestId('return-button');
+    this.startReadingButton = page.getByTestId('start-reading-button');
+    this.cancelReservationButton = page.getByTestId('cancel-reservation-button');
+    this.joinWaitlistButton = page.getByTestId('join-waitlist-button');
+    this.leaveWaitlistButton = page.getByTestId('leave-waitlist-button');
+    this.checkoutEmail = page.getByTestId('checkout-email');
+    this.checkoutButton = page.getByTestId('checkout-form').getByRole('button', { name: 'Check out' });
+  }
+
+  /**
+   * The loan panel's headline for where the viewer stands with the book:
+   * 'open' (copies free), 'full' (all out), 'queued' (on the waitlist), 'held' (a copy kept for them),
+   * 'out' (they have it) or 'reference' (physical, not lendable).
+   */
+  loanState(state: 'open' | 'full' | 'queued' | 'held' | 'out' | 'reference'): Locator {
+    return this.page.getByTestId(`loan-state-${state}`);
+  }
+
+  /** A physical book's call number, drawn as a spine label. */
+  spineLabel(callNumber: string): Locator {
+    return this.page.getByLabel(`Shelf ${callNumber}`);
   }
 
   /** Picks 1–5 stars and submits (or, if the user already reviewed the book, updates) a review with the given comment. */

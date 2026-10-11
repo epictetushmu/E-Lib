@@ -12,11 +12,13 @@ consumes it via environment variables. See "Admin-gated tests" below.
 ```
 qa/
   tests/            # *.spec.ts files, grouped by feature (auth/, books/, profile/, navigation/,
-                     # reader/ — search, navigation, highlights & notes, rich notes, diagrams)
+                     # reader/ — search, navigation, highlights & notes, rich notes, diagrams;
+                     # lending/ — lent PDFs, physical books, waitlist, renewals, admin Loans page)
   pages/            # Page Objects — one class per page/component, DOM details live here only
   fixtures/         # Custom Playwright fixtures (registeredUser, adminCredentials,
                      # authenticatedPage, adminPage, seededBook, readerBook, reader,
-                     # otherReader) — test setup/teardown
+                     # otherReader, borrower, secondBorrower, lentBook, physicalBook)
+                     # — test setup/teardown
   support/          # testData.ts (unique data generators), api.ts (thin wrappers around
                      # the app's real HTTP endpoints for setup/teardown), samplePdf.ts
                      # (generates dummy PDFs in memory — no binary fixture is

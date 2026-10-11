@@ -139,7 +139,7 @@ onMounted(load)
             </tr>
           </thead>
           <tbody>
-            <tr v-for="l in shown" :key="l.id">
+            <tr v-for="l in shown" :key="l.id" data-testid="loan-row">
               <td>
                 <RouterLink v-if="l.book_title" :to="`/books/${l.book_id}`">{{ l.book_title }}</RouterLink>
                 <span v-else class="text-muted">Deleted book</span>

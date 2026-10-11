@@ -231,3 +231,81 @@ export async function getBookViaApi(
   }
   return ((await response.json()) as { data: { title: string; average_rating?: number; review_count?: number } }).data;
 }
+
+// --- Lending (borrowable PDFs, physical books, loans) ---
+
+/** PUT /api/v1/books/:id — lend a book with a copy limit (0 = open access / reference only). */
+export async function setLending(
+  request: APIRequestContext,
+  adminToken: string,
+  id: string,
+  lending: { loan_copies: number; loan_days?: number },
+): Promise<void> {
+  const response = await request.put(`/api/v1/books/${id}`, {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    data: lending,
+  });
+  if (!response.ok()) {
+    throw new Error(`setLending failed: ${response.status()} ${await response.text()}`);
+  }
+}
+
+/** POST /api/v1/books/physical — the endpoint behind the dashboard's "Add physical book" form. */
+export async function createPhysicalBookViaApi(
+  request: APIRequestContext,
+  adminToken: string,
+  input: { title: string; copies: number; shelf?: string },
+): Promise<string> {
+  const response = await request.post('/api/v1/books/physical', {
+    headers: { Authorization: `Bearer ${adminToken}` },
+    data: {
+      title: input.title,
+      author: 'QA Test Author',
+      status: 'public',
+      loan_copies: input.copies,
+      loan_days: 14,
+      shelf_location: input.shelf ?? 'QA76.9 .E2E',
+      categories: [],
+    },
+  });
+  const body = (await response.json()) as CreateBookResponse;
+  if (!response.ok() || !body.data?.insertedId) {
+    throw new Error(`createPhysicalBookViaApi failed: ${response.status()} ${JSON.stringify(body)}`);
+  }
+  return body.data.insertedId;
+}
+
+/** What GET /api/v1/books/:id says about lending, as the caller (anonymous without a token). */
+export interface LoanStatus {
+  copies: number;
+  available: number;
+  waiting: number;
+  position: number | null;
+  due_at: string | null;
+  pickup_by: string | null;
+  renewals_left: number | null;
+}
+
+export async function getLoanStatus(request: APIRequestContext, id: string, token?: string): Promise<LoanStatus | null> {
+  const response = await request.get(`/api/v1/books/${id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!response.ok()) {
+    throw new Error(`getLoanStatus failed: ${response.status()} ${await response.text()}`);
+  }
+  return ((await response.json()) as { data: { loan?: LoanStatus } }).data.loan ?? null;
+}
+
+/** POST /api/v1/books/:id/borrow as the given user — a PDF loan, or a physical reservation. */
+export async function borrowViaApi(request: APIRequestContext, token: string, id: string): Promise<number> {
+  const response = await request.post(`/api/v1/books/${id}/borrow`, { headers: { Authorization: `Bearer ${token}` } });
+  return response.status();
+}
+
+/** Status code of the reader's PDF source, /api/v1/books/:id/file, for the given user (anonymous without a token). */
+export async function fileStatus(request: APIRequestContext, id: string, token?: string): Promise<number> {
+  const response = await request.get(`/api/v1/books/${id}/file`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  return response.status();
+}

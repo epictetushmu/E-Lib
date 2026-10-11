@@ -1,11 +1,13 @@
 import { test as base, expect, type APIRequestContext, type Browser, type Page, type PlaywrightWorkerArgs } from '@playwright/test';
 import {
   createBookViaApi,
+  createPhysicalBookViaApi,
   deleteAllAnnotations,
   deleteBookViaApi,
   loginAsAdmin,
   loginViaApi,
   setBookVisibility,
+  setLending,
 } from '../support/api';
 import { requireEnv } from '../support/env';
 import { buildReaderPdf, buildSamplePdf } from '../support/samplePdf';
@@ -80,6 +82,35 @@ interface Fixtures {
   readerBook: { id: string; title: string };
   reader: ReaderSession;
   otherReader: ReaderSession;
+  borrower: ReaderSession;
+  secondBorrower: ReaderSession;
+  lentBook: { id: string; title: string };
+  physicalBook: { id: string; title: string };
+}
+
+/**
+ * A freshly signed-up, logged-in reader in their own browser context, for the lending specs.
+ * Unlike readerFixture there's nothing to clean up per user: their loans go with the book fixture
+ * (deleting a book deletes its loans and waitlist).
+ */
+function borrowerFixture(prefix: string) {
+  return async (
+    { browser, playwright, baseURL }: { browser: Browser; playwright: PlaywrightWorkerArgs['playwright']; baseURL: string | undefined },
+    use: (session: ReaderSession) => Promise<void>,
+  ): Promise<void> => {
+    const user = buildTestUser(prefix);
+    const api = await playwright.request.newContext({ baseURL });
+    await registerViaApi(api, user);
+    const context = await browser.newContext({ baseURL });
+    const page = await context.newPage();
+    await loginViaUi(page, user);
+    const { token } = await loginViaApi(api, user.email, user.password);
+
+    await use({ page, user, api, token });
+
+    await context.close();
+    await api.dispose();
+  };
 }
 
 /**
@@ -186,6 +217,34 @@ export const test = base.extend<Fixtures>({
   },
 
   reader: readerFixture('qa_reader'),
+
+  borrower: borrowerFixture('qa_borrower'),
+  secondBorrower: borrowerFixture('qa_waiting'),
+
+  // A public PDF lent with ONE copy, so a second reader always finds it taken. Built from the
+  // reader PDF so ReaderPage.open() recognises it.
+  lentBook: async ({ request, adminCredentials }, use) => {
+    const token = await loginAsAdmin(request, adminCredentials.email, adminCredentials.password);
+    const title = uniqueBookTitle('QA Lent Book');
+    const id = await createBookViaApi(request, token, { title, pdf: buildReaderPdf() });
+    await setBookVisibility(request, token, id, { status: 'public' });
+    await setLending(request, token, id, { loan_copies: 1, loan_days: 14 });
+
+    await use({ id, title });
+
+    await deleteBookViaApi(request, token, id);
+  },
+
+  // A public physical book (no PDF) with ONE copy on the shelf.
+  physicalBook: async ({ request, adminCredentials }, use) => {
+    const token = await loginAsAdmin(request, adminCredentials.email, adminCredentials.password);
+    const title = uniqueBookTitle('QA Shelf Book');
+    const id = await createPhysicalBookViaApi(request, token, { title, copies: 1 });
+
+    await use({ id, title });
+
+    await deleteBookViaApi(request, token, id);
+  },
 
   // A second, unrelated reader of the same book — for privacy checks.
   otherReader: readerFixture('qa_other'),

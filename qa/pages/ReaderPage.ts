@@ -31,6 +31,8 @@ export class ReaderPage extends BasePage {
   readonly selectionPopover: Locator;
   readonly highlightPopover: Locator;
   readonly footer: Locator;
+  readonly printButton: Locator;
+  readonly errorMessage: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -55,6 +57,8 @@ export class ReaderPage extends BasePage {
     this.selectionPopover = page.getByRole('dialog', { name: 'Highlight selection' });
     this.highlightPopover = page.getByRole('dialog', { name: 'Edit highlight' });
     this.footer = page.locator('footer.site-footer');
+    this.printButton = page.getByRole('button', { name: 'Print' });
+    this.errorMessage = page.locator('.reader-error');
   }
 
   /** Opens the book and waits until the first page's text layer exists (the reader is ready). */

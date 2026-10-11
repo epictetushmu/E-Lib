@@ -13,6 +13,10 @@ export class ProfilePage extends BasePage {
   readonly emailText: Locator;
   readonly accountTab: Locator;
   readonly downloadedTab: Locator;
+  readonly loansTab: Locator;
+  readonly notificationsTab: Locator;
+  readonly loanItems: Locator;
+  readonly notificationItems: Locator;
 
   readonly usernameInput: Locator;
   readonly saveUsernameButton: Locator;
@@ -31,6 +35,10 @@ export class ProfilePage extends BasePage {
     this.emailText = page.getByTestId('profile-email');
     this.accountTab = page.getByTestId('profile-tab-account');
     this.downloadedTab = page.getByTestId('profile-tab-downloaded');
+    this.loansTab = page.getByTestId('profile-tab-loans');
+    this.notificationsTab = page.getByTestId('profile-tab-notifications');
+    this.loanItems = page.getByTestId('my-loans').getByRole('listitem');
+    this.notificationItems = page.getByTestId('notifications').getByRole('listitem');
 
     this.usernameInput = page.getByTestId('profile-username-input');
     this.saveUsernameButton = page.getByTestId('profile-save-username');
