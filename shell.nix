@@ -34,12 +34,10 @@ pkgs.mkShell {
     php
     php.packages.composer
 
-    # Document/thumbnail pipeline (App/Helpers/FileHelper.php, Docs component):
-    # pdftoppm (poppler) for PDF thumbnails, ImageMagick for image/PDF
-    # processing, LibreOffice for office-doc conversion — mirrors Dockerfile.
+    # PDF pipeline (App/Helpers/FileHelper.php): poppler for thumbnails and
+    # text extraction, ImageMagick for image/PDF processing — mirrors Dockerfile.
     poppler-utils
     imagemagick
-    libreoffice
 
     # General tooling used by the app/build (matches Dockerfile & README)
     git

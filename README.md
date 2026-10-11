@@ -327,7 +327,7 @@ worker and the model never start:
 COMPOSE_PROFILES=search
 ```
 
-Server sizing: ~4GB RAM total (app + LibreOffice + embedder). Indexing a 300-page book takes a few minutes
+Server sizing: ~4GB RAM total (app + embedder). Indexing a 300-page book takes a few minutes
 on CPU; to index faster, run more workers: `docker compose up -d --scale worker=3`.
 
 **On/off:** the two containers only run with `COMPOSE_PROFILES=search` in `.env`, then

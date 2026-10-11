@@ -15,7 +15,6 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     imagemagick \
     poppler-utils \
-    default-jre \
     fonts-liberation \
     fontconfig \
     nodejs \
@@ -30,11 +29,8 @@ RUN docker-php-ext-install gd
 # OpenSSL is already built into PHP, just verify it's enabled
 RUN php -r 'if(!extension_loaded("openssl")) exit(1);'
 
-# Install LibreOffice with Java support and ImageMagick with Imagick PHP extension
+# Install the Imagick PHP extension
 RUN apt-get update && apt-get install -y \
-    libreoffice \
-    libreoffice-java-common \
-    imagemagick \
     libmagickwand-dev --no-install-recommends \
     && pecl install imagick \
     && docker-php-ext-enable imagick
@@ -94,7 +90,7 @@ RUN mkdir -p /var/www/html/storage/logs \
     /var/www/html/public/assets/uploads/documents \
     /var/www/html/public/assets/uploads/thumbnails \
     /var/www/html/cache \
-    # Create LibreOffice user profile with proper permissions
+    # Writable HOME config/cache (fontconfig etc.)
     /var/www/.config \
     /var/www/.cache \
     # Set proper permissions
@@ -121,7 +117,7 @@ RUN composer dump-autoload --optimize --no-dev
 # Environment variable indicating we're in Docker
 ENV DOCKER_ENV=true
 
-# Set HOME for LibreOffice user profile
+# Writable HOME for www-data (see the .config/.cache dirs above)
 ENV HOME=/var/www
 
 # Set proper permissions

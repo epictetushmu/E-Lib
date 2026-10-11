@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-E-Lib is a PHP 8.2 digital library management app (Hellenic Mediterranean University) built on a **custom MVC framework** (no Laravel/Symfony) with MongoDB as the sole datastore. It handles book uploads (PDF/EPUB/Word/PowerPoint/MOBI/AZW/DJVU), thumbnail generation, an in-browser PDF reader, JWT + session + CAS authentication, reviews, and an admin panel.
+E-Lib is a PHP 8.2 digital library management app (Hellenic Mediterranean University) built on a **custom MVC framework** (no Laravel/Symfony) with MongoDB as the sole datastore. It handles PDF book uploads, thumbnail generation, an in-browser PDF reader, JWT + session + CAS authentication, reviews, and an admin panel.
 
 ## Commands
 
@@ -36,7 +36,7 @@ npm run lint:fix                       # ESLint autofix
 
 `composer run check` runs the PHPUnit suite (`tests/Unit/`, mocked collaborators via `tests/Support/*TestCase.php` — no real MongoDB needed). `tests/verify_refactoring.php` and `tests/verify_pdf_restriction.php` are separate standalone scripts run directly with `php tests/<file>.php`; the refactoring one talks to a real MongoDB and inserts/deletes throwaway documents, so only run it against a dev database.
 
-Nix users: `shell.nix` provides a PHP 8.2 environment with the exact extensions the app needs (mongodb, imagick, gd, etc.) plus poppler-utils/imagemagick/libreoffice for the thumbnail pipeline — no local MongoDB is included, the shell expects `MONGO_URI` to point at Atlas.
+Nix users: `shell.nix` provides a PHP 8.2 environment with the exact extensions the app needs (mongodb, imagick, gd, etc.) plus poppler-utils/imagemagick for the thumbnail pipeline — no local MongoDB is included, the shell expects `MONGO_URI` to point at Atlas.
 
 ## Architecture
 
@@ -61,7 +61,7 @@ Models (`App/Models`) extend `BaseModel`, which pulls the shared `DatabaseInterf
 Two mechanisms coexist: JWT bearer tokens (`JwtHelper`, checked by `JwtAuthMiddleware`) for all API auth (`UserController::handleLogin`'s JWT payload carries `user_id`/`email`/`isAdmin`), and CAS SSO (`CasService`) for university login, bridged into that same JWT shape. `PageRouter` special-cases `/cas-login`: it validates the ticket via `CasService::authenticateAndIssueToken()` (which resolves the CAS username to a local user — see the `CAS_EMAIL_DOMAIN`-gated pending-decision comment in `CasService::resolveLocalUser()`, since HMU's exact CAS response shape isn't confirmed yet) and redirects to `APP_URL/auth/callback#token=...` — a URL fragment, so the token is never sent to/logged by the server; `AuthCallback.vue` reads `location.hash` client-side. `JWT_SECRET_KEY` falls back to a hardcoded dev-only string in `App/bootstrap.php` if unset — this must be set in production `.env`.
 
 ### File handling
-`App/Helpers/FileHelper.php` validates and stores uploaded documents (extension allowlist, not MIME-only) and drives thumbnail generation via ImageMagick (`pdftoppm`/`convert`) and LibreOffice (for Office format conversion) — see `MongoSchematics.png` and `docs/architecture/` for the data-model/refactor background.
+`App/Helpers/FileHelper.php` validates and stores uploaded PDFs (extension allowlist — PDF only, not MIME-only) and drives thumbnail generation via Imagick, falling back to `pdftoppm` — see `MongoSchematics.png` and `docs/architecture/` for the data-model/refactor background.
 
 ### Catalog search
 `GET /api/v1/catalog` (`BookService::catalog` → `Books::catalog`) backs the search page's "Catalog" mode: title-or-author substring match (escaped, not regex) plus subject/author/format filters and a published-year range, one `$facet` aggregation returning a page of books, per-filter counts and the year span (range placeholders). Each facet is counted with every filter except its own, so options show what picking them gives. Filters live in the URL (`?category=a&category=b&year_from=2005`). Plain MongoDB (works on CI's 4.4 — keep it that way, e.g. no 3-argument `$ifNull`).

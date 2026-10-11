@@ -66,7 +66,7 @@ onUnmounted(() => {
         <p class="hero-attribution">Epictetus, Discourses</p>
         <div class="meander meander--on-dark hero-rule"></div>
         <p class="tagline">
-          Search, read and annotate the university's digital collection — PDFs, EPUBs and more, straight in your browser.
+          Search, read and annotate the university's digital collection — straight in your browser.
         </p>
         <div class="hero-actions">
           <a href="#featured" class="btn btn-primary">Browse the collection</a>
