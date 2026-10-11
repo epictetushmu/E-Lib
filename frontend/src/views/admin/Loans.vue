@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import * as adminApi from '@/api/admin'
-import { LOAN_STATUS_LABELS, type LoanRecord } from '@/types/book'
+import type { LoanRecord } from '@/types/book'
+import LoanStatus from '@/components/LoanStatus.vue'
+import { shortDate } from '@/utils/date'
 import { isApiSuccess, apiErrorMessage, requestErrorMessage, type ApiError } from '@/types/api'
 import { useToast } from '@/composables/useToast'
 
@@ -42,9 +44,7 @@ const shown = computed(() => {
   )
 })
 
-function date(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleDateString() : '—'
-}
+const date = (iso: string | null) => shortDate(iso) || '—'
 
 async function load() {
   try {
@@ -128,7 +128,7 @@ onMounted(load)
         <table class="admin-table" data-testid="loans-table">
           <thead>
             <tr>
-              <th>Book</th>
+              <th class="col-book">Book</th>
               <th>Reader</th>
               <th>Reserved</th>
               <th>Borrowed</th>
@@ -143,28 +143,34 @@ onMounted(load)
               <td>
                 <RouterLink v-if="l.book_title" :to="`/books/${l.book_id}`">{{ l.book_title }}</RouterLink>
                 <span v-else class="text-muted">Deleted book</span>
-                <div class="text-muted">
-                  {{ l.kind === 'physical' ? 'Physical' : 'PDF' }}<template v-if="l.shelf_location">
-                    · {{ l.shelf_location }}</template
+                <div class="text-muted sub">
+                  {{ l.kind === 'physical' ? 'Physical' : 'PDF' }}<span v-if="l.shelf_location" class="callno">
+                    {{ l.shelf_location }}</span
                   >
                 </div>
               </td>
-              <td>
+              <td class="reader-cell">
                 {{ l.username ?? 'Deleted user' }}
-                <div v-if="l.email" class="text-muted">{{ l.email }}</div>
+                <div v-if="l.email" class="text-muted sub">{{ l.email }}</div>
               </td>
-              <td>
+              <td data-label="Reserved" :class="{ empty: !l.reserved_at }">
                 {{ date(l.reserved_at) }}
-                <div v-if="l.status === 'reserved'" class="text-muted">pick up by {{ date(l.pickup_by) }}</div>
+                <div v-if="l.status === 'reserved'" class="text-muted sub">until {{ date(l.pickup_by) }}</div>
               </td>
-              <td>{{ date(l.borrowed_at) }}</td>
-              <td>
+              <td data-label="Borrowed" :class="{ empty: !l.borrowed_at }">{{ date(l.borrowed_at) }}</td>
+              <td data-label="Due" :class="{ empty: !l.due_at }">
                 {{ date(l.due_at) }}
-                <div v-if="l.renewals" class="text-muted">renewed {{ l.renewals }}×</div>
+                <div v-if="l.renewals" class="text-muted sub">renewed {{ l.renewals }}×</div>
               </td>
-              <td>{{ date(l.returned_at ?? l.cancelled_at) }}</td>
-              <td :class="{ 'status-overdue': l.status === 'overdue' }">{{ LOAN_STATUS_LABELS[l.status] }}</td>
-              <td class="row-actions">
+              <td
+                :data-label="l.cancelled_at ? 'Cancelled' : 'Returned'"
+                :class="{ empty: !(l.returned_at ?? l.cancelled_at) }"
+              >
+                {{ date(l.returned_at ?? l.cancelled_at) }}
+              </td>
+              <td class="status-cell"><LoanStatus :status="l.status" /></td>
+              <td>
+                <div class="row-actions">
                 <template v-if="l.status === 'reserved' && l.kind === 'physical'">
                   <button type="button" class="link-btn" :disabled="busy === l.id || !l.email" @click="act(l, 'pickup')">
                     Picked up
@@ -185,6 +191,7 @@ onMounted(load)
                     Renew
                   </button>
                 </template>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -196,12 +203,61 @@ onMounted(load)
 
 <style scoped src="@/css/views/admin/Dashboard.css"></style>
 <style scoped>
-.status-overdue {
-  color: var(--color-danger, #b3261e);
-  font-weight: 600;
+.col-book {
+  min-width: 15rem;
+}
+
+.admin-table td {
+  white-space: nowrap;
+}
+
+.admin-table td:first-child {
+  white-space: normal;
+}
+
+.sub {
+  font-size: 0.82rem;
+}
+
+.callno::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 0.8em;
+  margin: 0 0.4rem 0 0.45rem;
+  background: var(--color-accent);
+  vertical-align: -0.05em;
+}
+
+/* Phones: Dashboard.css stacks each row; give the dates their names and drop the empty ones. */
+@media (max-width: 760px) {
+  .admin-table tbody tr:not(.no-match) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reader-cell {
+    grid-column: 1 / -1;
+  }
+
+  td.empty {
+    display: none;
+  }
+
+  td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  .row-actions {
+    justify-content: flex-start;
+  }
 }
 
 .row-actions {
-  white-space: nowrap;
+  display: flex;
+  gap: 0.9rem;
+  justify-content: flex-end;
 }
 </style>

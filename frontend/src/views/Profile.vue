@@ -4,7 +4,9 @@ import * as usersApi from '@/api/users'
 import * as booksApi from '@/api/books'
 import { isApiSuccess, apiErrorMessage, requestErrorMessage, type ApiError } from '@/types/api'
 import type { Book } from '@/types/book'
-import { idToString, LOAN_STATUS_LABELS, type LoanRecord } from '@/types/book'
+import { idToString, type LoanRecord } from '@/types/book'
+import LoanStatus from '@/components/LoanStatus.vue'
+import { shortDate, shortDateTime } from '@/utils/date'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import BookCard from '@/components/BookCard.vue'
@@ -108,7 +110,6 @@ async function loadDownloaded() {
 const loans = ref<LoanRecord[] | null>(null)
 const notifications = ref<usersApi.UserNotification[]>([])
 const unread = computed(() => notifications.value.filter((n) => !n.read).length)
-const shortDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : '')
 
 async function loadLoans() {
   try {
@@ -314,22 +315,31 @@ onMounted(() => {
       </div>
       <ul v-else class="loan-list" data-testid="my-loans">
         <li v-for="l in loans" :key="l.id" class="card loan-item">
-          <div>
-            <RouterLink v-if="l.book_title" :to="`/books/${l.book_id}`">{{ l.book_title }}</RouterLink>
-            <span v-else class="text-muted">Deleted book</span>
-            <span class="text-muted"> · {{ l.kind === 'physical' ? 'Physical' : 'PDF' }}</span>
+          <div class="loan-main">
+            <RouterLink v-if="l.book_title" :to="`/books/${l.book_id}`" class="loan-title">{{ l.book_title }}</RouterLink>
+            <span v-else class="loan-title text-muted">Deleted book</span>
+            <span class="loan-when">
+              <template v-if="l.status === 'reserved'">
+                {{ l.kind === 'physical' ? 'Pick it up at the library desk' : 'Start reading' }} by {{ shortDate(l.pickup_by) }}
+              </template>
+              <template v-else-if="l.status === 'out' || l.status === 'active'">Due {{ shortDate(l.due_at) }}</template>
+              <template v-else-if="l.status === 'overdue'">Was due {{ shortDate(l.due_at) }}. Please return it.</template>
+              <template v-else-if="l.returned_at">Returned {{ shortDate(l.returned_at) }}</template>
+              <template v-else>{{ shortDate(l.borrowed_at ?? l.reserved_at) }}</template>
+              · {{ l.kind === 'physical' ? 'Physical book' : 'PDF' }}
+            </span>
           </div>
-          <div class="text-muted small">
-            <template v-if="l.status === 'reserved'">Pick up at the library desk by {{ shortDate(l.pickup_by) }}</template>
-            <template v-else-if="l.status === 'out' || l.status === 'active'">
-              Due {{ shortDate(l.due_at) }}
-              <button v-if="l.renewals < 2" type="button" class="link-btn" @click="renewLoan(l)">Renew</button>
-            </template>
-            <template v-else-if="l.status === 'overdue'">Was due {{ shortDate(l.due_at) }}: please return it</template>
-            <template v-else-if="l.returned_at">Returned {{ shortDate(l.returned_at) }}</template>
-            <template v-else>{{ shortDate(l.borrowed_at ?? l.reserved_at) }}</template>
+          <div class="loan-side">
+            <button
+              v-if="(l.status === 'out' || l.status === 'active') && l.renewals < 2"
+              type="button"
+              class="btn btn-outline btn-sm"
+              @click="renewLoan(l)"
+            >
+              Renew
+            </button>
+            <LoanStatus :status="l.status" />
           </div>
-          <span class="loan-status" :class="`loan-status-${l.status}`">{{ LOAN_STATUS_LABELS[l.status] }}</span>
         </li>
       </ul>
     </section>
@@ -340,11 +350,13 @@ onMounted(() => {
       </div>
       <ul v-else class="loan-list" data-testid="notifications">
         <li v-for="n in notifications" :key="n.id" class="card loan-item" :class="{ unread: !n.read }">
-          <div>
-            <RouterLink v-if="n.book_id" :to="`/books/${n.book_id}`">{{ n.message }}</RouterLink>
-            <template v-else>{{ n.message }}</template>
+          <div class="loan-main">
+            <span>{{ n.message }}</span>
+            <span class="loan-when">{{ shortDateTime(n.created_at) }}</span>
           </div>
-          <div class="text-muted small">{{ n.created_at ? new Date(n.created_at).toLocaleString() : '' }}</div>
+          <div class="loan-side">
+            <RouterLink v-if="n.book_id" :to="`/books/${n.book_id}`" class="link-btn">Open book</RouterLink>
+          </div>
         </li>
       </ul>
     </section>

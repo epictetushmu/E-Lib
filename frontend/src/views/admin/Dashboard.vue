@@ -693,7 +693,7 @@ onMounted(loadBooks)
           <div class="modal-actions">
             <button type="button" class="btn btn-outline" @click="closeEdit">Cancel</button>
             <button type="submit" class="btn btn-primary" :disabled="editSaving" data-testid="edit-save-button">
-              {{ editSaving ? 'Saving…' : 'Save Changes' }}
+              {{ editSaving ? 'Saving…' : isNewPhysical ? 'Add book' : 'Save Changes' }}
             </button>
           </div>
         </form>

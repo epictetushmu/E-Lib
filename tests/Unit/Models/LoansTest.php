@@ -54,7 +54,7 @@ class LoansTest extends ModelTestCase
     public function testExistingLoanIsReturnedWithoutTakingAnotherCopy(): void
     {
         $db = $this->createMock(DatabaseInterface::class);
-        $db->method('findOne')->willReturn(['_id' => self::BOOK . ':0', 'user_id' => self::USER]);
+        $db->method('findOne')->willReturn(['_id' => self::BOOK . ':0', 'user_id' => self::USER, 'due_at' => new UTCDateTime()]);
         $db->expects($this->never())->method('findOneAndUpdate');
 
         $this->assertSame(self::BOOK . ':0', $this->makeLoans($db)->borrow(self::BOOK, self::USER, 2, 14)['_id']);
@@ -98,5 +98,67 @@ class LoansTest extends ModelTestCase
         $db->expects($this->never())->method('update');
 
         $this->assertNull($this->makeLoans($db)->checkOut(self::BOOK, self::USER, 2, 14));
+    }
+
+    public function testBorrowStartsTheLoanOnACopyHeldForTheReader(): void
+    {
+        $db = $this->createMock(DatabaseInterface::class);
+        $db->method('findOne')->willReturnOnConsecutiveCalls(
+            ['_id' => self::BOOK . ':0', 'due_at' => null, 'history_id' => '0123456789abcdef01234567'],
+            ['_id' => '0123456789abcdef01234567'],
+            ['_id' => self::BOOK . ':0', 'due_at' => new UTCDateTime()]
+        );
+        $db->expects($this->never())->method('findOneAndUpdate');
+        $sets = [];
+        $db->method('update')->willReturnCallback(function (string $c, array $f, array $u) use (&$sets) {
+            $sets[$c] = $u['$set'];
+            return [];
+        });
+
+        $this->makeLoans($db)->borrow(self::BOOK, self::USER, 1, 14);
+
+        $this->assertEquals($sets['Loans']['due_at'], $sets['Loans']['free_at'], 'a PDF loan frees the copy at its due date');
+        $this->assertArrayHasKey('borrowed_at', $sets['LoanHistory']);
+    }
+
+    /**
+     * @param array<string, mixed> $history
+     */
+    private function renewDb(int $dueOffsetSeconds, array $history): DatabaseInterface
+    {
+        $historyId = '0123456789abcdef01234567';
+        $db = $this->createMock(DatabaseInterface::class);
+        $db->method('findOne')->willReturnOnConsecutiveCalls(
+            ['_id' => self::BOOK . ':0', 'due_at' => new UTCDateTime((time() + $dueOffsetSeconds) * 1000), 'history_id' => $historyId],
+            ['_id' => new \MongoDB\BSON\ObjectId($historyId)] + $history,
+            ['_id' => $historyId, 'due_at' => new UTCDateTime()]
+        );
+        return $db;
+    }
+
+    public function testRenewStopsAfterTheLimit(): void
+    {
+        $db = $this->renewDb(86400, ['kind' => 'physical', 'renewals' => Loans::MAX_RENEWALS]);
+        $db->expects($this->never())->method('update');
+
+        $this->assertIsString($this->makeLoans($db)->renew(self::BOOK, self::USER, 14, false));
+    }
+
+    public function testOverdueLoansRenewOnlyAtTheDesk(): void
+    {
+        $reader = $this->renewDb(-86400, ['kind' => 'physical', 'renewals' => 0]);
+        $reader->expects($this->never())->method('update');
+        $this->assertIsString($this->makeLoans($reader)->renew(self::BOOK, self::USER, 14, false));
+
+        $desk = $this->renewDb(-86400, ['kind' => 'physical', 'renewals' => 0]);
+        $updates = [];
+        $desk->method('update')->willReturnCallback(function (string $c, array $f, array $u) use (&$updates) {
+            $updates[$c] = $u;
+            return [];
+        });
+        $this->assertIsArray($this->makeLoans($desk)->renew(self::BOOK, self::USER, 14, true));
+        $this->assertArrayNotHasKey('free_at', $updates['Loans']['$set'], 'a physical copy stays held until check-in');
+        $this->assertSame(['renewals' => 1], $updates['LoanHistory']['$inc']);
+        $this->assertNull($updates['LoanHistory']['$set']['overdue_notified_at'], 'a new due date can go overdue again');
     }
 }
