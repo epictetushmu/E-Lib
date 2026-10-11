@@ -21,6 +21,12 @@ services:
     depends_on:
       - mongo
 
+  scheduler:
+    environment:
+      - APP_ENV=development
+    volumes:
+      - .:/var/www/html
+
   # Content search (COMPOSE_PROFILES=search in .env): the worker writes BookChunks + index_* fields
   # into whatever MONGO_URI points at — point it at the local `mongo` below, not the real Atlas
   # cluster — and the embedder downloads a 1.2GB model on first start and needs ~2GB RAM.

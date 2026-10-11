@@ -77,6 +77,8 @@ $router->addMiddleware(new JwtAuthMiddleware([
     ['path' => '/api/v1/annotations', 'method' => 'DELETE'],
     ['path' => '/api/v1/admin/logs', 'method' => 'GET'],
     ['path' => '/api/v1/admin/loans', 'method' => 'GET'],
+    ['path' => '/api/v1/admin/loans', 'method' => 'POST'],
+    ['path' => '/api/v1/user/notifications/read', 'method' => 'POST'],
     ['path' => '/api/v1/admin/metadata-lookup', 'method' => 'GET'],
     ['path' => '/api/v1/update-profile', 'method' => 'POST'],
     ['path' => '/api/v1/change-password', 'method' => 'POST'],

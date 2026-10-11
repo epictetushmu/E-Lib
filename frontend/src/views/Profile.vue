@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import * as usersApi from '@/api/users'
 import { isApiSuccess, apiErrorMessage, requestErrorMessage, type ApiError } from '@/types/api'
 import type { Book } from '@/types/book'
-import { idToString } from '@/types/book'
+import { idToString, LOAN_STATUS_LABELS, type LoanRecord } from '@/types/book'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from '@/composables/useToast'
 import BookCard from '@/components/BookCard.vue'
@@ -11,7 +11,7 @@ import BookCard from '@/components/BookCard.vue'
 const auth = useAuthStore()
 const toast = useToast()
 
-type Tab = 'saved' | 'downloaded' | 'account'
+type Tab = 'saved' | 'loans' | 'notifications' | 'downloaded' | 'account'
 const activeTab = ref<Tab>('saved')
 
 const profileLoading = ref(true)
@@ -104,10 +104,39 @@ async function loadDownloaded() {
   }
 }
 
+const loans = ref<LoanRecord[] | null>(null)
+const notifications = ref<usersApi.UserNotification[]>([])
+const unread = computed(() => notifications.value.filter((n) => !n.read).length)
+const shortDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString() : '')
+
+async function loadLoans() {
+  try {
+    const { data: body } = await usersApi.getMyLoans()
+    loans.value = isApiSuccess(body) ? body.data : []
+  } catch {
+    loans.value = []
+  }
+}
+
+async function loadNotifications() {
+  try {
+    const { data: body } = await usersApi.getNotifications()
+    if (isApiSuccess(body)) notifications.value = body.data
+  } catch {
+    // The badge is a convenience; the tab retries when opened.
+  }
+}
+
 function selectTab(tab: Tab) {
   activeTab.value = tab
   if (tab === 'downloaded') {
     loadDownloaded()
+  } else if (tab === 'loans') {
+    loadLoans()
+  } else if (tab === 'notifications') {
+    loadNotifications().then(() => {
+      if (unread.value) usersApi.markNotificationsRead().catch(() => {})
+    })
   }
 }
 
@@ -192,6 +221,7 @@ async function submitPasswordChange() {
 onMounted(() => {
   loadProfile()
   loadSaved()
+  loadNotifications()
 })
 </script>
 
@@ -214,6 +244,22 @@ onMounted(() => {
         @click="selectTab('saved')"
       >
         Saved Books
+      </button>
+      <button
+        type="button"
+        :class="{ active: activeTab === 'loans' }"
+        data-testid="profile-tab-loans"
+        @click="selectTab('loans')"
+      >
+        Loans
+      </button>
+      <button
+        type="button"
+        :class="{ active: activeTab === 'notifications' }"
+        data-testid="profile-tab-notifications"
+        @click="selectTab('notifications')"
+      >
+        Notifications<span v-if="unread" class="unread-badge" :aria-label="`${unread} unread`">{{ unread }}</span>
       </button>
       <button
         type="button"
@@ -243,6 +289,46 @@ onMounted(() => {
       <div v-else class="grid-books">
         <BookCard v-for="book in savedBooks" :key="String(book._id)" :book="book" removable @remove="removeSavedBook(book)" />
       </div>
+    </section>
+
+    <section v-else-if="activeTab === 'loans'" class="tab-panel">
+      <div v-if="loans === null" class="spinner" role="status" aria-label="Loading loans"></div>
+      <div v-else-if="!loans.length" class="empty-state">
+        <p>Books you borrow or reserve will appear here.</p>
+        <RouterLink to="/browse" class="btn btn-primary">Browse Books</RouterLink>
+      </div>
+      <ul v-else class="loan-list" data-testid="my-loans">
+        <li v-for="l in loans" :key="l.id" class="card loan-item">
+          <div>
+            <RouterLink v-if="l.book_title" :to="`/books/${l.book_id}`">{{ l.book_title }}</RouterLink>
+            <span v-else class="text-muted">Deleted book</span>
+            <span class="text-muted"> · {{ l.kind === 'physical' ? 'Physical' : 'PDF' }}</span>
+          </div>
+          <div class="text-muted small">
+            <template v-if="l.status === 'reserved'">Pick up at the library desk by {{ shortDate(l.pickup_by) }}</template>
+            <template v-else-if="l.status === 'out' || l.status === 'active'">Due {{ shortDate(l.due_at) }}</template>
+            <template v-else-if="l.status === 'overdue'">Was due {{ shortDate(l.due_at) }}: please return it</template>
+            <template v-else-if="l.returned_at">Returned {{ shortDate(l.returned_at) }}</template>
+            <template v-else>{{ shortDate(l.borrowed_at ?? l.reserved_at) }}</template>
+          </div>
+          <span class="loan-status" :class="`loan-status-${l.status}`">{{ LOAN_STATUS_LABELS[l.status] }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <section v-else-if="activeTab === 'notifications'" class="tab-panel">
+      <div v-if="!notifications.length" class="empty-state">
+        <p>No notifications yet. You'll hear here (and by email) when you check out, return, or are late with a book.</p>
+      </div>
+      <ul v-else class="loan-list" data-testid="notifications">
+        <li v-for="n in notifications" :key="n.id" class="card loan-item" :class="{ unread: !n.read }">
+          <div>
+            <RouterLink v-if="n.book_id" :to="`/books/${n.book_id}`">{{ n.message }}</RouterLink>
+            <template v-else>{{ n.message }}</template>
+          </div>
+          <div class="text-muted small">{{ n.created_at ? new Date(n.created_at).toLocaleString() : '' }}</div>
+        </li>
+      </ul>
     </section>
 
     <section v-else-if="activeTab === 'downloaded'" class="tab-panel">

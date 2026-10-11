@@ -6,6 +6,8 @@ use App\Includes\Environment;
 use App\Services\UserService;
 use App\Services\BookService;
 use App\Services\EmailService;
+use App\Services\NotificationService;
+use MongoDB\BSON\UTCDateTime;
 use App\Includes\ResponseHandler;
 use App\Includes\JwtHelper;
 use App\Includes\AuthenticatedUser;
@@ -44,6 +46,39 @@ class UserController
         }
         $input = json_decode(file_get_contents('php://input'), true);
         return is_array($input) ? $input : [];
+    }
+
+    /**
+     * GET /api/v1/user/notifications — the caller's loan notices, newest first.
+     */
+    public function getNotifications(): void
+    {
+        $userId = $this->getAuthenticatedUserId();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'User not authenticated', 401);
+            return;
+        }
+        ResponseHandler::respond(true, array_map(fn ($n) => [
+            'id' => (string) $n['_id'],
+            'book_id' => $n['book_id'] ?? null,
+            'message' => $n['message'] ?? '',
+            'created_at' => ($n['created_at'] ?? null) instanceof UTCDateTime ? $n['created_at']->toDateTime()->format(DATE_ATOM) : null,
+            'read' => ($n['read_at'] ?? null) !== null,
+        ], (new NotificationService())->forUser($userId)));
+    }
+
+    /**
+     * POST /api/v1/user/notifications/read — mark them all read.
+     */
+    public function markNotificationsRead(): void
+    {
+        $userId = $this->getAuthenticatedUserId();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'User not authenticated', 401);
+            return;
+        }
+        (new NotificationService())->markAllRead($userId);
+        ResponseHandler::respond(true, 'OK');
     }
 
     public function handleLogin(): void

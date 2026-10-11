@@ -21,8 +21,20 @@ export interface Book {
   loan_copies?: number
   /** Loan period in days (server defaults to 14). */
   loan_days?: number
-  /** Lending state, only on GET /v1/books/{id} for lent books. */
-  loan?: { copies: number; available: number; loan_days: number; due_at: string | null }
+  /** Shelf / call number of a physical book. */
+  shelf_location?: string
+  /** "physical" for a book that's only on the library's shelves (no PDF). */
+  file_type?: string
+  /** Lending state, only on GET /v1/books/{id} for lent books. due_at = the caller has it;
+   *  pickup_by = the caller reserved a physical copy that's waiting at the desk. */
+  loan?: {
+    copies: number
+    available: number
+    loan_days: number
+    due_at: string | null
+    pickup_by: string | null
+    pickup_days: number
+  }
   thumbnail?: string
   average_rating?: number
   review_count?: number
@@ -38,6 +50,37 @@ export interface Book {
   /** Content-search indexing state, written by the indexing worker. Absent = not indexed yet. */
   index_status?: 'pending' | 'indexing' | 'done' | 'no_text' | 'failed'
   index_error?: string
+}
+
+/** One loan record, from GET /v1/admin/loans (all) or /v1/user/loans (the caller's), newest first. */
+export interface LoanRecord {
+  id: string
+  kind: 'digital' | 'physical'
+  book_id: string
+  book_title: string | null
+  book_author: string | null
+  shelf_location: string | null
+  user_id: string
+  username: string | null
+  email: string | null
+  reserved_at: string | null
+  pickup_by: string | null
+  borrowed_at: string | null
+  due_at: string | null
+  returned_at: string | null
+  cancelled_at: string | null
+  status: 'active' | 'expired' | 'reserved' | 'not_collected' | 'cancelled' | 'out' | 'overdue' | 'returned'
+}
+
+export const LOAN_STATUS_LABELS: Record<LoanRecord['status'], string> = {
+  active: 'Reading (PDF)',
+  expired: 'Ended',
+  reserved: 'Reserved',
+  not_collected: 'Not picked up',
+  cancelled: 'Cancelled',
+  out: 'On loan',
+  overdue: 'Overdue',
+  returned: 'Returned',
 }
 
 /** One option of a catalog filter, with how many books picking it would give. */

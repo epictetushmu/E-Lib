@@ -49,7 +49,7 @@ const filterTests: Record<Filter, (book: Book) => boolean> = {
   public: (b) => b.status === 'public',
   draft: (b) => b.status !== 'public',
   featured: (b) => !!b.featured,
-  locked: (b) => b.downloadable === false,
+  locked: (b) => b.downloadable === false && b.file_type !== 'physical',
 }
 
 const filters = computed(() =>
@@ -246,8 +246,33 @@ const editForm = reactive({
   downloadable: true,
   loan_copies: 0,
   loan_days: 14,
+  shelf_location: '',
   categories: [] as string[],
 })
+/** The edit modal doubles as the "Add physical book" form. */
+const isNewPhysical = ref(false)
+const editIsPhysical = computed(() => isNewPhysical.value || editing.value?.file_type === 'physical')
+
+function openNewPhysical() {
+  editing.value = { _id: '', title: '', file_type: 'physical' }
+  isNewPhysical.value = true
+  Object.assign(editForm, {
+    title: '',
+    author: '',
+    year: '',
+    description: '',
+    status: 'public',
+    featured: false,
+    isbn: '',
+    downloadable: false,
+    loan_copies: 1,
+    loan_days: 14,
+    shelf_location: '',
+    categories: [],
+  })
+  editError.value = ''
+  editLookedUp.value = false
+}
 const editSaving = ref(false)
 const editError = ref('')
 /** A lookup filled something in; the admin should check it before saving. */
@@ -284,6 +309,8 @@ function openEdit(book: Book) {
   editForm.downloadable = book.downloadable !== false
   editForm.loan_copies = book.loan_copies ?? 0
   editForm.loan_days = book.loan_days ?? 14
+  editForm.shelf_location = book.shelf_location ?? ''
+  isNewPhysical.value = false
   editForm.categories = [...(book.categories ?? [])]
   editError.value = ''
   editLookedUp.value = false
@@ -300,6 +327,23 @@ async function submitEdit() {
   editSaving.value = true
   const id = idToString(editing.value._id)
   const payload = { ...editForm }
+  if (isNewPhysical.value) {
+    try {
+      const { data: body } = await adminApi.addPhysicalBook(payload)
+      if (isApiSuccess(body)) {
+        toast.success('Physical book added.')
+        closeEdit()
+        await loadBooks()
+      } else {
+        editError.value = apiErrorMessage(body as ApiError, 'Could not add the book')
+      }
+    } catch (err) {
+      editError.value = requestErrorMessage(err, 'Could not add the book')
+    } finally {
+      editSaving.value = false
+    }
+    return
+  }
   try {
     const response = await adminApi.updateBook(id, payload)
     if (isApiSuccess(response.data)) {
@@ -326,6 +370,9 @@ onMounted(loadBooks)
       <div class="header-actions">
         <RouterLink to="/admin/loans" class="link-btn" data-testid="loans-link">Loans</RouterLink>
         <RouterLink to="/admin/logs" class="link-btn">Server logs</RouterLink>
+        <button type="button" class="btn btn-outline" data-testid="add-physical-button" @click="openNewPhysical">
+          Add physical book
+        </button>
         <RouterLink to="/admin/upload" class="btn btn-primary" data-testid="upload-pdf-link">Upload books</RouterLink>
       </div>
     </header>
@@ -498,7 +545,10 @@ onMounted(loadBooks)
               </td>
               <td class="num">{{ book.views || '–' }}</td>
               <td class="num">
-                <span v-if="book.downloadable === false" class="locked" title="Downloads are turned off for this book"
+                <span v-if="book.file_type === 'physical'" class="locked" title="Physical book on the library shelves"
+                  >Shelf</span
+                >
+                <span v-else-if="book.downloadable === false" class="locked" title="Downloads are turned off for this book"
                   >Off</span
                 >
                 <template v-else>{{ book.downloads || '–' }}</template>
@@ -552,7 +602,7 @@ onMounted(loadBooks)
 
     <div v-if="editing" class="modal-overlay" @click.self="closeEdit">
       <div class="modal-panel card" role="dialog" aria-modal="true" aria-labelledby="edit-book-heading">
-        <h2 id="edit-book-heading">Edit Book</h2>
+        <h2 id="edit-book-heading">{{ isNewPhysical ? 'Add physical book' : 'Edit Book' }}</h2>
         <p v-if="editError" class="alert alert-danger">{{ editError }}</p>
         <form @submit.prevent="submitEdit">
           <div class="form-grid">
@@ -584,19 +634,25 @@ onMounted(loadBooks)
             </div>
             <div class="form-field">
               <label for="edit-isbn">ISBN</label>
-              <input id="edit-isbn" v-model="editForm.isbn" type="text" />
+              <input
+                id="edit-isbn"
+                v-model="editForm.isbn"
+                type="text"
+                @change="isNewPhysical && editing && prefillEdit(editing)"
+              />
+              <small v-if="isNewPhysical" class="text-muted">Fills empty fields from Google Books / Open Library.</small>
             </div>
-            <div class="form-field checkbox-field">
+            <div v-if="!isNewPhysical" class="form-field checkbox-field">
               <label><input v-model="editForm.featured" type="checkbox" /> Featured</label>
             </div>
-            <div class="form-field checkbox-field">
+            <div v-if="!editIsPhysical" class="form-field checkbox-field">
               <label
                 ><input v-model="editForm.downloadable" type="checkbox" data-testid="edit-downloadable-checkbox" />
                 Downloadable</label
               >
             </div>
             <div class="form-field">
-              <label for="edit-loan-copies">Copies to lend</label>
+              <label for="edit-loan-copies">{{ editIsPhysical ? 'Copies on the shelf' : 'Copies to lend' }}</label>
               <input
                 id="edit-loan-copies"
                 v-model.number="editForm.loan_copies"
@@ -605,7 +661,12 @@ onMounted(loadBooks)
                 max="1000"
                 data-testid="edit-loan-copies"
               />
-              <small class="text-muted">0 = open access. Above 0, readers must borrow it and can't download it.</small>
+              <small v-if="editIsPhysical" class="text-muted">0 = reference only (can't be borrowed).</small>
+              <small v-else class="text-muted">0 = open access. Above 0, readers must borrow it and can't download it.</small>
+            </div>
+            <div v-if="editIsPhysical" class="form-field">
+              <label for="edit-shelf">Shelf / call number</label>
+              <input id="edit-shelf" v-model="editForm.shelf_location" type="text" placeholder="e.g. QA76.73 .P22" />
             </div>
             <div class="form-field">
               <label for="edit-loan-days">Loan period (days)</label>

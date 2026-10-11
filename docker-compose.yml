@@ -52,6 +52,21 @@ services:
     networks:
       - elib-network
 
+  # Hourly overdue-loan notices (scripts/notify-overdue.php). Each loan is notified once, so a restart
+  # or a missed hour is harmless.
+  scheduler:
+    image: e-lib-app
+    command: ["sh", "-c", "while true; do php scripts/notify-overdue.php; sleep 3600; done"]
+    restart: unless-stopped
+    environment:
+      - APP_ENV=production
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+    depends_on:
+      - app
+    networks:
+      - elib-network
+
   # Self-hosted embedding model: bge-m3 (Greek + English, 1024 dims) served by Ollama at f16 — ~2GB RAM,
   # where text-embeddings-inference's fp32 build of the same model needed 5-6GB for identical vectors.
   # Deliberately NO ports: Ollama has no authentication, so only app + worker reach it, by service name.

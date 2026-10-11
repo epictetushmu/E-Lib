@@ -68,3 +68,48 @@
 .account-card {
   padding: 1.25rem 1.5rem;
 }
+
+.unread-badge {
+  margin-left: 0.4rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.loan-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.loan-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.2rem 1rem;
+  padding: 0.85rem 1rem;
+}
+
+.loan-item .small {
+  grid-column: 1;
+}
+
+.loan-item.unread {
+  border-left: 3px solid var(--color-primary);
+}
+
+.loan-status {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.loan-status-overdue {
+  color: var(--color-danger, #b3261e);
+}

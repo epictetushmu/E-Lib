@@ -49,7 +49,7 @@ export function downloadBook(bookId: string) {
 }
 
 export function borrowBook(bookId: string) {
-  return client.post<ApiResponse<{ due_at: string }>>(`/v1/books/${bookId}/borrow`)
+  return client.post<ApiResponse<{ due_at: string | null; pickup_by: string | null }>>(`/v1/books/${bookId}/borrow`)
 }
 
 export function returnBook(bookId: string) {

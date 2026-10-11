@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import * as booksApi from '@/api/books'
 import * as reviewsApi from '@/api/reviews'
 import * as usersApi from '@/api/users'
+import * as adminApi from '@/api/admin'
 import { isApiSuccess, apiErrorMessage, requestErrorMessage, type ApiError } from '@/types/api'
 import type { Book } from '@/types/book'
 import type { Review } from '@/types/review'
@@ -30,8 +31,11 @@ const downloading = ref(false)
 
 const cover = computed(() => book.value?.thumbnail || booksApi.thumbnailUrl(bookId))
 const loan = computed(() => book.value?.loan ?? null)
-const isDownloadable = computed(() => book.value?.downloadable !== false && !loan.value)
+const isPhysical = computed(() => book.value?.file_type === 'physical')
+const isDownloadable = computed(() => book.value?.downloadable !== false && !loan.value && !isPhysical.value)
 const lending = ref(false)
+const checkoutEmail = ref('')
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString()
 const myReview = computed(() => reviews.value.find((r) => r.user_id === auth.claims?.user_id))
 
 async function loadReviews() {
@@ -62,37 +66,44 @@ async function handleSave() {
   }
 }
 
-async function handleBorrow() {
-  if (!book.value?.loan) return
+/** Borrow (PDF) / reserve (physical) / return / cancel / desk checkout, then reload the loan state. */
+async function lendingAction(request: () => Promise<{ data: unknown }>, success: string, failure: string) {
   lending.value = true
   try {
-    const { data: body } = await booksApi.borrowBook(bookId)
-    if (isApiSuccess(body)) {
-      book.value.loan = { ...book.value.loan, due_at: body.data.due_at, available: book.value.loan.available - 1 }
-      toast.success('Borrowed — happy reading')
+    const { data: body } = await request()
+    if (isApiSuccess(body as ApiError)) {
+      toast.success(success)
+      await loadBook()
     } else {
-      toast.error(apiErrorMessage(body as ApiError, 'Could not borrow this book'))
+      toast.error(apiErrorMessage(body as ApiError, failure))
     }
   } catch (err) {
-    toast.error(requestErrorMessage(err, 'Could not borrow this book'))
+    toast.error(requestErrorMessage(err, failure))
   } finally {
     lending.value = false
   }
 }
 
-async function handleReturn() {
-  if (!book.value?.loan) return
-  lending.value = true
-  try {
-    await booksApi.returnBook(bookId)
-    book.value.loan = { ...book.value.loan, due_at: null, available: book.value.loan.available + 1 }
-    toast.success('Book returned')
-  } catch (err) {
-    toast.error(requestErrorMessage(err, 'Could not return this book'))
-  } finally {
-    lending.value = false
-  }
-}
+const handleBorrow = () =>
+  lendingAction(
+    () => booksApi.borrowBook(bookId),
+    isPhysical.value ? 'Reserved — pick it up at the library desk' : 'Borrowed — happy reading',
+    isPhysical.value ? 'Could not reserve this book' : 'Could not borrow this book',
+  )
+
+const handleReturn = () =>
+  lendingAction(
+    () => booksApi.returnBook(bookId),
+    isPhysical.value ? 'Reservation cancelled' : 'Book returned',
+    'Something went wrong. Please try again.',
+  )
+
+const handleCheckout = () =>
+  lendingAction(
+    () => adminApi.checkOut(bookId, checkoutEmail.value.trim()),
+    `Checked out to ${checkoutEmail.value.trim()}`,
+    'Could not check out this book',
+  ).then(() => (checkoutEmail.value = ''))
 
 async function handleDownload() {
   downloading.value = true
@@ -106,16 +117,19 @@ async function handleDownload() {
   }
 }
 
+async function loadBook() {
+  const { data: body } = await booksApi.getBook(bookId)
+  if (isApiSuccess(body)) {
+    book.value = body.data
+    document.title = book.value.title || 'Book Details'
+  } else {
+    notFound.value = true
+  }
+}
+
 onMounted(async () => {
   try {
-    const response = await booksApi.getBook(bookId)
-    const body = response.data
-    if (isApiSuccess(body)) {
-      book.value = body.data
-      document.title = book.value.title || 'Book Details'
-    } else {
-      notFound.value = true
-    }
+    await loadBook()
   } catch {
     notFound.value = true
   } finally {
@@ -140,7 +154,62 @@ onMounted(async () => {
         <img :src="cover" class="cover" :alt="`Cover of ${book.title}`" @error="onThumbnailError" />
 
         <div class="actions">
-          <template v-if="loan">
+          <template v-if="isPhysical">
+            <p class="loan-note" data-testid="physical-note">
+              <strong>Physical book</strong><template v-if="book.shelf_location"> · Shelf {{ book.shelf_location }}</template>
+            </p>
+            <p v-if="!loan" class="text-muted loan-note">Reference only: read it in the library.</p>
+            <template v-else-if="loan.due_at">
+              <p class="loan-note" data-testid="loan-due">
+                You have this book. Please return it to the library desk by {{ shortDate(loan.due_at) }}.
+              </p>
+            </template>
+            <template v-else-if="loan.pickup_by">
+              <p class="loan-note" data-testid="loan-reserved">
+                Reserved for you. Pick it up at the library desk by {{ shortDate(loan.pickup_by) }}.
+              </p>
+              <button
+                type="button"
+                class="btn btn-outline full-width"
+                :disabled="lending"
+                data-testid="cancel-reservation-button"
+                @click="handleReturn"
+              >
+                Cancel reservation
+              </button>
+            </template>
+            <template v-else>
+              <button
+                v-if="auth.isAuthenticated"
+                type="button"
+                class="btn btn-primary full-width"
+                :disabled="lending || loan.available < 1"
+                data-testid="reserve-button"
+                @click="handleBorrow"
+              >
+                {{ loan.available < 1 ? 'All copies on loan' : 'Reserve for pickup' }}
+              </button>
+              <p class="text-muted loan-note" data-testid="loan-availability">
+                {{ loan.available }} of {{ loan.copies }} on the shelf · {{ loan.loan_days }}-day loan<template
+                  v-if="auth.isAuthenticated && loan.available > 0"
+                  >, held {{ loan.pickup_days }} days for pickup</template
+                >
+              </p>
+            </template>
+            <form v-if="auth.isAdmin && loan" class="checkout-form" data-testid="checkout-form" @submit.prevent="handleCheckout">
+              <label for="checkout-email">Check out at the desk</label>
+              <input
+                id="checkout-email"
+                v-model="checkoutEmail"
+                type="email"
+                required
+                placeholder="Reader's email"
+                data-testid="checkout-email"
+              />
+              <button type="submit" class="btn btn-outline full-width" :disabled="lending">Check out</button>
+            </form>
+          </template>
+          <template v-else-if="loan">
             <template v-if="loan.due_at">
               <RouterLink :to="`/read/${bookId}`" class="btn btn-primary full-width" data-testid="read-loan-button">
                 Read
@@ -192,8 +261,9 @@ onMounted(async () => {
             >
               {{ saved ? 'Saved to List' : saving ? 'Saving…' : 'Save to Reading List' }}
             </button>
+            <template v-if="isPhysical"></template>
             <button
-              v-if="isDownloadable"
+              v-else-if="isDownloadable"
               type="button"
               class="btn btn-primary full-width"
               :disabled="downloading"
@@ -215,7 +285,7 @@ onMounted(async () => {
           </template>
           <p v-else class="text-muted login-hint" data-testid="login-hint">
             <RouterLink :to="{ path: '/login', query: { redirect: route.fullPath } }">Log in</RouterLink>
-            to {{ loan ? 'borrow' : 'read online, save, or download' }} this book.
+            to {{ isPhysical ? 'reserve' : loan ? 'borrow' : 'read online, save, or download' }} this book.
           </p>
         </div>
       </div>

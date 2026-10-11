@@ -15,16 +15,18 @@ class BookService
 
     private Books $book;
     private Loans $loans;
+    private NotificationService $notifications;
 
     public function __construct()
     {
         $this->book = new Books();
         $this->loans = new Loans();
+        $this->notifications = new NotificationService();
     }
 
     /**
-     * Copies a book is lent with. 0 = open access; anything more means it can only be read while
-     * borrowed, and is never downloadable.
+     * Copies a book is lent with. For a PDF: 0 = open access; more means it can only be read while
+     * borrowed, and is never downloadable. For a physical book: copies on the shelf (0 = reference only).
      *
      * @param array<string, mixed> $book
      */
@@ -33,56 +35,135 @@ class BookService
         return max(0, (int) ($book['loan_copies'] ?? 0));
     }
 
+    /**
+     * @param array<string, mixed> $book
+     */
+    public static function isPhysical(array $book): bool
+    {
+        return ($book['file_type'] ?? null) === 'physical';
+    }
+
+    /**
+     * @param array<string, mixed> $book
+     */
+    private static function loanDays(array $book): int
+    {
+        return (int) ($book['loan_days'] ?? 0) ?: self::DEFAULT_LOAN_DAYS;
+    }
+
     public function hasActiveLoan(string $bookId, string $userId): bool
     {
         return $this->loans->activeFor($bookId, $userId) !== null;
     }
 
     /**
-     * Borrow a copy of a lent book. Returns the due date (ISO 8601), or null when every copy is out.
+     * Reader takes a copy: a PDF loan starts now, a physical copy is held for pickup.
+     * Returns the slot (due_at / free_at as ISO 8601), or null when every copy is out.
      *
      * @param array<string, mixed> $book
+     * @return array{due_at: ?string, pickup_by: ?string}|null
      */
-    public function borrow(string $bookId, array $book, string $userId): ?string
+    public function borrow(string $bookId, array $book, string $userId): ?array
     {
-        $days = (int) ($book['loan_days'] ?? 0) ?: self::DEFAULT_LOAN_DAYS;
-        $loan = $this->loans->borrow($bookId, $userId, self::loanCopies($book), $days);
-        return $loan === null ? null : self::isoDate($loan['due_at']);
-    }
-
-    public function returnBook(string $bookId, string $userId): void
-    {
-        $this->loans->returnBook($bookId, $userId);
+        $copies = self::loanCopies($book);
+        $slot = self::isPhysical($book)
+            ? $this->loans->reserve($bookId, $userId, $copies)
+            : $this->loans->borrow($bookId, $userId, $copies, self::loanDays($book));
+        if ($slot === null) {
+            return null;
+        }
+        $due = self::isoDate($slot['due_at'] ?? null);
+        return ['due_at' => $due, 'pickup_by' => $due === null ? self::isoDate($slot['free_at']) : null];
     }
 
     /**
-     * What the book page shows about lending: copies, how many are free, and the caller's due date.
+     * Librarian hands a physical copy to a reader (their reservation, or a walk-in).
      *
      * @param array<string, mixed> $book
-     * @return array{copies: int, available: int, loan_days: int, due_at: ?string}
+     * @return string|null Due date, or null when they already have it out or no copy is free
+     */
+    public function checkOut(string $bookId, array $book, string $userId): ?string
+    {
+        $loan = $this->loans->checkOut($bookId, $userId, self::loanCopies($book), self::loanDays($book));
+        if ($loan === null) {
+            return null;
+        }
+        $due = (string) self::isoDate($loan['due_at']);
+        $this->notifications->notify(
+            $userId,
+            $bookId,
+            'Checked out: ' . $book['title'],
+            sprintf('You borrowed "%s". Please return it to the library by %s.', $book['title'], self::humanDate($loan['due_at']))
+        );
+        return $due;
+    }
+
+    /**
+     * End a hold: return a PDF, cancel a reservation, or (librarian) check a physical copy back in.
+     *
+     * @param array<string, mixed>|null $book Null when the book has been deleted
+     * @return bool False when the user held nothing
+     */
+    public function returnBook(string $bookId, ?array $book, string $userId): bool
+    {
+        $loan = $this->loans->returnBook($bookId, $userId);
+        if ($loan === null) {
+            return false;
+        }
+        if (($loan['kind'] ?? null) === 'physical' && $loan['returned_at'] !== null) {
+            $title = $book['title'] ?? 'your book';
+            $this->notifications->notify(
+                $userId,
+                $bookId,
+                'Returned: ' . $title,
+                sprintf('"%s" was checked back in on %s. Thank you!', $title, self::humanDate($loan['returned_at']))
+            );
+        }
+        return true;
+    }
+
+    /**
+     * True when the user's hold on the book is a reservation not yet picked up.
+     */
+    public function hasReservation(string $bookId, string $userId): bool
+    {
+        $slot = $this->loans->activeFor($bookId, $userId);
+        return $slot !== null && $slot['due_at'] === null;
+    }
+
+    /**
+     * What the book page shows about lending: copies, how many are free, and the caller's hold.
+     *
+     * @param array<string, mixed> $book
+     * @return array{copies: int, available: int, loan_days: int, due_at: ?string, pickup_by: ?string, pickup_days: int}
      */
     public function loanStatus(string $bookId, array $book, ?string $userId): array
     {
         $copies = self::loanCopies($book);
         $mine = $userId === null ? null : $this->loans->activeFor($bookId, $userId);
+        $due = self::isoDate($mine['due_at'] ?? null);
         return [
             'copies' => $copies,
             'available' => max(0, $copies - $this->loans->activeCount($bookId)),
-            'loan_days' => (int) ($book['loan_days'] ?? 0) ?: self::DEFAULT_LOAN_DAYS,
-            'due_at' => $mine === null ? null : self::isoDate($mine['due_at']),
+            'loan_days' => self::loanDays($book),
+            'due_at' => $due,
+            'pickup_by' => $mine !== null && $due === null ? self::isoDate($mine['free_at']) : null,
+            'pickup_days' => Loans::PICKUP_DAYS,
         ];
     }
 
     /**
-     * Loan records for the admin, with book title and borrower filled in.
-     * status: active (still out), returned (given back early) or expired (ran out its period).
+     * Loan records with book title and borrower filled in — all of them (admin) or one reader's.
+     *
+     * Status: digital → active | returned | expired; physical → reserved | not_collected | cancelled |
+     * out | overdue | returned.
      *
      * @return list<array<string, mixed>>
      */
-    public function loanHistory(bool $activeOnly): array
+    public function loanHistory(?string $userId = null): array
     {
         // ponytail: newest 1000 only, add paging when a library outgrows it
-        $loans = $this->loans->history($activeOnly, 1000);
+        $loans = $this->loans->history($userId === null ? [] : ['user_id' => $userId], 1000);
         $ids = fn (string $field) => array_values(array_unique(array_map(
             fn ($loan) => MongoHelper::createObjectId((string) $loan[$field]),
             $loans
@@ -95,31 +176,86 @@ class BookService
             return $map;
         };
         $books = $byId($this->book->findAll(['_id' => ['$in' => $ids('book_id')]], [
-            'projection' => ['title' => 1, 'author' => 1, 'loan_copies' => 1], 'limit' => 0,
+            'projection' => ['title' => 1, 'author' => 1, 'shelf_location' => 1], 'limit' => 0,
         ]));
-        $users = $byId((new Users())->findAll(['_id' => ['$in' => $ids('user_id')]], [
+        $users = $userId !== null ? [] : $byId((new Users())->findAll(['_id' => ['$in' => $ids('user_id')]], [
             'projection' => ['username' => 1, 'email' => 1], 'limit' => 0,
         ]));
 
-        $now = time();
-        return array_map(function ($loan) use ($books, $users, $now) {
+        return array_map(function ($loan) use ($books, $users) {
             $book = $books[$loan['book_id']] ?? null;
             $user = $users[$loan['user_id']] ?? null;
-            $due = $loan['due_at'] instanceof UTCDateTime ? $loan['due_at']->toDateTime()->getTimestamp() : 0;
-            $returned = self::isoDate($loan['returned_at'] ?? null);
             return [
+                'id' => (string) $loan['_id'],
+                'kind' => $loan['kind'] ?? 'digital',
                 'book_id' => $loan['book_id'],
                 'book_title' => $book['title'] ?? null,
                 'book_author' => $book['author'] ?? null,
+                'shelf_location' => $book['shelf_location'] ?? null,
                 'user_id' => $loan['user_id'],
                 'username' => $user['username'] ?? null,
                 'email' => $user['email'] ?? null,
-                'borrowed_at' => self::isoDate($loan['borrowed_at']),
-                'due_at' => self::isoDate($loan['due_at']),
-                'returned_at' => $returned,
-                'status' => $returned !== null ? 'returned' : ($due > $now ? 'active' : 'expired'),
+                'reserved_at' => self::isoDate($loan['reserved_at'] ?? null),
+                'pickup_by' => self::isoDate($loan['pickup_by'] ?? null),
+                'borrowed_at' => self::isoDate($loan['borrowed_at'] ?? null),
+                'due_at' => self::isoDate($loan['due_at'] ?? null),
+                'returned_at' => self::isoDate($loan['returned_at'] ?? null),
+                'cancelled_at' => self::isoDate($loan['cancelled_at'] ?? null),
+                'status' => self::loanState($loan),
             ];
         }, $loans);
+    }
+
+    /**
+     * Email + in-app notice for each physical loan that has gone overdue, once per loan.
+     * Run by scripts/notify-overdue.php.
+     */
+    public function notifyOverdue(): int
+    {
+        $sent = 0;
+        foreach ($this->loans->overdueUnnotified() as $loan) {
+            $book = $this->book->getBookDetails((string) $loan['book_id']);
+            $title = $book['title'] ?? 'a library book';
+            $this->notifications->notify(
+                (string) $loan['user_id'],
+                (string) $loan['book_id'],
+                'Overdue: ' . $title,
+                sprintf('"%s" was due back on %s. Please return it to the library.', $title, self::humanDate($loan['due_at']))
+            );
+            $this->loans->markOverdueNotified((string) $loan['_id']);
+            $sent++;
+        }
+        return $sent;
+    }
+
+    /**
+     * @param array<string, mixed> $loan A LoanHistory document
+     */
+    public static function loanState(array $loan, ?int $now = null): string
+    {
+        $now ??= time();
+        $ts = fn (string $field) => ($loan[$field] ?? null) instanceof UTCDateTime
+            ? $loan[$field]->toDateTime()->getTimestamp()
+            : null;
+        if ($ts('returned_at') !== null) {
+            return 'returned';
+        }
+        if ($ts('cancelled_at') !== null) {
+            return 'cancelled';
+        }
+        $due = $ts('due_at');
+        if (($loan['kind'] ?? 'digital') === 'digital') {
+            return $due !== null && $due > $now ? 'active' : 'expired';
+        }
+        if ($due === null) {
+            return ($ts('pickup_by') ?? 0) > $now ? 'reserved' : 'not_collected';
+        }
+        return $due > $now ? 'out' : 'overdue';
+    }
+
+    private static function humanDate(mixed $date): string
+    {
+        return $date instanceof UTCDateTime ? $date->toDateTime()->format('j M Y') : '';
     }
 
     private static function isoDate(mixed $date): ?string
@@ -223,7 +359,8 @@ class BookService
         string $isbn,
         bool $downloadable = true,
         ?int $loanCopies = null,
-        ?int $loanDays = null
+        ?int $loanDays = null,
+        ?string $shelfLocation = null
     ): array|false {
         // Add validation here
 
@@ -243,6 +380,7 @@ class BookService
             'downloadable' => $downloadable,
             'loan_copies' => $loanCopies,
             'loan_days' => $loanDays,
+            'shelf_location' => $shelfLocation,
             'featured' => $featuredBool,
             'status' => $status,
             'updated_at' => new UTCDateTime()
@@ -257,6 +395,50 @@ class BookService
     public function getBookDetails(string $id): ?array
     {
         return $this->book->getBookDetails($id);
+    }
+
+    /**
+     * Catalogue a book that only exists on the library's shelves: no file, lent by copies.
+     * file_type/file_extension "physical" is what the catalog's Format filter shows.
+     *
+     * @param array<int, string> $categories
+     * @return array<string, mixed>
+     */
+    public function addPhysicalBook(
+        string $title,
+        string $author,
+        string $year,
+        string $description,
+        array $categories,
+        string $isbn,
+        string $status,
+        int $copies,
+        int $loanDays,
+        string $shelfLocation
+    ): array {
+        return $this->book->addBook([
+            'title' => $title,
+            'author' => trim($author) !== '' ? trim($author) : self::DEFAULT_AUTHOR,
+            'year' => (int) $year,
+            'description' => $description,
+            'categories' => $categories,
+            'isbn' => $isbn,
+            'file_path' => null,
+            'file_type' => 'physical',
+            'file_extension' => 'physical',
+            'thumbnail' => null,
+            'created_at' => new UTCDateTime(),
+            'updated_at' => new UTCDateTime(),
+            'status' => $status === 'public' ? 'public' : 'draft',
+            'views' => 0,
+            'downloads' => 0,
+            'featured' => false,
+            'downloadable' => false,
+            'loan_copies' => $copies,
+            'loan_days' => $loanDays,
+            'shelf_location' => $shelfLocation,
+            'reviews' => [],
+        ]);
     }
 
     /**

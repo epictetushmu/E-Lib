@@ -97,6 +97,7 @@ class BookController
         // Absent = keep what's stored (null is skipped by Books::updateBook); 0 copies = open access.
         $loanCopies = isset($data['loan_copies']) ? min(1000, max(0, (int) $data['loan_copies'])) : null;
         $loanDays = isset($data['loan_days']) ? min(365, max(1, (int) $data['loan_days'])) : null;
+        $shelfLocation = isset($data['shelf_location']) ? trim((string) $data['shelf_location']) : null;
 
         // Check if categories are being updated
         $categories = [];
@@ -127,7 +128,8 @@ class BookController
             $isbn,
             $downloadable,
             $loanCopies,
-            $loanDays
+            $loanDays,
+            $shelfLocation
         );
 
         if ($response) {
@@ -206,7 +208,7 @@ class BookController
     }
 
     /**
-     * POST /api/v1/books/{id}/borrow — take one of a lent book's copies for its loan period.
+     * POST /api/v1/books/{id}/borrow — a PDF loan starts now; a physical copy is reserved for pickup.
      */
     public function borrowBook(string $id): void
     {
@@ -221,19 +223,21 @@ class BookController
             return;
         }
         if (BookService::loanCopies($book) === 0) {
-            ResponseHandler::respond(false, 'This book is open access and does not need borrowing', 400);
+            $why = BookService::isPhysical($book) ? 'This book can only be read in the library' : 'This book is open access';
+            ResponseHandler::respond(false, $why, 400);
             return;
         }
-        $dueAt = $this->bookService->borrow($id, $book, $userId);
-        if ($dueAt === null) {
+        $hold = $this->bookService->borrow($id, $book, $userId);
+        if ($hold === null) {
             ResponseHandler::respond(false, 'All copies are on loan. Try again later.', 409);
             return;
         }
-        ResponseHandler::respond(true, ['due_at' => $dueAt]);
+        ResponseHandler::respond(true, $hold);
     }
 
     /**
-     * POST /api/v1/books/{id}/return — give the caller's copy back early.
+     * POST /api/v1/books/{id}/return — give a PDF back early, or cancel a physical reservation.
+     * Physical copies that were picked up are checked in by a librarian (adminCheckIn).
      */
     public function returnBook(string $id): void
     {
@@ -242,12 +246,17 @@ class BookController
             ResponseHandler::respond(false, 'Authentication required', 401);
             return;
         }
-        $this->bookService->returnBook($id, $userId);
-        ResponseHandler::respond(true, 'Book returned');
+        $book = $this->bookService->getBookDetails($id);
+        if ($book && BookService::isPhysical($book) && !$this->bookService->hasReservation($id, $userId)) {
+            ResponseHandler::respond(false, 'Bring the book back to the library to return it', 400);
+            return;
+        }
+        $this->bookService->returnBook($id, $book, $userId);
+        ResponseHandler::respond(true, 'Done');
     }
 
     /**
-     * GET /api/v1/admin/loans?status=active|all — who borrowed what and when (admin only).
+     * GET /api/v1/admin/loans — every loan: who borrowed what and when (admin only).
      */
     public function adminLoans(): void
     {
@@ -255,7 +264,122 @@ class BookController
             ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
             return;
         }
-        ResponseHandler::respond(true, $this->bookService->loanHistory(($_GET['status'] ?? 'all') === 'active'));
+        ResponseHandler::respond(true, $this->bookService->loanHistory());
+    }
+
+    /**
+     * GET /api/v1/user/loans — the caller's own loans and reservations.
+     */
+    public function userLoans(): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        ResponseHandler::respond(true, $this->bookService->loanHistory($userId));
+    }
+
+    /**
+     * POST /api/v1/admin/loans/checkout {book_id, email} — hand a physical copy over at the desk:
+     * the reader's reservation becomes a loan, or a walk-in takes a free copy.
+     */
+    public function adminCheckOut(): void
+    {
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+        $data = $this->jsonBody();
+        $bookId = is_string($data['book_id'] ?? null) ? $data['book_id'] : '';
+        $book = preg_match('/^[0-9a-f]{24}$/', $bookId) ? $this->bookService->getBookDetails($bookId) : null;
+        if (!$book || !BookService::isPhysical($book) || BookService::loanCopies($book) === 0) {
+            ResponseHandler::respond(false, 'Not a lendable physical book', 400);
+            return;
+        }
+        $user = (new UserService())->getUserByEmail(trim((string) ($data['email'] ?? '')));
+        if (!$user) {
+            ResponseHandler::respond(false, 'No reader with that email', 404);
+            return;
+        }
+        $dueAt = $this->bookService->checkOut($bookId, $book, (string) $user['_id']);
+        if ($dueAt === null) {
+            ResponseHandler::respond(false, 'They already have this book out, or no copy is free', 409);
+            return;
+        }
+        ResponseHandler::respond(true, ['due_at' => $dueAt, 'username' => $user['username'] ?? null]);
+    }
+
+    /**
+     * POST /api/v1/admin/loans/checkin {book_id, user_id} — a physical copy is back on the shelf
+     * (also ends a reservation or a PDF loan early).
+     */
+    public function adminCheckIn(): void
+    {
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+        $data = $this->jsonBody();
+        $bookId = (string) ($data['book_id'] ?? '');
+        $userId = (string) ($data['user_id'] ?? '');
+        if (!preg_match('/^[0-9a-f]{24}$/', $bookId) || !preg_match('/^[0-9a-f]{24}$/', $userId)) {
+            ResponseHandler::respond(false, 'Invalid book or user', 400);
+            return;
+        }
+        if (!$this->bookService->returnBook($bookId, $this->bookService->getBookDetails($bookId), $userId)) {
+            ResponseHandler::respond(false, 'This reader has no current loan of that book', 404);
+            return;
+        }
+        ResponseHandler::respond(true, 'Checked in');
+    }
+
+    /**
+     * POST /api/v1/books/physical — catalogue a book that's on the library's shelves (no file).
+     */
+    public function addPhysicalBook(): void
+    {
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+        $data = $this->jsonBody();
+        $text = fn (string $key) => trim(is_string($data[$key] ?? null) ? $data[$key] : '');
+        $categories = array_values(array_filter(
+            is_array($data['categories'] ?? null) ? $data['categories'] : [],
+            'is_string'
+        ));
+        try {
+            $response = $this->bookService->addPhysicalBook(
+                $text('title'),
+                $text('author'),
+                (string) ($data['year'] ?? ''),
+                $text('description'),
+                $categories,
+                $text('isbn'),
+                $text('status'),
+                min(1000, max(0, (int) ($data['loan_copies'] ?? 1))),
+                min(365, max(1, (int) ($data['loan_days'] ?? BookService::DEFAULT_LOAN_DAYS))),
+                $text('shelf_location')
+            );
+        } catch (\InvalidArgumentException $e) {
+            ResponseHandler::respond(false, json_decode($e->getMessage(), true) ?: $e->getMessage(), 400);
+            return;
+        }
+        if (isset($response['error'])) {
+            ResponseHandler::respond(false, 'Error adding book', 500);
+            return;
+        }
+        ResponseHandler::respond(true, $response);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function jsonBody(): array
+    {
+        $data = json_decode((string) file_get_contents('php://input'), true);
+        return is_array($data) ? $data : [];
     }
 
     public function searchBooks(string $search): void

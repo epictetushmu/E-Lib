@@ -1,6 +1,6 @@
 import client from './client'
 import type { ApiResponse } from '@/types/api'
-import type { Book } from '@/types/book'
+import type { Book, LoanRecord } from '@/types/book'
 
 /** Full catalog (all statuses) — admin only. */
 export function getAllBooks() {
@@ -19,6 +19,7 @@ export interface BookUpdatePayload {
   downloadable?: boolean
   loan_copies?: number
   loan_days?: number
+  shelf_location?: string
 }
 
 export function updateBook(id: string, payload: BookUpdatePayload) {
@@ -105,22 +106,38 @@ export interface AdminLogs {
   requests: string[] | string
 }
 
-/** One borrow, from GET /v1/admin/loans (newest first). */
-export interface LoanRecord {
-  book_id: string
-  book_title: string | null
-  book_author: string | null
-  user_id: string
-  username: string | null
-  email: string | null
-  borrowed_at: string | null
-  due_at: string | null
-  returned_at: string | null
-  status: 'active' | 'returned' | 'expired'
-}
-
 export function getLoans() {
   return client.get<ApiResponse<LoanRecord[]>>('/v1/admin/loans')
+}
+
+/** Hand a physical copy to a reader at the desk (their reservation, or a walk-in). */
+export function checkOut(bookId: string, email: string) {
+  return client.post<ApiResponse<{ due_at: string; username: string | null }>>('/v1/admin/loans/checkout', {
+    book_id: bookId,
+    email,
+  })
+}
+
+/** A copy is back on the shelf (also ends a reservation or PDF loan early). */
+export function checkIn(bookId: string, userId: string) {
+  return client.post<ApiResponse<string>>('/v1/admin/loans/checkin', { book_id: bookId, user_id: userId })
+}
+
+export interface PhysicalBookPayload {
+  title: string
+  author: string
+  year: string
+  isbn: string
+  description: string
+  categories: string[]
+  status: string
+  loan_copies: number
+  loan_days: number
+  shelf_location: string
+}
+
+export function addPhysicalBook(payload: PhysicalBookPayload) {
+  return client.post<ApiResponse<unknown>>('/v1/books/physical', payload)
 }
 
 export function getLogs() {

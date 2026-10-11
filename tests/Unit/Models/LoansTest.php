@@ -4,6 +4,7 @@ namespace Tests\Unit\Models;
 
 use App\Database\DatabaseInterface;
 use App\Models\Loans;
+use MongoDB\BSON\UTCDateTime;
 use MongoDB\Driver\Exception\CommandException;
 use Tests\Support\ModelTestCase;
 
@@ -67,5 +68,35 @@ class LoansTest extends ModelTestCase
 
         $this->expectException(CommandException::class);
         $this->makeLoans($db)->borrow(self::BOOK, self::USER, 2, 14);
+    }
+
+    public function testCheckOutTurnsTheReadersReservationIntoALoan(): void
+    {
+        $historyId = '0123456789abcdef01234567';
+        $db = $this->createMock(DatabaseInterface::class);
+        $db->method('findOne')->willReturnOnConsecutiveCalls(
+            ['_id' => self::BOOK . ':0', 'due_at' => null, 'history_id' => $historyId],
+            ['_id' => $historyId, 'kind' => 'physical']
+        );
+        $db->expects($this->never())->method('findOneAndUpdate');
+        $updated = [];
+        $db->method('update')->willReturnCallback(function (string $collection, array $filter, array $update) use (&$updated) {
+            $updated[$collection] = $update['$set'];
+            return ['modifiedCount' => 1];
+        });
+
+        $this->assertNotNull($this->makeLoans($db)->checkOut(self::BOOK, self::USER, 2, 14));
+        $this->assertNotNull($updated['Loans']['due_at']);
+        $this->assertGreaterThan(time() * 1000 + 10 ** 12, (int) (string) $updated['Loans']['free_at'], 'held until check-in');
+        $this->assertArrayHasKey('borrowed_at', $updated['LoanHistory']);
+    }
+
+    public function testCheckOutRefusesWhenTheReaderAlreadyHasItOut(): void
+    {
+        $db = $this->createMock(DatabaseInterface::class);
+        $db->method('findOne')->willReturn(['_id' => self::BOOK . ':0', 'due_at' => new UTCDateTime(), 'history_id' => 'x']);
+        $db->expects($this->never())->method('update');
+
+        $this->assertNull($this->makeLoans($db)->checkOut(self::BOOK, self::USER, 2, 14));
     }
 }
