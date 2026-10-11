@@ -16,6 +16,9 @@ export class DashboardPage extends BasePage {
   readonly noMatchMessage: Locator;
   readonly showAllBooksButton: Locator;
   readonly serverLogsLink: Locator;
+  readonly loansLink: Locator;
+  readonly addPhysicalButton: Locator;
+  readonly addPhysicalDialog: Locator;
 
   readonly editDialog: Locator;
   readonly downloadableCheckbox: Locator;
@@ -30,6 +33,10 @@ export class DashboardPage extends BasePage {
     this.noMatchMessage = page.getByText('No books match these filters.');
     this.showAllBooksButton = page.getByRole('button', { name: 'Show all books' });
     this.serverLogsLink = page.getByRole('link', { name: 'Server logs' });
+    this.loansLink = page.getByTestId('loans-link');
+    this.addPhysicalButton = page.getByTestId('add-physical-button');
+    // The edit modal doubles as the "Add physical book" form.
+    this.addPhysicalDialog = page.getByRole('dialog', { name: 'Add physical book' });
 
     // Edit modal — only one is ever open at a time, so these don't need a book id.
     this.editDialog = page.getByRole('dialog', { name: 'Edit Book' });

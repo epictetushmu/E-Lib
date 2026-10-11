@@ -486,7 +486,15 @@ onBeforeUnmount(() => {
           <button type="button" class="tool-btn" aria-label="Full screen" title="Full screen" @click="toggleFullscreen">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
           </button>
-          <button type="button" class="tool-btn" aria-label="Print" title="Print" @click="handlePrint">
+          <!-- Lent books: printing is "Save as PDF", which would outlive the loan. -->
+          <button
+            v-if="book && !book.loan_copies"
+            type="button"
+            class="tool-btn"
+            aria-label="Print"
+            title="Print"
+            @click="handlePrint"
+          >
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5M7 17H4v-7h16v7h-3M7 14h10v6H7z" /></svg>
           </button>
         </div>

@@ -297,11 +297,25 @@ class FileHelper
      *
      * @return array{0: string, 1: string}
      */
-    private function resolveUploadPaths(string $subDir): array
+    private static function resolveUploadPaths(string $subDir): array
     {
         $uploadDir = getenv('DOCKER_ENV') === 'true' ? '/var/www/html/public' : dirname(__DIR__, 2) . '/public';
         $webPath = '/assets/uploads/' . $subDir;
         return [$uploadDir . $webPath, $webPath];
+    }
+
+    /**
+     * Store downloaded cover bytes as a thumbnail (physical books have no PDF to render one from).
+     * Returns the web path to keep in the book's `thumbnail`, or null when it can't be written.
+     */
+    public static function storeCover(string $image): ?string
+    {
+        [$dir, $webPath] = self::resolveUploadPaths('thumbnails');
+        if (!is_dir($dir) && !@mkdir($dir, 0777, true)) {
+            return null;
+        }
+        $name = 'cover-' . md5($image) . '.jpg';
+        return @file_put_contents("$dir/$name", $image) === false ? null : "$webPath/$name";
     }
 
     /**

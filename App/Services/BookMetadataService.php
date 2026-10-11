@@ -144,6 +144,24 @@ class BookMetadataService
     }
 
     /**
+     * Open Library's cover for an ISBN as image bytes, or null when it has none (or is unreachable).
+     */
+    public function coverImage(string $isbn): ?string
+    {
+        $isbn = preg_replace('/[^0-9Xx]/', '', $isbn) ?? '';
+        if ($isbn === '') {
+            return null;
+        }
+        try {
+            // default=false: a 404 instead of a blank placeholder image when there's no cover.
+            $body = (string) $this->http()->request('GET', "https://covers.openlibrary.org/b/isbn/$isbn-L.jpg?default=false")->getBody();
+        } catch (TransferException $e) {
+            return null;
+        }
+        return @getimagesizefromstring($body) !== false ? $body : null;
+    }
+
+    /**
      * @param array<string, mixed> $query
      * @return array<string, mixed>
      */

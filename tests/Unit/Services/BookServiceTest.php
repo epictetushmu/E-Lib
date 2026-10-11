@@ -3,7 +3,10 @@
 namespace Tests\Unit\Services;
 
 use App\Models\Books;
+use App\Models\Loans;
+use App\Services\NotificationService;
 use App\Services\BookService;
+use MongoDB\BSON\UTCDateTime;
 use MongoDB\Model\BSONArray;
 use MongoDB\Model\BSONDocument;
 use Tests\Support\ServiceTestCase;
@@ -342,5 +345,63 @@ class BookServiceTest extends ServiceTestCase
 
         $authors = array_map(fn ($i) => $i . str_repeat('x', 300), range(1, 50));
         $this->service($books)->catalog(['author' => $authors, 'year_from' => '19x0', 'year_to' => '1999', 'sort' => 'views', 'page' => '99999'], false);
+    }
+
+    /**
+     * @dataProvider loanStateProvider
+     */
+    public function testLoanState(array $loan, string $expected): void
+    {
+        $this->assertSame($expected, BookService::loanState($loan, 1_000_000));
+    }
+
+    public static function loanStateProvider(): array
+    {
+        $past = new UTCDateTime(999_000 * 1000);
+        $future = new UTCDateTime(1_001_000 * 1000);
+        return [
+            'pdf on loan' => [['kind' => 'digital', 'due_at' => $future], 'active'],
+            'pdf ran out' => [['kind' => 'digital', 'due_at' => $past], 'expired'],
+            'legacy record without kind' => [['due_at' => $future], 'active'],
+            'returned wins' => [['kind' => 'physical', 'due_at' => $past, 'returned_at' => $past], 'returned'],
+            'reservation waiting' => [['kind' => 'physical', 'due_at' => null, 'pickup_by' => $future], 'reserved'],
+            'reservation lapsed' => [['kind' => 'physical', 'due_at' => null, 'pickup_by' => $past], 'not_collected'],
+            'reservation cancelled' => [['kind' => 'physical', 'due_at' => null, 'cancelled_at' => $past], 'cancelled'],
+            'physical out' => [['kind' => 'physical', 'due_at' => $future], 'out'],
+            'physical overdue' => [['kind' => 'physical', 'due_at' => $past], 'overdue'],
+        ];
+    }
+
+    public function testFreedCopyGoesToTheHeadOfTheWaitlist(): void
+    {
+        $loans = $this->createMock(Loans::class);
+        $loans->method('waitlist')->willReturn([['user_id' => 'u1'], ['user_id' => 'u2']]);
+        $loans->method('activeFor')->willReturn(null);
+        $loans->method('activeCount')->willReturnOnConsecutiveCalls(0, 1);
+        $loans->expects($this->once())->method('reserve')->with('b1', 'u1', 1, 'physical')
+            ->willReturn(['free_at' => new UTCDateTime()]);
+        $loans->expects($this->once())->method('leaveWaitlist')->with('b1', 'u1');
+        $notifications = $this->createMock(NotificationService::class);
+        $notifications->expects($this->once())->method('notify')->with('u1', 'b1', $this->stringContains('Ready'));
+
+        $service = $this->service();
+        $this->inject($service, 'loans', $loans);
+        $this->inject($service, 'notifications', $notifications);
+
+        $book = ['title' => 'T', 'loan_copies' => 1, 'file_type' => 'physical'];
+        $this->assertSame(1, $service->promoteWaitlist('b1', $book));
+    }
+
+    public function testNobodyJumpsTheWaitlist(): void
+    {
+        $loans = $this->createMock(Loans::class);
+        $loans->method('activeFor')->willReturn(null);
+        $loans->method('waitlist')->willReturn([['user_id' => 'someone-else']]);
+        $loans->expects($this->never())->method('borrow');
+
+        $service = $this->service();
+        $this->inject($service, 'loans', $loans);
+
+        $this->assertSame('queue', $service->borrow('b1', ['loan_copies' => 3], 'u1'));
     }
 }

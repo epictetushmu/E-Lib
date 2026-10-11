@@ -1,6 +1,6 @@
 import client from './client'
 import type { ApiResponse } from '@/types/api'
-import type { MongoId, Book } from '@/types/book'
+import type { MongoId, Book, LoanRecord } from '@/types/book'
 
 export interface LoginResult {
   token: string
@@ -61,4 +61,25 @@ export function getSavedBooks() {
 
 export function getDownloadedBooks() {
   return client.get<ApiResponse<Book[]>>('/v1/downloaded-books')
+}
+
+/** The caller's loans and reservations, newest first. */
+export function getMyLoans() {
+  return client.get<ApiResponse<LoanRecord[]>>('/v1/user/loans')
+}
+
+export interface UserNotification {
+  id: string
+  book_id: string | null
+  message: string
+  created_at: string | null
+  read: boolean
+}
+
+export function getNotifications() {
+  return client.get<ApiResponse<UserNotification[]>>('/v1/user/notifications')
+}
+
+export function markNotificationsRead() {
+  return client.post<ApiResponse<string>>('/v1/user/notifications/read')
 }

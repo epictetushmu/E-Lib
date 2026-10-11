@@ -301,8 +301,9 @@ class Books extends BaseModel
     public function deleteBook(string $id): array
     {
         $result = $this->deleteById($id);
-        // Its search chunks go with it — here, the one place every delete goes through.
+        // Its search chunks and loans go with it — here, the one place every delete goes through.
         (new BookChunks($this->db))->deleteForBook($id);
+        (new Loans($this->db))->deleteForBook($id);
         return $result;
     }
 

@@ -47,6 +47,12 @@ const router = createRouter({
       beforeEnter: requireAdmin,
     },
     {
+      path: '/admin/loans',
+      name: 'admin-loans',
+      component: () => import('@/views/admin/Loans.vue'),
+      beforeEnter: requireAdmin,
+    },
+    {
       path: '/admin/logs',
       name: 'admin-logs',
       component: () => import('@/views/admin/Logs.vue'),

@@ -84,6 +84,27 @@ class EmailService
     }
 
     /**
+     * Plain message to a reader (loan notifications).
+     */
+    public function sendToUser(string $toEmail, string $toName, string $subject, string $message): bool
+    {
+        try {
+            $this->mailer->clearAllRecipients();
+            $this->mailer->clearAttachments();
+            $this->mailer->Timeout = 10;
+            $this->mailer->addAddress($toEmail, $toName);
+            $this->mailer->isHTML(false);
+            $this->mailer->Subject = $subject;
+            $this->mailer->Body = $message;
+            $this->mailer->send();
+            return true;
+        } catch (Exception $e) {
+            error_log("PHPMailer Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Format support email HTML
      *
      * @param string $name Sender name

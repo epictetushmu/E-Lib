@@ -52,6 +52,21 @@ services:
     networks:
       - elib-network
 
+  # Library jobs every minute (scripts/scheduler.php): waitlist holds, due-soon/overdue notices, queued
+  # emails. Every job is idempotent, so a restart or a missed run is harmless.
+  scheduler:
+    image: e-lib-app
+    command: ["sh", "-c", "while true; do php scripts/scheduler.php; sleep 60; done"]
+    restart: unless-stopped
+    environment:
+      - APP_ENV=production
+    volumes:
+      - ./.env:/var/www/html/.env:ro
+    depends_on:
+      - app
+    networks:
+      - elib-network
+
   # Self-hosted embedding model: bge-m3 (Greek + English, 1024 dims) served by Ollama at f16 — ~2GB RAM,
   # where text-embeddings-inference's fp32 build of the same model needed 5-6GB for identical vectors.
   # Deliberately NO ports: Ollama has no authentication, so only app + worker reach it, by service name.
