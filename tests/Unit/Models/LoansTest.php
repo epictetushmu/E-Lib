@@ -31,6 +31,8 @@ class LoansTest extends ModelTestCase
             }
             return ['_id' => $filter['_id'], 'user_id' => self::USER];
         });
+        $db->expects($this->once())->method('insert')
+            ->with('LoanHistory', $this->callback(fn ($doc) => $doc['user_id'] === self::USER && $doc['returned_at'] === null));
 
         $loan = $this->makeLoans($db)->borrow(self::BOOK, self::USER, 3, 14);
 

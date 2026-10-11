@@ -246,6 +246,18 @@ class BookController
         ResponseHandler::respond(true, 'Book returned');
     }
 
+    /**
+     * GET /api/v1/admin/loans?status=active|all — who borrowed what and when (admin only).
+     */
+    public function adminLoans(): void
+    {
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+        ResponseHandler::respond(true, $this->bookService->loanHistory(($_GET['status'] ?? 'all') === 'active'));
+    }
+
     public function searchBooks(string $search): void
     {
         // Zero matches is a normal outcome for a search, not an error — respond

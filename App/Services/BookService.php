@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Books;
 use App\Models\Loans;
+use App\Models\Users;
+use App\Helpers\Database\MongoHelper;
 use MongoDB\BSON\UTCDateTime;
 
 class BookService
@@ -69,6 +71,55 @@ class BookService
             'loan_days' => (int) ($book['loan_days'] ?? 0) ?: self::DEFAULT_LOAN_DAYS,
             'due_at' => $mine === null ? null : self::isoDate($mine['due_at']),
         ];
+    }
+
+    /**
+     * Loan records for the admin, with book title and borrower filled in.
+     * status: active (still out), returned (given back early) or expired (ran out its period).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function loanHistory(bool $activeOnly): array
+    {
+        // ponytail: newest 1000 only, add paging when a library outgrows it
+        $loans = $this->loans->history($activeOnly, 1000);
+        $ids = fn (string $field) => array_values(array_unique(array_map(
+            fn ($loan) => MongoHelper::createObjectId((string) $loan[$field]),
+            $loans
+        )));
+        $byId = function (array $docs): array {
+            $map = [];
+            foreach ($docs as $doc) {
+                $map[(string) $doc['_id']] = $doc;
+            }
+            return $map;
+        };
+        $books = $byId($this->book->findAll(['_id' => ['$in' => $ids('book_id')]], [
+            'projection' => ['title' => 1, 'author' => 1, 'loan_copies' => 1], 'limit' => 0,
+        ]));
+        $users = $byId((new Users())->findAll(['_id' => ['$in' => $ids('user_id')]], [
+            'projection' => ['username' => 1, 'email' => 1], 'limit' => 0,
+        ]));
+
+        $now = time();
+        return array_map(function ($loan) use ($books, $users, $now) {
+            $book = $books[$loan['book_id']] ?? null;
+            $user = $users[$loan['user_id']] ?? null;
+            $due = $loan['due_at'] instanceof UTCDateTime ? $loan['due_at']->toDateTime()->getTimestamp() : 0;
+            $returned = self::isoDate($loan['returned_at'] ?? null);
+            return [
+                'book_id' => $loan['book_id'],
+                'book_title' => $book['title'] ?? null,
+                'book_author' => $book['author'] ?? null,
+                'user_id' => $loan['user_id'],
+                'username' => $user['username'] ?? null,
+                'email' => $user['email'] ?? null,
+                'borrowed_at' => self::isoDate($loan['borrowed_at']),
+                'due_at' => self::isoDate($loan['due_at']),
+                'returned_at' => $returned,
+                'status' => $returned !== null ? 'returned' : ($due > $now ? 'active' : 'expired'),
+            ];
+        }, $loans);
     }
 
     private static function isoDate(mixed $date): ?string

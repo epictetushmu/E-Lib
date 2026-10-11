@@ -78,6 +78,7 @@ class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/saved-books', 'handler' => [new UserController(), 'getSavedBooks']],
             ['method' => 'GET', 'path' => '/api/v1/downloaded-books', 'handler' => [new UserController(), 'getDownloadedBooks']],
             ['method' => 'GET', 'path' => '/api/v1/admin/metadata-lookup', 'handler' => [new BookController(), 'metadataLookup']],
+            ['method' => 'GET', 'path' => '/api/v1/admin/loans', 'handler' => [new BookController(), 'adminLoans']],
             ['method' => 'GET', 'path' => '/api/v1/admin/logs', 'handler' => [new UserController(), 'viewLogs']],
             ['method' => 'POST', 'path' => '/api/v1/update-profile', 'handler' => [new UserController(), 'updateProfile']],
             ['method' => 'POST', 'path' => '/api/v1/change-password', 'handler' => [new UserController(), 'changePassword']],

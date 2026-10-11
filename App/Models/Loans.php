@@ -11,11 +11,13 @@ use MongoDB\Driver\Exception\ServerException;
  * Each copy is a slot document with _id "<bookId>:<n>", so the copy limit is enforced by the unique _id
  * index alone: taking a copy is one upsert that only matches a slot whose loan has expired, and fails with
  * a duplicate-key error while the slot is held. Expired loans are simply overwritten, no cleanup job.
+ * Since slots are reused, every borrow is also appended to LoanHistory: the record admins see.
  */
 class Loans extends BaseModel
 {
     protected string $collection = 'Loans';
 
+    private const HISTORY = 'LoanHistory';
     private const DUPLICATE_KEY = 11000;
 
     /**
@@ -70,6 +72,7 @@ class Loans extends BaseModel
                     ['upsert' => true]
                 );
                 if ($taken !== null) {
+                    $this->db->insert(self::HISTORY, $loan + ['returned_at' => null]);
                     return $taken;
                 }
             } catch (ServerException $e) {
@@ -84,6 +87,23 @@ class Loans extends BaseModel
     public function returnBook(string $bookId, string $userId): void
     {
         $this->db->delete($this->collection, ['book_id' => $bookId, 'user_id' => $userId]);
+        $now = new UTCDateTime();
+        $this->db->update(
+            self::HISTORY,
+            ['book_id' => $bookId, 'user_id' => $userId, 'returned_at' => null, 'due_at' => ['$gt' => $now]],
+            ['$set' => ['returned_at' => $now]]
+        );
+    }
+
+    /**
+     * Past and current loans, newest first. $activeOnly: not returned and not yet due.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function history(bool $activeOnly, int $limit): array
+    {
+        $filter = $activeOnly ? ['returned_at' => null, 'due_at' => ['$gt' => new UTCDateTime()]] : [];
+        return $this->db->find(self::HISTORY, $filter, ['sort' => ['borrowed_at' => -1], 'limit' => $limit]);
     }
 
     public function deleteForBook(string $bookId): void
