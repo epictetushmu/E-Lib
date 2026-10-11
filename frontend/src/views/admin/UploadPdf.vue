@@ -3,7 +3,7 @@ import { reactive, ref } from 'vue'
 import * as adminApi from '@/api/admin'
 import { isApiSuccess, requestErrorMessage } from '@/types/api'
 import { useToast } from '@/composables/useToast'
-import { useCategoryOptions } from '@/composables/useCategoryOptions'
+import { fillEmpty, useCategoryOptions } from '@/composables/useCategoryOptions'
 import CategoryPicker from '@/components/CategoryPicker.vue'
 
 const toast = useToast()
@@ -13,6 +13,12 @@ interface PendingFile {
   file: File
   title: string
   author: string
+  year: string
+  isbn: string
+  description: string
+  categories: string[]
+  /** Set once a lookup matched, so the admin knows to check the filled-in details. */
+  lookedUp: boolean
   status: 'pending' | 'success' | 'failed'
   reason?: string
 }
@@ -25,7 +31,6 @@ const feedback = ref('')
 const feedbackVariant = ref<'info' | 'success' | 'warning' | 'danger'>('info')
 
 const defaults = reactive({
-  author: '',
   categories: [] as string[],
   downloadable: true,
   status: 'draft',
@@ -42,8 +47,53 @@ function addFiles(files: File[]) {
     return
   }
   pdfFiles.forEach((file) => {
-    pendingFiles.value.push({ file, title: titleFromFilename(file.name), author: '', status: 'pending' })
+    pendingFiles.value.push({
+      file,
+      title: titleFromFilename(file.name),
+      author: '',
+      year: '',
+      isbn: '',
+      description: '',
+      categories: [],
+      lookedUp: false,
+      status: 'pending',
+    })
+    // Push first, then fill in the background (the reactive entry, not the raw object).
+    prefill(pendingFiles.value[pendingFiles.value.length - 1])
   })
+}
+
+/**
+ * Best effort, never overwriting what the admin typed: the PDF's own Title/Author and printed ISBN, then
+ * Google Books / Open Library (by ISBN, else title/author) for the description, year, categories and anything missing.
+ */
+async function prefill(entry: PendingFile) {
+  const guess = entry.title
+  const untouched = () => entry.title === guess
+  try {
+    const { readPdfDetails } = await import('@/utils/pdfjs')
+    const pdf = await readPdfDetails(entry.file)
+    if (pdf.title && untouched()) entry.title = pdf.title
+    entry.author ||= pdf.author
+    entry.isbn ||= pdf.isbn
+  } catch {
+    // Unreadable/encrypted PDF: keep the filename guess; the server validates the file on upload.
+  }
+
+  // Only a real title (from the PDF or the admin) is worth a title search; a filename guess finds wrong books.
+  const realTitle = entry.title !== titleFromFilename(entry.file.name)
+  if (!entry.isbn && !realTitle) return
+  const query = { isbn: entry.isbn, title: realTitle ? entry.title : '', author: entry.author }
+  try {
+    const { data: body } = await adminApi.lookupMetadata(query)
+    const found = isApiSuccess(body) ? body.data : null
+    if (!found) return
+    if (found.title && untouched()) entry.title = found.title
+    fillEmpty(entry, found, availableCategories.value)
+    entry.lookedUp = true
+  } catch {
+    // Lookup is optional; the admin fills the fields by hand.
+  }
 }
 
 function onFileInput(event: Event) {
@@ -80,9 +130,16 @@ async function handleUpload() {
 
   try {
     const response = await adminApi.uploadBooks(
-      pendingFiles.value.map((f) => ({ file: f.file, title: f.title.trim(), author: f.author.trim() })),
+      pendingFiles.value.map((f) => ({
+        file: f.file,
+        title: f.title.trim(),
+        author: f.author.trim(),
+        year: f.year.trim(),
+        isbn: f.isbn.trim(),
+        description: f.description.trim(),
+        categories: f.categories,
+      })),
       {
-        author: defaults.author,
         categories: defaults.categories,
         downloadable: defaults.downloadable,
         status: defaults.status,
@@ -136,10 +193,10 @@ async function handleUpload() {
 
 <template>
   <div class="container upload-pdf-page">
-    <div class="page-header">
-      <h1>Upload PDF</h1>
-      <RouterLink to="/admin" class="btn btn-outline">Back to Dashboard</RouterLink>
-    </div>
+    <header class="page-header">
+      <h1>Upload books</h1>
+      <RouterLink to="/admin" class="link-btn">Back to books</RouterLink>
+    </header>
 
     <div
       class="drop-area"
@@ -148,8 +205,6 @@ async function handleUpload() {
       @dragleave.prevent="dragging = false"
       @drop.prevent="onDrop"
     >
-      <p class="drop-title">Drag &amp; Drop PDF Files Here</p>
-      <p class="text-muted">or</p>
       <input
         id="pdf-files-input"
         type="file"
@@ -159,12 +214,12 @@ async function handleUpload() {
         data-testid="file-input"
         @change="onFileInput"
       />
-      <label for="pdf-files-input" class="btn btn-outline">Browse Files</label>
+      <p>Drop PDF files here or <label for="pdf-files-input" class="btn btn-outline">Choose files</label></p>
+      <p class="drop-hint">Title, author, ISBN and description are filled in from each PDF where possible.</p>
     </div>
 
-    <div v-if="pendingFiles.length" class="files-list card">
-      <h3>Selected Files <span class="badge">{{ pendingFiles.length }}</span></h3>
-      <div
+    <ul v-if="pendingFiles.length" class="files-list">
+      <li
         v-for="(item, index) in pendingFiles"
         :key="item.file.name + index"
         class="file-row"
@@ -172,82 +227,91 @@ async function handleUpload() {
         :data-testid="`file-row-${index}`"
       >
         <div class="file-row-header">
-          <strong>{{ item.file.name }}</strong>
-          <button type="button" class="btn-close" aria-label="Remove" @click="removeFile(index)">&times;</button>
+          <span class="file-name">{{ item.file.name }}</span>
+          <button type="button" class="btn-close" :aria-label="`Remove ${item.file.name}`" @click="removeFile(index)">
+            &times;
+          </button>
         </div>
-        <div class="file-row-fields">
-          <input
-            v-model="item.title"
-            type="text"
-            placeholder="Book Title"
-            required
-            :data-testid="`file-title-input-${index}`"
-          />
-          <input
-            v-model="item.author"
-            type="text"
-            placeholder="Author (optional)"
-            :data-testid="`file-author-input-${index}`"
-          />
+        <div class="file-fields">
+          <label class="field wide">
+            <span>Title</span>
+            <input v-model="item.title" type="text" required :data-testid="`file-title-input-${index}`" />
+          </label>
+          <label class="field">
+            <span>Author</span>
+            <input v-model="item.author" type="text" :data-testid="`file-author-input-${index}`" />
+          </label>
+          <label class="field">
+            <span>Year</span>
+            <input v-model="item.year" type="text" inputmode="numeric" />
+          </label>
+          <label class="field">
+            <span>ISBN</span>
+            <input v-model="item.isbn" type="text" />
+          </label>
+          <label class="field full">
+            <span>Description</span>
+            <textarea v-model="item.description" rows="3"></textarea>
+          </label>
+          <div class="field full">
+            <label :for="`file-categories-${index}`">Categories</label>
+            <CategoryPicker
+              :id="`file-categories-${index}`"
+              v-model="item.categories"
+              :options="availableCategories"
+              placeholder="Add a category"
+            />
+          </div>
         </div>
+        <p v-if="item.lookedUp" class="file-source">Details filled from Google Books / Open Library. Check they match this book.</p>
         <p v-if="item.reason" class="file-reason">{{ item.reason }}</p>
-      </div>
-    </div>
+      </li>
+    </ul>
 
-    <div class="card defaults-card">
-      <h3>Default Values for All Books</h3>
-      <div class="form-grid">
-        <div class="form-field">
-          <label for="default-author">Default Author</label>
-          <input id="default-author" v-model="defaults.author" type="text" placeholder="Optional" />
-        </div>
-        <div class="form-field">
-          <label for="default-categories">Default Categories</label>
+    <template v-if="pendingFiles.length">
+      <fieldset class="defaults">
+        <legend>For every file</legend>
+        <div class="field">
+          <label for="default-categories">Also add categories</label>
           <CategoryPicker
             id="default-categories"
             v-model="defaults.categories"
             :options="availableCategories"
-            placeholder="Fiction, Fantasy, Adventure…"
+            placeholder="e.g. a course name"
           />
         </div>
-        <div class="form-field checkbox-field">
-          <label><input v-model="defaults.downloadable" type="checkbox" /> Allow download</label>
-        </div>
-        <div class="form-field">
-          <label for="default-status">Default Status</label>
-          <select id="default-status" v-model="defaults.status">
-            <option value="draft">Draft</option>
-            <option value="public">Public</option>
-          </select>
-        </div>
-      </div>
-    </div>
+        <label class="check"
+          ><input v-model="defaults.status" type="checkbox" true-value="public" false-value="draft" /> Publish right away</label
+        >
+        <label class="check"><input v-model="defaults.downloadable" type="checkbox" /> Allow download</label>
+      </fieldset>
 
-    <div v-if="uploading || feedback" class="upload-status">
-      <div v-if="uploading" class="progress-bar-track">
-        <div class="progress-bar-fill" :style="{ width: progress + '%' }"></div>
+      <div v-if="uploading || feedback" class="upload-status">
+        <div v-if="uploading" class="progress-bar-track">
+          <div class="progress-bar-fill" :style="{ width: progress + '%' }"></div>
+        </div>
+        <p
+          v-if="feedback"
+          class="alert"
+          :class="`alert-${feedbackVariant === 'danger' ? 'danger' : feedbackVariant === 'success' ? 'success' : 'info'}`"
+          data-testid="upload-feedback"
+        >
+          {{ feedback }}
+        </p>
       </div>
-      <p
-        v-if="feedback"
-        class="alert"
-        :class="`alert-${feedbackVariant === 'danger' ? 'danger' : feedbackVariant === 'success' ? 'success' : 'info'}`"
-        data-testid="upload-feedback"
-      >
-        {{ feedback }}
-      </p>
-    </div>
 
-    <div class="page-actions">
-      <button
-        type="button"
-        class="btn btn-primary"
-        :disabled="uploading || !pendingFiles.length"
-        data-testid="upload-button"
-        @click="handleUpload"
-      >
-        {{ uploading ? 'Uploading…' : 'Upload All Files' }}
-      </button>
-    </div>
+      <div class="page-actions">
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="uploading"
+          data-testid="upload-button"
+          @click="handleUpload"
+        >
+          {{ uploading ? 'Uploading…' : `Upload ${pendingFiles.length} ${pendingFiles.length === 1 ? 'book' : 'books'}` }}
+        </button>
+      </div>
+    </template>
   </div>
 </template>
 

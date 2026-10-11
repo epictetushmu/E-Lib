@@ -43,13 +43,6 @@
   margin: 1.75rem 0 1.25rem;
 }
 
-.summary {
-  margin: 0 0 1rem;
-  font-family: var(--font-serif);
-  font-size: 1.15rem;
-  color: var(--color-text-muted);
-}
-
 .shelf {
   display: flex;
   align-items: flex-end;
@@ -265,8 +258,13 @@
   min-width: 0;
 }
 
-/* Book titles are italicised, as a bibliography sets them. */
+/* Book titles are italicised, as a bibliography sets them. The title opens the edit dialog. */
 .book-title {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
   font-family: var(--font-serif);
   font-size: 1.05rem;
   font-style: italic;
@@ -390,11 +388,20 @@
   margin-left: 0.9rem;
 }
 
-.link-btn.danger {
-  color: var(--color-danger);
+.book-title cite {
+  font-style: inherit;
 }
 
-.link-btn.danger:hover:not(:disabled) {
+.book-title:hover cite,
+.book-title:focus-visible cite {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* Quiet until pointed at: one red word per row adds up to a red column. */
+.link-btn.danger:hover:not(:disabled),
+.link-btn.danger:focus-visible {
   color: var(--color-danger);
 }
 
@@ -432,11 +439,13 @@
     clip: rect(0, 0, 0, 0);
   }
 
+  /* Book on top; status, featured and actions on one line under it. Reader stats stay on wide screens. */
   .admin-table tbody tr:not(.no-match) {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem 1rem;
-    padding: 1rem;
+    grid-template-columns: auto auto 1fr;
+    align-items: center;
+    gap: 0.6rem 1rem;
+    padding: 0.85rem 0.25rem;
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -453,40 +462,12 @@
     min-width: 0;
   }
 
-  .status-cell {
-    grid-column: 1 / span 2;
-  }
-
-  .featured-cell {
-    justify-self: end;
-  }
-
-  /* Views, downloads and rating side by side, each labelled. */
   .admin-table td.num {
-    display: flex;
-    flex-direction: column;
-    text-align: left;
-    font-size: 0.95rem;
-  }
-
-  .admin-table td.num::before {
-    content: attr(data-label);
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-  }
-
-  .actions-cell {
-    grid-column: 1 / -1;
-    text-align: left;
-    padding-top: 0.4rem !important;
+    display: none;
   }
 
   .actions-cell .link-btn {
     font-size: 0.95rem;
-  }
-
-  .actions-cell .link-btn + .link-btn {
-    margin-left: 1.5rem;
   }
 }
 

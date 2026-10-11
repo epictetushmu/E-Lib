@@ -28,7 +28,6 @@ export function deleteBook(id: string) {
 }
 
 export interface UploadDefaults {
-  author: string
   categories: string[]
   status: string
   downloadable: boolean
@@ -38,6 +37,25 @@ export interface UploadFileMeta {
   file: File
   title: string
   author: string
+  year: string
+  isbn: string
+  description: string
+  /** This file's own categories, on top of the defaults. */
+  categories: string[]
+}
+
+export interface MetadataLookup {
+  title: string
+  author: string
+  year: string
+  isbn: string
+  description: string
+  categories: string[]
+}
+
+/** Google Books / Open Library details for a book (null when not found) — pre-fills the upload form. */
+export function lookupMetadata(params: { isbn?: string; title?: string; author?: string }) {
+  return client.get<ApiResponse<MetadataLookup | null>>('/v1/admin/metadata-lookup', { params })
 }
 
 export interface UploadResult {
@@ -50,16 +68,24 @@ export interface UploadResult {
 
 export function uploadBooks(files: UploadFileMeta[], defaults: UploadDefaults, onProgress?: (percent: number) => void) {
   const formData = new FormData()
-  formData.append('defaultAuthor', defaults.author)
   formData.append('defaultCategories', JSON.stringify(defaults.categories))
   formData.append('defaultStatus', defaults.status)
   formData.append('defaultDownloadable', defaults.downloadable ? 'true' : 'false')
 
   files.forEach((item, index) => {
     formData.append('books[]', item.file)
-    if (item.title || item.author) {
-      formData.append(`metadata_${index}`, JSON.stringify({ title: item.title, author: item.author || defaults.author }))
-    }
+    formData.append(
+      `metadata_${index}`,
+      JSON.stringify({
+        title: item.title,
+        author: item.author,
+        year: item.year,
+        isbn: item.isbn,
+        description: item.description,
+        // Sent per file, this replaces the default categories server-side, so merge them here.
+        categories: [...new Set([...defaults.categories, ...item.categories])],
+      }),
+    )
   })
 
   return client.post<ApiResponse<UploadResult>>('/v1/books/upload', formData, {

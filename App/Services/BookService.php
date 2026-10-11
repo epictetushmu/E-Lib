@@ -7,7 +7,7 @@ use MongoDB\BSON\UTCDateTime;
 
 class BookService
 {
-    private const DEFAULT_AUTHOR = 'Unknown Author';
+    public const DEFAULT_AUTHOR = 'Unknown Author';
 
     private Books $book;
 

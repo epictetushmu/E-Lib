@@ -5,7 +5,7 @@ import { isApiSuccess, apiErrorMessage, requestErrorMessage, type ApiError } fro
 import type { Book } from '@/types/book'
 import { idToString } from '@/types/book'
 import { useToast } from '@/composables/useToast'
-import { useCategoryOptions } from '@/composables/useCategoryOptions'
+import { fillEmpty, useCategoryOptions } from '@/composables/useCategoryOptions'
 import { thumbnailUrl } from '@/api/books'
 import { onThumbnailError } from '@/utils/dom'
 import CategoryPicker from '@/components/CategoryPicker.vue'
@@ -193,6 +193,7 @@ const editing = ref<Book | null>(null)
 const editForm = reactive({
   title: '',
   author: '',
+  year: '',
   description: '',
   status: 'draft',
   featured: false,
@@ -202,18 +203,42 @@ const editForm = reactive({
 })
 const editSaving = ref(false)
 const editError = ref('')
+/** A lookup filled something in; the admin should check it before saving. */
+const editLookedUp = ref(false)
+
+/** What the bulk upload used to store instead of a description; treated as empty. */
+const PLACEHOLDER_DESCRIPTION = 'Uploaded via the upload feature'
+
+/** Missing description/year/ISBN/categories → fill only the empty fields from Google Books / Open Library. */
+async function prefillEdit(book: Book) {
+  if (editForm.description && editForm.year && editForm.isbn && editForm.categories.length) return
+  const query = { isbn: editForm.isbn, title: editForm.title, author: editForm.author }
+  try {
+    const { data: body } = await adminApi.lookupMetadata(query)
+    const found = isApiSuccess(body) ? body.data : null
+    // Ignore a late answer for a modal that was closed or switched to another book meanwhile.
+    if (!found || editing.value !== book) return
+    fillEmpty(editForm, found, availableCategories.value)
+    editLookedUp.value = true
+  } catch {
+    // Lookup is optional; the admin fills the fields by hand.
+  }
+}
 
 function openEdit(book: Book) {
   editing.value = book
   editForm.title = book.title ?? ''
   editForm.author = book.author ?? ''
-  editForm.description = book.description ?? ''
+  editForm.year = book.year ?? ''
+  editForm.description = book.description === PLACEHOLDER_DESCRIPTION ? '' : (book.description ?? '')
   editForm.status = book.status ?? 'draft'
   editForm.featured = !!book.featured
   editForm.isbn = book.isbn ?? ''
   editForm.downloadable = book.downloadable !== false
   editForm.categories = [...(book.categories ?? [])]
   editError.value = ''
+  editLookedUp.value = false
+  prefillEdit(book)
 }
 
 function closeEdit() {
@@ -248,10 +273,10 @@ onMounted(loadBooks)
 <template>
   <div class="container admin-page" data-testid="dashboard-page">
     <header class="admin-header">
-      <h1 data-testid="dashboard-heading">Manage Books</h1>
+      <h1 data-testid="dashboard-heading">Manage books</h1>
       <div class="header-actions">
         <RouterLink to="/admin/logs" class="link-btn">Server logs</RouterLink>
-        <RouterLink to="/admin/upload" class="btn btn-primary" data-testid="upload-pdf-link">Upload PDF</RouterLink>
+        <RouterLink to="/admin/upload" class="btn btn-primary" data-testid="upload-pdf-link">Upload books</RouterLink>
       </div>
     </header>
 
@@ -264,16 +289,11 @@ onMounted(loadBooks)
 
     <div v-else-if="!books.length" class="state-message">
       <p>No books in the catalogue yet. Upload a PDF to start the collection.</p>
-      <RouterLink to="/admin/upload" class="btn btn-primary">Upload PDF</RouterLink>
+      <RouterLink to="/admin/upload" class="btn btn-primary">Upload books</RouterLink>
     </div>
 
     <template v-else>
-      <section class="collection" aria-labelledby="collection-summary">
-        <p id="collection-summary" class="summary">
-          {{ books.length }} {{ books.length === 1 ? 'book' : 'books' }}: {{ filters[1].count }} public,
-          {{ filters[2].count }} {{ filters[2].count === 1 ? 'draft' : 'drafts' }}, {{ filters[3].count }} featured.
-        </p>
-
+      <section class="collection" aria-label="Collection">
         <!-- Decorative overview of the same data as the summary and table, so it's hidden from assistive tech. -->
         <div class="shelf" aria-hidden="true">
           <button
@@ -346,7 +366,15 @@ onMounted(loadBooks)
                     @error="onThumbnailError"
                   />
                   <div class="book-text">
-                    <cite class="book-title">{{ book.title }}</cite>
+                    <button
+                      type="button"
+                      class="book-title"
+                      title="Edit details"
+                      :data-testid="`edit-book-${idToString(book._id)}`"
+                      @click="openEdit(book)"
+                    >
+                      <cite>{{ book.title }}</cite>
+                    </button>
                     <span class="book-meta"
                       >{{ book.author || 'Unknown author'
                       }}<template v-if="book.year">, {{ book.year }}</template></span
@@ -398,31 +426,23 @@ onMounted(loadBooks)
                   </svg>
                 </button>
               </td>
-              <td class="num" data-label="Views">{{ book.views ?? 0 }}</td>
-              <td class="num" data-label="Downloads">
+              <td class="num">{{ book.views || '–' }}</td>
+              <td class="num">
                 <span v-if="book.downloadable === false" class="locked" title="Downloads are turned off for this book"
                   >Off</span
                 >
-                <template v-else>{{ book.downloads ?? 0 }}</template>
+                <template v-else>{{ book.downloads || '–' }}</template>
               </td>
-              <td class="num" data-label="Rating">
+              <td class="num">
                 <template v-if="book.review_count">
                   {{ book.average_rating?.toFixed(1) }}
                   <span class="reviews"
                     >{{ book.review_count }} {{ book.review_count === 1 ? 'review' : 'reviews' }}</span
                   >
                 </template>
-                <span v-else class="none">None yet</span>
+                <span v-else class="none">–</span>
               </td>
               <td class="actions-cell">
-                <button
-                  type="button"
-                  class="link-btn"
-                  :data-testid="`edit-book-${idToString(book._id)}`"
-                  @click="openEdit(book)"
-                >
-                  Edit
-                </button>
                 <RouterLink :to="`/read/${idToString(book._id)}`" class="link-btn">Preview</RouterLink>
                 <button
                   type="button"
@@ -463,6 +483,13 @@ onMounted(loadBooks)
             <div class="form-field span-2">
               <label for="edit-description">Description</label>
               <textarea id="edit-description" v-model="editForm.description" rows="3"></textarea>
+              <small v-if="editLookedUp" class="text-muted">
+                Empty fields were filled from Google Books / Open Library. Check they match this book before saving.
+              </small>
+            </div>
+            <div class="form-field">
+              <label for="edit-year">Year</label>
+              <input id="edit-year" v-model="editForm.year" type="text" inputmode="numeric" />
             </div>
             <div class="form-field">
               <label for="edit-status">Status</label>
@@ -492,7 +519,6 @@ onMounted(loadBooks)
                 :options="availableCategories"
                 placeholder="Fiction, Fantasy, Adventure…"
               />
-              <small class="text-muted">Pick an existing category or type a new one and press Enter.</small>
             </div>
           </div>
           <div class="modal-actions">

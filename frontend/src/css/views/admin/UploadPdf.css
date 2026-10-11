@@ -6,18 +6,16 @@
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
+  align-items: baseline;
   gap: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .drop-area {
   border: 2px dashed var(--color-border);
   border-radius: var(--radius);
-  padding: 3rem 1.5rem;
+  padding: 1.25rem 1.5rem;
   text-align: center;
-  margin-bottom: 1.5rem;
   background: var(--color-surface);
 }
 
@@ -26,107 +24,148 @@
   background: var(--color-bg);
 }
 
-.drop-title {
-  font-weight: 600;
-  margin-bottom: 0.25rem;
+.drop-area p {
+  margin: 0;
+}
+
+.drop-area .btn {
+  margin-left: 0.5rem;
+}
+
+.drop-hint {
+  margin-top: 0.6rem !important;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
 }
 
 .files-list {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 1.5rem;
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
 }
 
-.badge {
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  font-size: 0.8rem;
-  padding: 0.1rem 0.6rem;
-}
-
+/* One file per row, separated by a rule rather than boxed: the page is the container. */
 .file-row {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: 0.75rem;
-  margin-top: 0.75rem;
+  padding: 1rem 0 1.25rem;
+  border-top: 1px solid var(--color-border);
 }
 
 .file-row.success {
-  border-color: var(--color-success);
-  background: #f2f8f4;
+  border-left: 3px solid var(--color-success);
+  padding-left: 0.75rem;
 }
 
 .file-row.failed {
-  border-color: var(--color-danger);
-  background: #faf1f1;
+  border-left: 3px solid var(--color-danger);
+  padding-left: 0.75rem;
 }
 
 .file-row-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.file-name {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
 }
 
 .btn-close {
   background: none;
   border: none;
-  font-size: 1.1rem;
+  font-size: 1.25rem;
+  line-height: 1;
   cursor: pointer;
   color: var(--color-text-muted);
 }
 
-.file-row-fields {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.file-row-fields input {
-  flex: 1;
-  min-width: 140px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: 0.4rem 0.6rem;
-}
-
-.file-reason {
-  margin: 0.4rem 0 0;
-  font-size: 0.8rem;
-  color: var(--color-danger);
-}
-
-.defaults-card {
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-.form-grid {
+.file-fields {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem 1rem;
+  grid-template-columns: 2fr 1.5fr 0.6fr 1fr;
+  gap: 0.6rem 0.75rem;
 }
 
-@media (max-width: 480px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .drop-area {
-    padding: 2rem 1rem;
-  }
-}
-
-.checkbox-field label {
+.field {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.field > span,
+.field > label {
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--color-text-muted);
 }
 
+.field input,
+.field textarea {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.45rem 0.6rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field.full {
+  grid-column: 1 / -1;
+}
+
+.file-source,
+.file-reason {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.file-reason {
+  color: var(--color-danger);
+}
+
+.defaults {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1.5rem;
+  margin: 0;
+  padding: 1rem 0 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.defaults legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 0.25rem;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  color: var(--color-navy);
+}
+
+.defaults .field {
+  flex: 1 1 18rem;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-bottom: 0.55rem;
+  font-size: 0.9rem;
+}
+
 .upload-status {
-  margin-bottom: 1.5rem;
+  margin-top: 1.25rem;
 }
 
 .progress-bar-track {
@@ -146,4 +185,25 @@
 .page-actions {
   display: flex;
   justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
+@media (max-width: 560px) {
+  .upload-pdf-page {
+    padding: 1.75rem 1rem 2.5rem;
+  }
+
+  .file-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .field.wide {
+    grid-column: 1 / -1;
+  }
+
+  .drop-area .btn {
+    display: block;
+    width: fit-content;
+    margin: 0.6rem auto 0;
+  }
 }

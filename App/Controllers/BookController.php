@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Services\BookMetadataService;
 use App\Services\BookService;
 use App\Services\ContentSearchService;
 use App\Services\UserService;
@@ -220,6 +221,20 @@ class BookController
      * GET /api/v1/features — optional features this deployment has switched on, so the SPA can hide
      * what isn't available.
      */
+    /**
+     * GET /api/v1/admin/metadata-lookup?isbn=&title=&author= — Google Books details to pre-fill the upload form.
+     * A miss is a successful null, so the form just keeps what it has.
+     */
+    public function metadataLookup(): void
+    {
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+        $str = fn (string $key) => is_string($_GET[$key] ?? null) ? mb_substr($_GET[$key], 0, 300) : '';
+        ResponseHandler::respond(true, (new BookMetadataService())->lookup($str('isbn'), $str('title'), $str('author')));
+    }
+
     public function features(): void
     {
         ResponseHandler::respond(true, ['contentSearch' => ContentSearchService::enabled()]);

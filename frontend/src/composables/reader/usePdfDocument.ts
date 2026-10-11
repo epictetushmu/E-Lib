@@ -1,12 +1,9 @@
 import { ref, shallowRef, type Ref } from 'vue'
-import * as pdfjsLib from 'pdfjs-dist'
+import { pdfjsLib } from '@/utils/pdfjs'
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, PageViewport } from 'pdfjs-dist'
-import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import * as booksApi from '@/api/books'
 import { requestErrorMessage } from '@/types/api'
 import { scrollWithin } from '@/utils/dom'
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc
 
 export interface UsePdfDocumentOptions {
   scale: Ref<number>
