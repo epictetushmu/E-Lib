@@ -324,6 +324,7 @@ onMounted(loadBooks)
     <header class="admin-header">
       <h1 data-testid="dashboard-heading">Manage books</h1>
       <div class="header-actions">
+        <RouterLink to="/admin/loans" class="link-btn" data-testid="loans-link">Loans</RouterLink>
         <RouterLink to="/admin/logs" class="link-btn">Server logs</RouterLink>
         <RouterLink to="/admin/upload" class="btn btn-primary" data-testid="upload-pdf-link">Upload books</RouterLink>
       </div>

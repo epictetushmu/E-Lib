@@ -105,6 +105,24 @@ export interface AdminLogs {
   requests: string[] | string
 }
 
+/** One borrow, from GET /v1/admin/loans (newest first). */
+export interface LoanRecord {
+  book_id: string
+  book_title: string | null
+  book_author: string | null
+  user_id: string
+  username: string | null
+  email: string | null
+  borrowed_at: string | null
+  due_at: string | null
+  returned_at: string | null
+  status: 'active' | 'returned' | 'expired'
+}
+
+export function getLoans() {
+  return client.get<ApiResponse<LoanRecord[]>>('/v1/admin/loans')
+}
+
 export function getLogs() {
   return client.get<ApiResponse<AdminLogs>>('/v1/admin/logs')
 }
