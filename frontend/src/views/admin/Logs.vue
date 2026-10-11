@@ -4,6 +4,7 @@ import * as adminApi from '@/api/admin'
 import { isApiSuccess, requestErrorMessage } from '@/types/api'
 import { useToast } from '@/composables/useToast'
 import { downloadBlob } from '@/utils/dom'
+import { shortDateTime } from '@/utils/date'
 
 const toast = useToast()
 
@@ -18,7 +19,7 @@ const autoRefresh = ref(false)
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 const systemInfo = computed(() => ({
-  'Page loaded': new Date().toLocaleString(),
+  'Page loaded': shortDateTime(new Date().toISOString()),
   Browser: navigator.userAgent,
   'Screen resolution': `${window.screen.width}x${window.screen.height}`,
   'Cookies enabled': navigator.cookieEnabled ? 'Yes' : 'No',

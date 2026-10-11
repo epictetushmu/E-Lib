@@ -65,11 +65,7 @@ async function loadProfile() {
         isAdmin: body.data.isAdmin,
       })
       if (body.data.createdAt) {
-        memberSince.value = new Date(body.data.createdAt).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        })
+        memberSince.value = shortDate(body.data.createdAt)
       }
     }
   } finally {

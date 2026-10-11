@@ -13,6 +13,7 @@ class BookService
     public const DEFAULT_AUTHOR = 'Unknown Author';
     public const DEFAULT_LOAN_DAYS = 14;
     public const DUE_SOON_DAYS = 2;
+    private const LIBRARY_TIMEZONE = 'Europe/Athens';
 
     private Books $book;
     private Loans $loans;
@@ -377,9 +378,12 @@ class BookService
         return $due > $now ? 'out' : 'overdue';
     }
 
+    /** dd-mm-yyyy in the library's local time, for notification text (the app itself runs in UTC). */
     private static function humanDate(mixed $date): string
     {
-        return $date instanceof UTCDateTime ? $date->toDateTime()->format('j M Y') : '';
+        return $date instanceof UTCDateTime
+            ? $date->toDateTime()->setTimezone(new \DateTimeZone(self::LIBRARY_TIMEZONE))->format('d-m-Y')
+            : '';
     }
 
     private static function isoDate(mixed $date): ?string

@@ -1,16 +1,15 @@
-/** "20 Oct", with the year only when it isn't this year ("3 Dec 2025"). Empty for null. */
+const pad = (n: number) => String(n).padStart(2, '0')
+
+/** dd-mm-yyyy, in the viewer's local time. Empty for null. */
 export function shortDate(iso: string | null | undefined): string {
   if (!iso) return ''
   const d = new Date(iso)
-  return d.toLocaleDateString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    ...(d.getFullYear() !== new Date().getFullYear() && { year: 'numeric' }),
-  })
+  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`
 }
 
-/** shortDate plus the time: "20 Oct, 18:36". */
+/** dd-mm-yyyy HH:mm (24-hour). */
 export function shortDateTime(iso: string | null | undefined): string {
   if (!iso) return ''
-  return `${shortDate(iso)}, ${new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
+  const d = new Date(iso)
+  return `${shortDate(iso)} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
