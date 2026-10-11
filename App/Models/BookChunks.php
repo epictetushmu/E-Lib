@@ -114,9 +114,9 @@ class BookChunks extends BaseModel
     /**
      * Pages closest in meaning to the query vector (Atlas Vector Search), from the current model only —
      * vectors from different models aren't comparable. Vector search always returns *some* nearest
-     * neighbours, however unrelated, so pages scoring below $minScore are dropped.
+     * neighbours, however unrelated, so pages scoring below $minScore are dropped. Best first.
      *
-     * @return list<array{book_id: string, page: int, snippet: string}>
+     * @return list<array{book_id: string, page: int, snippet: string, similarity: float}>
      */
     public function vectorSearch(Binary $queryVector, string $model, bool $publicOnly, int $limit, float $minScore): array
     {
@@ -148,6 +148,7 @@ class BookChunks extends BaseModel
             'book_id' => (string) $row['book_id'],
             'page' => (int) $row['page'],
             'snippet' => (string) $row['snippet'],
+            'similarity' => (float) $row['score'],
         ], $rows);
     }
 

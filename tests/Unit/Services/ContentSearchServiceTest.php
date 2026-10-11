@@ -122,6 +122,31 @@ class ContentSearchServiceTest extends ServiceTestCase
         $this->assertSame([76, -127, 25, 0], $vector);
     }
 
+    // --- isNavigationPage() ---
+
+    public function testIsNavigationPageDetectsContentsAndIndexPages(): void
+    {
+        $contents = "Contents\n" . str_repeat("Section 1.1: A sample algorithmic problem ........................ 2\n", 9);
+        $greekContents = "ΠΕΡΙΕΧΟΜΕΝΑ\nxi\n" . str_repeat("1.2 Ιεραρχία Chomsky . . . . . . . . . . . .\n3\n", 8);
+        $index = "INDEX\n" . str_repeat("cholesterol 454, 457\nclients, freelance 71–72\n", 5);
+
+        $this->assertTrue(ContentSearchService::isNavigationPage($contents));
+        $this->assertTrue(ContentSearchService::isNavigationPage($greekContents));
+        $this->assertTrue(ContentSearchService::isNavigationPage($index));
+    }
+
+    public function testIsNavigationPageKeepsProseAndProgramOutput(): void
+    {
+        $prose = str_repeat("Depth-first search explores as far as possible along each branch before backtracking.\n", 10);
+        // Lines ending in numbers, but mostly bare numbers — output, not a contents page.
+        $output = "Expected output of the program is\nVertex\n0\n1\n2\n3\n4\n5\n6\n7\n8\nDistance from Source\n0\n4\n12\n";
+        $short = "Chapter 1 ..... 2\nChapter 2 ..... 5\n";
+
+        $this->assertFalse(ContentSearchService::isNavigationPage($prose));
+        $this->assertFalse(ContentSearchService::isNavigationPage($output));
+        $this->assertFalse(ContentSearchService::isNavigationPage($short));
+    }
+
     // --- indexNextBook() ---
 
     public function testIndexNextBookReturnsFalseWhenNothingNeedsIndexing(): void
@@ -187,6 +212,21 @@ class ContentSearchServiceTest extends ServiceTestCase
             ->willReturn(1);
 
         $this->service($books, $chunks, $this->files(['one', 'two', 'three']), [self::vectors(1)])->indexNextBook();
+    }
+
+    public function testIndexNextBookSkipsContentsPages(): void
+    {
+        $books = $this->createMock(Books::class);
+        $books->method('claimNextForIndexing')->willReturn(self::book());
+        $books->method('getBookDetails')->willReturn(self::book());
+        $chunks = $this->createMock(BookChunks::class);
+        $chunks->expects($this->once())
+            ->method('insertChunks')
+            ->with($this->callback(fn (array $docs) => array_column($docs, 'page') === [2]))
+            ->willReturn(1);
+        $contents = str_repeat("Chapter 42: Depth First Search ........ 202\n", 10);
+
+        $this->service($books, $chunks, $this->files([$contents, 'Depth-first search explores...']), [self::vectors(1)])->indexNextBook();
     }
 
     public function testIndexNextBookMarksScannedPdfsAsNoText(): void
@@ -269,11 +309,52 @@ class ContentSearchServiceTest extends ServiceTestCase
     {
         $chunks = $this->createMock(BookChunks::class);
         $chunks->method('keywordSearch')->willReturn([['book_id' => self::BOOK_ID, 'page' => 1, 'snippet' => '']]);
-        $chunks->method('vectorSearch')->willReturn([]);
+        $chunks->method('vectorSearch')->willReturn([['book_id' => self::BOOK_ID, 'page' => 1, 'snippet' => '', 'similarity' => 0.8]]);
         $books = $this->createMock(Books::class);
         // Chunk status lagged behind: the book was just moved back to draft.
         $books->method('findAll')->willReturn([self::book(['status' => 'draft'])]);
 
         $this->assertSame([], $this->service($books, $chunks, null, [self::vectors(1)])->search('q', true));
+    }
+
+    public function testSearchOnlyShowsBooksCloseInMeaningToTheBestMatch(): void
+    {
+        $close = '507f1f77bcf86cd799439022';
+        $far = '507f1f77bcf86cd799439033';
+        $keywordOnly = '507f1f77bcf86cd799439044';
+        $chunks = $this->createMock(BookChunks::class);
+        // Keyword search matched common words in every book.
+        $chunks->method('keywordSearch')->willReturn([
+            ['book_id' => $keywordOnly, 'page' => 9, 'snippet' => 'how to'],
+            ['book_id' => $far, 'page' => 2, 'snippet' => 'kw far'],
+            ['book_id' => self::BOOK_ID, 'page' => 5, 'snippet' => 'kw best'],
+        ]);
+        $chunks->method('vectorSearch')->willReturn([
+            ['book_id' => self::BOOK_ID, 'page' => 4, 'snippet' => 'sem best', 'similarity' => 0.85],
+            ['book_id' => $close, 'page' => 1, 'snippet' => 'sem close', 'similarity' => 0.83],
+            ['book_id' => $far, 'page' => 3, 'snippet' => 'sem far', 'similarity' => 0.78],
+        ]);
+        $books = $this->createMock(Books::class);
+        $books->expects($this->once())
+            ->method('findAll')
+            ->with($this->callback(fn (array $filter) => array_map('strval', $filter['_id']['$in']) === [self::BOOK_ID, $close]))
+            ->willReturn([self::book(), self::book(['_id' => $close])]);
+
+        $results = $this->service($books, $chunks, null, [self::vectors(1)])->search('q', true);
+
+        $this->assertSame([self::BOOK_ID, $close], array_map(fn (array $r) => (string) $r['book']['_id'], $results));
+        // The best book keeps its keyword-matched page too.
+        $this->assertSame([5, 4], array_column($results[0]['matches'], 'page'));
+    }
+
+    public function testSearchReturnsNothingWhenNoPageIsCloseInMeaning(): void
+    {
+        $chunks = $this->createMock(BookChunks::class);
+        $chunks->method('keywordSearch')->willReturn([['book_id' => self::BOOK_ID, 'page' => 1, 'snippet' => 'recipe']]);
+        $chunks->method('vectorSearch')->willReturn([]);
+        $books = $this->createMock(Books::class);
+        $books->expects($this->never())->method('findAll');
+
+        $this->assertSame([], $this->service($books, $chunks, null, [self::vectors(1)])->search('recipe for chocolate cake', true));
     }
 }

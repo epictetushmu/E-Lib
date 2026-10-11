@@ -104,7 +104,7 @@ class ContentSearchService
         $batch = [];
         foreach ($pages as $i => $text) {
             $page = $i + 1;
-            if ($page <= $resumeAfter || $text === '') {
+            if ($page <= $resumeAfter || $text === '' || self::isNavigationPage($text)) {
                 continue;
             }
             $batch[$page] = $text;
@@ -136,6 +136,27 @@ class ContentSearchService
             'index_lease_until' => null,
             'indexed_at' => new UTCDateTime(),
         ]);
+    }
+
+    /**
+     * Table-of-contents / index pages: they mention every topic, so they'd match almost any query and
+     * crowd out the page they point to. Detected as pages where most lines end in a page reference
+     * ("Chapter 3: Big-O ...... 8", "cholesterol 454, 457", "1.1 Ορισμοί . . . .").
+     * ponytail: line-shape heuristic, on 5 real books (2,128 pages) it caught every contents/index page
+     * and wrongly skipped 2 pages of router command output; replace with a classifier if that matters.
+     */
+    public static function isNavigationPage(string $text): bool
+    {
+        // Bare page numbers ("292", "xvi") are layout noise, not content: leave them out of the ratio.
+        $lines = array_filter(
+            array_map('trim', explode("\n", $text)),
+            fn (string $line) => $line !== '' && !preg_match('/^(\d{1,4}|[ivxlc]{1,7})$/i', $line)
+        );
+        if (count($lines) < 8) {
+            return false;
+        }
+        $refs = count(preg_grep('/\p{L}.*(\s\d{1,4}([-\x{2013}]\d{1,4})?|(\.\s?){4,})$/u', $lines) ?: []);
+        return $refs / count($lines) >= 0.5;
     }
 
     /**
@@ -173,19 +194,30 @@ class ContentSearchService
     {
         $keyword = $this->chunks->keywordSearch($query, $publicOnly, self::CANDIDATES);
 
-        $semantic = [];
         try {
             $timeout = (float) Environment::get('EMBEDDING_TIMEOUT', 2);
             $vector = self::toVector($this->embed([$query], $timeout)[0]);
-            // ponytail: fixed cutoff (Atlas cosine score, 0..1) calibrated on a small test set — bge-m3 put
-            // relevant pages at ~0.75-0.85 and unrelated ones at ~0.60-0.70. Re-tune on the real library.
-            $minScore = (float) Environment::get('SEMANTIC_MIN_SCORE', 0.70);
+            // ponytail: fixed thresholds on bge-m3 cosine scores, tuned on
+            // 5 real books (correct book's best page 0.76-0.86, best page for a query the library can't
+            // answer <= 0.74). Re-tune on the real library.
+            $minScore = (float) Environment::get('SEMANTIC_MIN_SCORE', 0.75);
             $semantic = $this->chunks->vectorSearch($vector, self::model(), $publicOnly, self::CANDIDATES, $minScore);
         } catch (\Throwable $e) {
             error_log('Content search fell back to keyword-only: ' . $e->getMessage());
+            $semantic = null;
         }
 
-        $ranked = self::fuse([$keyword, $semantic], $limit);
+        if ($semantic !== null) {
+            // Keyword search matches any word of the query ("how", "be"...), so it finds something in
+            // almost every book. Only books whose meaning is close to the query — near the best match —
+            // are shown; keyword hits just help rank pages within them.
+            $cut = ($semantic[0]['similarity'] ?? 0.0) - (float) Environment::get('SEMANTIC_MARGIN', 0.03);
+            $close = array_flip(array_column(array_filter($semantic, fn (array $hit) => $hit['similarity'] >= $cut), 'book_id'));
+            $keyword = array_values(array_filter($keyword, fn (array $hit) => isset($close[$hit['book_id']])));
+            $semantic = array_values(array_filter($semantic, fn (array $hit) => isset($close[$hit['book_id']])));
+        }
+
+        $ranked = self::fuse([$keyword, $semantic ?? []], $limit);
         if ($ranked === []) {
             return [];
         }
