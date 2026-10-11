@@ -24,9 +24,14 @@ services:
     networks:
       - elib-network
 
+  # Content search ("search inside books") runs in the next two services, which only start when the
+  # "search" profile is on: COMPOSE_PROFILES=search in .env (production should set it). Off, the app
+  # still works and "Inside books" falls back to keyword matches on whatever is already indexed.
+
   # Content-search indexing (scripts/index-worker.php): the app image running a loop instead of Apache.
   # No container_name, so it can scale: `docker compose up -d --scale worker=4`.
   worker:
+    profiles: ["search"]
     build:
       context: .
       dockerfile: Dockerfile
@@ -51,6 +56,7 @@ services:
   # where text-embeddings-inference's fp32 build of the same model needed 5-6GB for identical vectors.
   # Deliberately NO ports: Ollama has no authentication, so only app + worker reach it, by service name.
   embedder:
+    profiles: ["search"]
     image: ollama/ollama:0.40.2
     # Ollama doesn't pull models by itself: start the server, pull the model (a no-op once it's in the
     # volume), then keep serving. The tag is EMBEDDING_MODEL — keep the two in sync; changing it makes

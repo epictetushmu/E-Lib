@@ -23,6 +23,10 @@ if grep -q '^COMPOSE_FILE=' "$ENV_FILE"; then
     exit 1
 fi
 
+if ! grep -qE '^COMPOSE_PROFILES=.*search' "$ENV_FILE"; then
+    echo "Note: $ENV_FILE doesn't set COMPOSE_PROFILES=search — content search's worker and model won't run." >&2
+fi
+
 echo "Syncing code to $DEPLOY_HOST:$DEPLOY_DIR..."
 ssh "$DEPLOY_HOST" "mkdir -p '$DEPLOY_DIR'"
 rsync -az --delete \

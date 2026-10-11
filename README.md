@@ -320,12 +320,24 @@ M0 tier works):
 ssh user@your-server 'cd /srv/e-lib && docker compose exec -T app php scripts/db-setup.php'
 ```
 
+and make sure the server's `.env` (`.env.production`) has `COMPOSE_PROFILES=search`, or the indexing
+worker and the model never start:
+
+```bash
+COMPOSE_PROFILES=search
+```
+
 Server sizing: ~4GB RAM total (app + LibreOffice + embedder). Indexing a 300-page book takes a few minutes
 on CPU; to index faster, run more workers: `docker compose up -d --scale worker=3`.
 
-**Local:** opt in with `docker compose --profile search up -d`. Point `MONGO_URI` at the local
-`mongo` container first (see above) — the worker writes search data to whichever database `MONGO_URI`
-names — then run `php scripts/db-setup.php` against it once.
+**On/off:** the two containers only run with `COMPOSE_PROFILES=search` in `.env`, then
+`docker compose up -d`. Set it on the server. Leave it empty on a laptop that can't spare ~2GB RAM: the
+app works without them, and "Inside books" falls back to keyword matches on pages already indexed.
+To turn them off again: empty the variable and `docker compose stop worker embedder`.
+
+**Local:** before turning it on, point `MONGO_URI` at the local `mongo` container (see above) — the
+worker writes search data to whichever database `MONGO_URI` names — then run
+`php scripts/db-setup.php` against it once.
 
 
 

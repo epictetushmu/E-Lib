@@ -21,11 +21,10 @@ services:
     depends_on:
       - mongo
 
-  # Content search is opt-in locally (`docker compose --profile search up -d`): the worker writes
-  # BookChunks + index_* fields into whatever MONGO_URI points at (point it at the local `mongo`
-  # below, not the real Atlas cluster), and the embedder downloads a 1.2GB model on first start.
+  # Content search (COMPOSE_PROFILES=search in .env): the worker writes BookChunks + index_* fields
+  # into whatever MONGO_URI points at — point it at the local `mongo` below, not the real Atlas
+  # cluster — and the embedder downloads a 1.2GB model on first start and needs ~2GB RAM.
   worker:
-    profiles: ["search"]
     environment:
       - APP_ENV=development
     volumes:
@@ -33,7 +32,6 @@ services:
       - ./public/assets/uploads:/var/www/html/public/assets/uploads
 
   embedder:
-    profiles: ["search"]
     ports:
       # Loopback only, so `php -S` + `php scripts/index-worker.php` on the host can use it
       # (EMBEDDING_URL=http://127.0.0.1:8082). Still unreachable from other machines.
