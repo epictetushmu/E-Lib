@@ -326,6 +326,10 @@ class BookController
         $storedFile = $fileHelper->storeFile($_FILES['bookFile']);
 
         if (!$storedFile) {
+            if ($fileHelper->rejectReason !== null) {
+                ResponseHandler::respond(false, $fileHelper->rejectReason, 400);
+                return;
+            }
             error_log("Failed to store file");
             ResponseHandler::respond(false, 'Error storing file', 500);
             return;
@@ -594,7 +598,7 @@ class BookController
                 if (!$pdfPath || !is_array($pdfPath)) {
                     $results['failed'][] = [
                         'filename' => $file['name'],
-                        'reason' => 'Failed to store PDF'
+                        'reason' => $fileHelper->rejectReason ?? 'Failed to store PDF'
                     ];
                     continue;
                 }

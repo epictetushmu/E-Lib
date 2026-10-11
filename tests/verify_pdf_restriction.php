@@ -30,6 +30,17 @@ if ($result === false) {
     exit(1);
 }
 
+// A non-PDF renamed to .pdf must be rejected by its content
+$fakePdf = $mockFile;
+$fakePdf['name'] = 'renamed.pdf';
+echo "\nTesting upload of non-PDF content named renamed.pdf...\n";
+if ($fileHelper->storeFile($fakePdf) === false && $fileHelper->rejectReason === 'File is not a valid PDF.') {
+    echo "SUCCESS: Renamed non-PDF was rejected.\n";
+} else {
+    echo "FAILURE: Renamed non-PDF was not rejected by content.\n";
+    exit(1);
+}
+
 // Test PDF upload
 $mockPdf = [
     'name' => 'test.pdf',

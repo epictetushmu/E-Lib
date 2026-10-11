@@ -10,6 +10,9 @@ class FileHelper
     private ?string $fileType = null;
     private ?string $fileExtension = null;
 
+    /** Why the last storeFile() rejected the upload (null if it failed for a server-side reason). */
+    public ?string $rejectReason = null;
+
     /**
      * Constructor
      *
@@ -342,6 +345,7 @@ class FileHelper
      */
     public function storeFile($file)
     {
+        $this->rejectReason = null;
         try {
             // Check if the upload was successful
             if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -366,7 +370,13 @@ class FileHelper
             $supportedTypes = ['pdf'];
 
             if (!in_array($fileExtension, $supportedTypes)) {
-                error_log("Invalid file extension: $fileExtension. Only PDF is supported.");
+                $this->rejectReason = 'Only PDF files are supported.';
+                return false;
+            }
+
+            // The extension is client-controlled; a real PDF starts with this header
+            if (@file_get_contents($fileTmpPath, false, null, 0, 5) !== '%PDF-') {
+                $this->rejectReason = 'File is not a valid PDF.';
                 return false;
             }
 
