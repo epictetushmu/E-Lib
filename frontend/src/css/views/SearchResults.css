@@ -171,6 +171,47 @@
   cursor: pointer;
 }
 
+.facet-years fieldset {
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.year-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.year-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+}
+
+.year-fields input {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: 0.4rem 0.5rem;
+  color: var(--color-text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.year-fields input:invalid {
+  border-color: var(--color-danger);
+}
+
+.year-apply {
+  margin-top: 0.6rem;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.88rem;
+}
+
 .facet-empty {
   margin: 0;
   font-size: 0.88rem;

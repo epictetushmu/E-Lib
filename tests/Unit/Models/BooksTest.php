@@ -275,13 +275,14 @@ class BooksTest extends ModelTestCase
                 'category' => [['value' => 'Networking', 'count' => 3]],
                 'format' => [],
                 'author' => [],
-                'decade' => [['value' => 2010, 'count' => 7]],
+                'year' => [['_id' => null, 'min' => 1999, 'max' => 2018]],
             ]];
         });
 
         $result = $this->makeBooks($db)->catalog(
             'kur(ose',
-            ['category' => ['Networking'], 'format' => [], 'author' => [], 'decade' => [2010]],
+            ['category' => ['Networking'], 'format' => [], 'author' => []],
+            [2010, null],
             true,
             'year_desc',
             24,
@@ -290,7 +291,7 @@ class BooksTest extends ModelTestCase
 
         $this->assertSame(7, $result['total']);
         $this->assertSame([['title' => 'A']], $result['books']);
-        $this->assertSame([['value' => 2010, 'count' => 7]], $result['facets']['decade']);
+        $this->assertSame(['min' => 1999, 'max' => 2018], $result['years']);
 
         $base = (array) $pipeline[0]['$match'];
         $this->assertSame('public', $base['status']);
@@ -299,10 +300,12 @@ class BooksTest extends ModelTestCase
 
         $facets = $pipeline[count($pipeline) - 1]['$facet'];
         $match = fn (string $branch) => (array) $facets[$branch][0]['$match'];
-        $this->assertSame(['categories' => ['$in' => ['Networking']], 'decade' => ['$in' => [2010]]], $match('books'));
-        $this->assertSame(['decade' => ['$in' => [2010]]], $match('category'));
-        $this->assertSame(['categories' => ['$in' => ['Networking']]], $match('decade'));
-        $this->assertSame(['categories' => ['$in' => ['Networking']], 'decade' => ['$in' => [2010]]], $match('format'));
+        $both = ['categories' => ['$in' => ['Networking']], 'year_num' => ['$gte' => 2010]];
+        $this->assertSame($both, $match('books'));
+        $this->assertSame($both, $match('format'));
+        $this->assertSame(['year_num' => ['$gte' => 2010]], $match('category'));
+        // The year span ignores the year filter, so the placeholders show the whole range available.
+        $this->assertSame(['categories' => ['$in' => ['Networking']]], $match('year'));
         $this->assertSame([['$sort' => ['year_num' => -1, 'sort_title' => 1]], ['$skip' => 24]], array_slice($facets['books'], 1, 2));
     }
 }

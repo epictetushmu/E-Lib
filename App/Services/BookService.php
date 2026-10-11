@@ -62,10 +62,10 @@ class BookService
      * Catalog search with facets (see Books::catalog). Untrusted query-string input is normalised
      * here: unknown filters/sorts are ignored, values are trimmed strings, capped in count and length.
      *
-     * @param array<string, mixed> $params Raw $_GET: q, category[], format[], author[], decade[], sort, page
+     * @param array<string, mixed> $params Raw $_GET: q, category[], format[], author[], year_from, year_to, sort, page
      * @return array{
      *     books: list<array<string, mixed>>, total: int, page: int, pageSize: int,
-     *     facets: array<string, list<array{value: string|int, count: int}>>
+     *     facets: array<string, list<array{value: string, count: int}>>, years: array{min: int, max: int}|null
      * }
      */
     public function catalog(array $params, bool $publicOnly): array
@@ -79,13 +79,20 @@ class BookService
             'category' => $strings($params['category'] ?? []),
             'format' => array_map('strtolower', $strings($params['format'] ?? [])),
             'author' => $strings($params['author'] ?? []),
-            'decade' => array_map('intval', array_filter($strings($params['decade'] ?? []), fn ($v) => ctype_digit($v))),
         ];
+        $year = fn (string $key) => is_string($params[$key] ?? null) && preg_match('/^\d{1,4}$/', trim($params[$key]))
+            ? (int) $params[$key]
+            : null;
+        $years = [$year('year_from'), $year('year_to')];
+        if ($years[0] !== null && $years[1] !== null && $years[0] > $years[1]) {
+            $years = [$years[1], $years[0]];
+        }
         $sort = is_string($params['sort'] ?? null) && isset(Books::CATALOG_SORTS[$params['sort']]) ? $params['sort'] : 'title';
         $page = max(1, min(1000, (int) ($params['page'] ?? 1)));
         $text = is_string($params['q'] ?? null) ? mb_substr(trim($params['q']), 0, 200) : '';
 
-        $result = $this->book->catalog($text, $filters, $publicOnly, $sort, ($page - 1) * self::CATALOG_PAGE_SIZE, self::CATALOG_PAGE_SIZE);
+        $skip = ($page - 1) * self::CATALOG_PAGE_SIZE;
+        $result = $this->book->catalog($text, $filters, $years, $publicOnly, $sort, $skip, self::CATALOG_PAGE_SIZE);
         return $result + ['page' => $page, 'pageSize' => self::CATALOG_PAGE_SIZE];
     }
 

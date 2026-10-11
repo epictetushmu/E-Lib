@@ -117,16 +117,20 @@ class Books extends BaseModel
 
     /**
      * Catalog search: one page of books matching $text (title or author) and the selected filters,
-     * plus facet counts for subjects, formats, authors and decades. Each facet is counted with every
-     * filter applied except its own, so its options show what picking them would give.
+     * plus facet counts for subjects, formats and authors, and the span of publication years. Each facet
+     * is counted with every filter applied except its own, so its options show what picking them would give.
      *
      * ponytail: computed fields ($convert, $toLower) mean a collection scan per query — fine for tens of
      * thousands of books; beyond that, move to Atlas Search facets on a search index.
      *
-     * @param array{category?: list<string>, format?: list<string>, author?: list<string>, decade?: list<int>} $filters
-     * @return array{books: list<array<string, mixed>>, total: int, facets: array<string, list<array{value: string|int, count: int}>>}
+     * @param array{category?: list<string>, format?: list<string>, author?: list<string>} $filters
+     * @param array{0: ?int, 1: ?int} $years Published from/to (inclusive); null = open-ended
+     * @return array{
+     *     books: list<array<string, mixed>>, total: int,
+     *     facets: array<string, list<array{value: string, count: int}>>, years: array{min: int, max: int}|null
+     * }
      */
-    public function catalog(string $text, array $filters, bool $publicOnly, string $sort, int $skip, int $limit): array
+    public function catalog(string $text, array $filters, array $years, bool $publicOnly, string $sort, int $skip, int $limit): array
     {
         $base = $publicOnly ? ['status' => 'public'] : [];
         if ($text !== '') {
@@ -134,16 +138,21 @@ class Books extends BaseModel
             $base['$or'] = [['title' => $regex], ['author' => $regex]];
         }
 
-        // Filter field per facet, on the normalised fields added below.
-        $fields = ['category' => 'categories', 'format' => 'format', 'author' => 'author', 'decade' => 'decade'];
-        $matchExcept = function (?string $facet) use ($filters, $fields): array {
-            $match = [];
-            foreach ($filters as $name => $values) {
-                if ($name !== $facet && $values !== []) {
-                    $match[$fields[$name]] = ['$in' => $values];
-                }
+        // One condition per filter, on the normalised fields added below.
+        $fields = ['category' => 'categories', 'format' => 'format', 'author' => 'author'];
+        $conditions = [];
+        foreach ($filters as $name => $values) {
+            if ($values !== []) {
+                $conditions[$name] = [$fields[$name] => ['$in' => $values]];
             }
-            return ['$match' => (object) $match];
+        }
+        $range = array_filter(['$gte' => $years[0], '$lte' => $years[1]], fn ($y) => $y !== null);
+        if ($range !== []) {
+            $conditions['year'] = ['year_num' => $range];
+        }
+        $matchExcept = function (?string $facet) use ($conditions): array {
+            unset($conditions[$facet ?? '']);
+            return ['$match' => (object) array_merge([], ...array_values($conditions))];
         };
         $countBy = fn (string $facet, string $field, int $max) => [
             $matchExcept($facet),
@@ -166,24 +175,24 @@ class Books extends BaseModel
                 'format' => ['$toLower' => ['$ifNull' => ['$file_extension', ['$ifNull' => ['$file_type', 'pdf']]]]],
                 'sort_title' => ['$toLower' => '$title'],
             ]],
-            ['$addFields' => ['decade' => ['$cond' => [
-                ['$gt' => ['$year_num', 0]],
-                ['$multiply' => [['$floor' => ['$divide' => ['$year_num', 10]]], 10]],
-                null,
-            ]]]],
             ['$facet' => [
                 'books' => [
                     $matchExcept(null),
                     ['$sort' => self::CATALOG_SORTS[$sort] ?? self::CATALOG_SORTS['title']],
                     ['$skip' => $skip],
                     ['$limit' => $limit],
-                    ['$project' => ['sort_title' => 0, 'year_num' => 0, 'decade' => 0]],
+                    ['$project' => ['sort_title' => 0, 'year_num' => 0]],
                 ],
                 'total' => [$matchExcept(null), ['$count' => 'n']],
                 'category' => $countBy('category', 'categories', 30),
                 'format' => $countBy('format', 'format', 10),
                 'author' => $countBy('author', 'author', 12),
-                'decade' => [...$countBy('decade', 'decade', 30), ['$sort' => ['value' => 1]]],
+                // The year span the other filters leave, shown as the range fields' placeholders.
+                'year' => [
+                    $matchExcept('year'),
+                    ['$match' => ['year_num' => ['$gt' => 0]]],
+                    ['$group' => ['_id' => null, 'min' => ['$min' => '$year_num'], 'max' => ['$max' => '$year_num']]],
+                ],
             ]],
         ])[0] ?? [];
 
@@ -194,8 +203,10 @@ class Books extends BaseModel
                 'category' => $result['category'] ?? [],
                 'format' => $result['format'] ?? [],
                 'author' => $result['author'] ?? [],
-                'decade' => $result['decade'] ?? [],
             ],
+            'years' => isset($result['year'][0])
+                ? ['min' => (int) $result['year'][0]['min'], 'max' => (int) $result['year'][0]['max']]
+                : null,
         ];
     }
 

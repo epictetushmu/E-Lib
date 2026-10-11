@@ -35,8 +35,8 @@ export interface Book {
 }
 
 /** One option of a catalog filter, with how many books picking it would give. */
-export interface FacetOption<T = string> {
-  value: T
+export interface FacetOption {
+  value: string
   count: number
 }
 
@@ -50,8 +50,9 @@ export interface CatalogResult {
     category: FacetOption[]
     format: FacetOption[]
     author: FacetOption[]
-    decade: FacetOption<number>[]
   }
+  /** Earliest and latest publication year the other filters leave; null when no book has a year. */
+  years: { min: number; max: number } | null
 }
 
 export interface CatalogQuery {
@@ -59,7 +60,8 @@ export interface CatalogQuery {
   category?: string[]
   format?: string[]
   author?: string[]
-  decade?: string[]
+  year_from?: string
+  year_to?: string
   sort?: string
   page?: number
 }

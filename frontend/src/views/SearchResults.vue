@@ -6,10 +6,9 @@ import { isApiSuccess } from '@/types/api'
 import type { CatalogResult, ContentSearchResult, FacetOption } from '@/types/book'
 import { idToString } from '@/types/book'
 import BookCard from '@/components/BookCard.vue'
-import DecadeShelf from '@/components/DecadeShelf.vue'
 
 type Mode = 'title' | 'content'
-type Facet = 'category' | 'format' | 'author' | 'decade'
+type Facet = 'category' | 'format' | 'author'
 
 const SORTS = [
   { value: 'title', label: 'Title A–Z' },
@@ -18,7 +17,7 @@ const SORTS = [
   { value: 'year_asc', label: 'Oldest published' },
   { value: 'views', label: 'Most viewed' },
 ]
-const FACET_GROUPS: { key: Exclude<Facet, 'decade'>; label: string }[] = [
+const FACET_GROUPS: { key: Facet; label: string }[] = [
   { key: 'category', label: 'Subject' },
   { key: 'author', label: 'Author' },
   { key: 'format', label: 'Format' },
@@ -39,11 +38,21 @@ const selected = computed<Record<Facet, string[]>>(() => ({
   category: list('category'),
   format: list('format'),
   author: list('author'),
-  decade: list('decade'),
 }))
+const yearFrom = computed(() => (typeof route.query.year_from === 'string' ? route.query.year_from : ''))
+const yearTo = computed(() => (typeof route.query.year_to === 'string' ? route.query.year_to : ''))
+/** What's typed in the range fields; applied to the URL on submit. */
+const yearInput = ref({ from: '', to: '' })
 const sort = computed(() => (typeof route.query.sort === 'string' ? route.query.sort : 'title'))
 const page = computed(() => Math.max(1, Number(route.query.page) || 1))
-const activeCount = computed(() => Object.values(selected.value).reduce((n, values) => n + values.length, 0))
+const activeCount = computed(
+  () => Object.values(selected.value).reduce((n, values) => n + values.length, 0) + (yearFrom.value || yearTo.value ? 1 : 0),
+)
+const yearLabel = computed(() => {
+  if (yearFrom.value && yearTo.value) return yearFrom.value === yearTo.value ? yearFrom.value : `${yearFrom.value}–${yearTo.value}`
+  if (yearFrom.value) return `From ${yearFrom.value}`
+  return yearTo.value ? `Until ${yearTo.value}` : ''
+})
 
 const catalog = ref<CatalogResult | null>(null)
 const contentResults = ref<ContentSearchResult[]>([])
@@ -61,7 +70,7 @@ const pageCount = computed(() => (catalog.value ? Math.max(1, Math.ceil(catalog.
  * A facet's options, plus any selected value the current results no longer contain (count 0), so it can
  * be unticked. Selected options come first, so collapsing a long list never hides one.
  */
-function options(facet: Exclude<Facet, 'decade'>): FacetOption[] {
+function options(facet: Facet): FacetOption[] {
   const opts = catalog.value?.facets[facet] ?? []
   const picked = selected.value[facet]
   const missing = picked.filter((v) => !opts.some((o) => o.value === v)).map((value) => ({ value, count: 0 }))
@@ -69,7 +78,7 @@ function options(facet: Exclude<Facet, 'decade'>): FacetOption[] {
   return [...all.filter((o) => picked.includes(o.value)), ...all.filter((o) => !picked.includes(o.value))]
 }
 
-function shown(facet: Exclude<Facet, 'decade'>): FacetOption[] {
+function shown(facet: Facet): FacetOption[] {
   const all = options(facet)
   return expanded.value.has(facet) ? all : all.slice(0, Math.max(SHOWN, selected.value[facet].length))
 }
@@ -81,9 +90,7 @@ function toggleExpanded(facet: Facet) {
 }
 
 function facetLabel(facet: Facet, value: string): string {
-  if (facet === 'decade') return `${value}s`
-  if (facet === 'format') return value.toUpperCase()
-  return value
+  return facet === 'format' ? value.toUpperCase() : value
 }
 
 function go(changes: LocationQueryRaw, push = true) {
@@ -98,8 +105,19 @@ function toggle(facet: Facet, value: string) {
   go({ [facet]: current.includes(value) ? current.filter((v) => v !== value) : [...current, value] })
 }
 
+function applyYears() {
+  const clean = (y: string) => (/^\d{1,4}$/.test(y.trim()) ? y.trim() : undefined)
+  let [from, to] = [clean(yearInput.value.from), clean(yearInput.value.to)]
+  if (from && to && Number(from) > Number(to)) [from, to] = [to, from]
+  go({ year_from: from, year_to: to })
+}
+
+function clearYears() {
+  go({ year_from: undefined, year_to: undefined })
+}
+
 function clearFilters() {
-  go({ category: [], format: [], author: [], decade: [] })
+  go({ category: [], format: [], author: [], year_from: undefined, year_to: undefined })
 }
 
 function submit() {
@@ -117,6 +135,8 @@ async function runCatalog() {
     const { data } = await booksApi.catalog({
       q: searchTerm.value.trim() || undefined,
       ...selected.value,
+      year_from: yearFrom.value || undefined,
+      year_to: yearTo.value || undefined,
       sort: sort.value,
       page: page.value,
     })
@@ -152,6 +172,7 @@ watch(
   () => {
     if (route.path !== '/search') return
     searchTerm.value = typeof route.query.q === 'string' ? route.query.q : ''
+    yearInput.value = { from: yearFrom.value, to: yearTo.value }
     if (mode.value === 'content') runContent()
     else runCatalog()
   },
@@ -195,12 +216,6 @@ watch(
     </form>
 
     <template v-if="mode === 'title'">
-      <DecadeShelf
-        :decades="catalog?.facets.decade ?? []"
-        :selected="selected.decade.map(Number)"
-        @toggle="(d) => toggle('decade', String(d))"
-      />
-
       <div class="catalog">
         <button
           type="button"
@@ -214,7 +229,8 @@ watch(
         </button>
 
         <aside id="catalog-filters" class="filters" :class="{ 'filters--open': filtersOpen }" aria-label="Filters">
-          <fieldset v-for="group in FACET_GROUPS" :key="group.key" class="facet" :data-testid="`facet-${group.key}`">
+          <template v-for="group in FACET_GROUPS" :key="group.key">
+          <fieldset class="facet" :data-testid="`facet-${group.key}`">
             <legend>{{ group.label }}</legend>
             <p v-if="!options(group.key).length" class="facet-empty">None in these results</p>
             <label v-for="opt in shown(group.key)" :key="opt.value" class="facet-option">
@@ -237,6 +253,40 @@ watch(
               {{ expanded.has(group.key) ? 'Show fewer' : `Show all ${options(group.key).length}` }}
             </button>
           </fieldset>
+
+          <form v-if="group.key === 'category'" class="facet facet-years" data-testid="facet-year" @submit.prevent="applyYears">
+            <fieldset>
+              <legend>Published</legend>
+              <div class="year-fields">
+                <label>
+                  From
+                  <input
+                    v-model="yearInput.from"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="[0-9]{1,4}"
+                    maxlength="4"
+                    :placeholder="catalog?.years ? String(catalog.years.min) : ''"
+                    data-testid="year-from"
+                  />
+                </label>
+                <label>
+                  To
+                  <input
+                    v-model="yearInput.to"
+                    type="text"
+                    inputmode="numeric"
+                    pattern="[0-9]{1,4}"
+                    maxlength="4"
+                    :placeholder="catalog?.years ? String(catalog.years.max) : ''"
+                    data-testid="year-to"
+                  />
+                </label>
+              </div>
+              <button type="submit" class="btn btn-outline year-apply" data-testid="year-apply">Apply</button>
+            </fieldset>
+          </form>
+          </template>
         </aside>
 
         <section class="results" :aria-busy="loading" aria-live="polite">
@@ -269,6 +319,11 @@ watch(
                 </button>
               </li>
             </template>
+            <li v-if="yearLabel">
+              <button type="button" class="active-filter" :aria-label="`Remove filter published ${yearLabel}`" @click="clearYears">
+                {{ yearLabel }} <span aria-hidden="true">×</span>
+              </button>
+            </li>
             <li><button type="button" class="clear-filters" data-testid="clear-filters" @click="clearFilters">Clear filters</button></li>
           </ul>
 
