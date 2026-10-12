@@ -898,31 +898,67 @@ svg {
   margin-top: 1.5rem;
 }
 
-.friend-notes-header {
+.friend-notes h3 {
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem;
+}
+
+/* Whose notes to show: one pill per friend, like the category chips; on = tinted, off = faded. */
+.friend-filter {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
-  padding-bottom: 0.4rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding-bottom: 0.65rem;
   border-bottom: 1px solid var(--color-border);
 }
 
-.friend-notes-header h3 {
-  font-size: 1.05rem;
-  margin: 0;
-}
-
-.friend-notes-toggle {
+.friend-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.8rem;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.85rem;
   color: var(--color-text-muted);
   cursor: pointer;
 }
 
-.friend-notes-toggle input {
-  accent-color: var(--color-primary);
+.friend-chip[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-text);
+}
+
+/* A tick, not just the tint, says which are on (state never rides on colour alone). */
+.friend-chip[aria-pressed='true']::before {
+  content: '✓';
+  font-size: 0.75rem;
+  color: var(--color-primary);
+}
+
+.friend-chip[aria-pressed='false'] {
+  border-style: dashed;
+}
+
+.friend-chip:hover {
+  color: var(--color-text);
+}
+
+.friend-chip:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.friend-chip-count {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.friend-notes .notes-empty {
+  margin-top: 0.65rem;
 }
 
 .friend-note {

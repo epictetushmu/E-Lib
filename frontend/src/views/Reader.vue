@@ -164,7 +164,7 @@ interface PopoverState {
 const popover = ref<PopoverState | null>(null)
 const popoverBusy = ref(false)
 
-watch([annotations.items, annotations.friendItems, annotations.showFriends, popover], () => pdf.redecorate())
+watch([annotations.items, annotations.friendItems, annotations.hiddenFriends, popover], () => pdf.redecorate())
 
 /* Friends' notes: read-only. Clicking one of their underlines opens it in the notes panel. */
 const focusedFriendNote = ref<string | null>(null)
@@ -668,19 +668,22 @@ onBeforeUnmount(() => {
           </ul>
 
           <section v-if="annotations.friendItems.value.length" class="friend-notes" aria-labelledby="friend-notes-heading">
-            <div class="friend-notes-header">
-              <h3 id="friend-notes-heading">From friends</h3>
-              <label class="friend-notes-toggle">
-                <input
-                  type="checkbox"
-                  :checked="annotations.showFriends.value"
-                  data-testid="show-friend-notes"
-                  @change="annotations.setShowFriends(($event.target as HTMLInputElement).checked)"
-                />
-                Show on pages
-              </label>
+            <h3 id="friend-notes-heading">From friends</h3>
+            <div class="friend-filter" role="group" aria-label="Whose notes to show" data-testid="friend-filter">
+              <button
+                v-for="f in annotations.noteFriends.value"
+                :key="f.id"
+                type="button"
+                class="friend-chip"
+                :aria-pressed="f.shown"
+                :data-testid="`friend-filter-${f.id}`"
+                @click="annotations.toggleFriend(f.id)"
+              >
+                {{ f.username }} <span class="friend-chip-count">{{ f.count }}</span>
+              </button>
             </div>
-            <ul class="notes-list">
+            <p v-if="!annotations.friendsSorted.value.length" class="notes-empty">Turn on a friend above to see their notes.</p>
+            <ul v-else class="notes-list">
               <li
                 v-for="item in annotations.friendsSorted.value"
                 :id="`friend-note-${item.id}`"

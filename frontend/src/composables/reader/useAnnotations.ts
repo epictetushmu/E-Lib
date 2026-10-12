@@ -21,33 +21,48 @@ function hits(a: Annotation, pageNumber: number, [x, y]: number[]): boolean {
   return a.page === pageNumber && a.rects.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2)
 }
 
-const SHOW_FRIENDS_KEY = 'reader:showFriendNotes'
+// Friends whose notes the reader turned off, by user id; the same choice for every book on this device.
+const HIDDEN_FRIENDS_KEY = 'reader:hiddenFriendNotes'
 
 /**
  * The signed-in reader's highlights and notes for one book, kept on the server per user — plus, read-only,
- * those of friends who share theirs, drawn as underlines the reader can hide.
+ * those of friends who share theirs, drawn as underlines. Each friend's can be turned off.
  */
 export function useAnnotations(bookId: string) {
   const auth = useAuthStore()
   const items = ref<Annotation[]>([])
   const friendItems = ref<FriendAnnotation[]>([])
-  const showFriends = ref(readShowFriends())
+  const hiddenFriends = ref<string[]>(readHiddenFriends())
   const canAnnotate = computed(() => auth.isAuthenticated)
   const sorted = computed(() => [...items.value].sort(byPosition))
-  const friendsSorted = computed(() => [...friendItems.value].sort(byPosition))
 
-  function readShowFriends(): boolean {
+  /** Friends with notes on this book, in order of first appearance, with how many each has. */
+  const noteFriends = computed(() => {
+    const byId = new Map<string, { id: string; username: string; count: number; shown: boolean }>()
+    for (const a of friendItems.value) {
+      const friend = byId.get(a.user_id)
+      if (friend) friend.count++
+      else byId.set(a.user_id, { id: a.user_id, username: a.username, count: 1, shown: !hiddenFriends.value.includes(a.user_id) })
+    }
+    return [...byId.values()]
+  })
+  const visibleFriendItems = computed(() => friendItems.value.filter((a) => !hiddenFriends.value.includes(a.user_id)))
+  const friendsSorted = computed(() => [...visibleFriendItems.value].sort(byPosition))
+
+  function readHiddenFriends(): string[] {
     try {
-      return localStorage.getItem(SHOW_FRIENDS_KEY) !== 'off'
+      const stored: unknown = JSON.parse(localStorage.getItem(HIDDEN_FRIENDS_KEY) ?? '[]')
+      return Array.isArray(stored) ? stored.filter((id): id is string => typeof id === 'string') : []
     } catch {
-      return true
+      return []
     }
   }
 
-  function setShowFriends(on: boolean) {
-    showFriends.value = on
+  function toggleFriend(userId: string) {
+    const hidden = hiddenFriends.value
+    hiddenFriends.value = hidden.includes(userId) ? hidden.filter((id) => id !== userId) : [...hidden, userId]
     try {
-      localStorage.setItem(SHOW_FRIENDS_KEY, on ? 'on' : 'off')
+      localStorage.setItem(HIDDEN_FRIENDS_KEY, JSON.stringify(hiddenFriends.value))
     } catch {
       // Private mode: the choice lasts for this visit only.
     }
@@ -85,15 +100,13 @@ export function useAnnotations(bookId: string) {
   /** Draws this page's highlights; `activeId` gets a frame while its popover is open. Friends' go underneath. */
   function paint(pageNumber: number, wrapper: HTMLElement, viewport: PageViewport, activeId?: string) {
     wrapper.querySelectorAll('.user-highlight, .friend-highlight').forEach((el) => el.remove())
-    if (showFriends.value) {
-      for (const annotation of friendItems.value) {
-        if (annotation.page !== pageNumber) continue
-        for (const rect of annotation.rects) {
-          const mark = document.createElement('div')
-          mark.className = 'friend-highlight'
-          placeOverPdfRect(mark, rect, viewport)
-          wrapper.appendChild(mark)
-        }
+    for (const annotation of visibleFriendItems.value) {
+      if (annotation.page !== pageNumber) continue
+      for (const rect of annotation.rects) {
+        const mark = document.createElement('div')
+        mark.className = 'friend-highlight'
+        placeOverPdfRect(mark, rect, viewport)
+        wrapper.appendChild(mark)
       }
     }
     for (const annotation of items.value) {
@@ -113,9 +126,9 @@ export function useAnnotations(bookId: string) {
     return [...items.value].reverse().find((a) => hits(a, pageNumber, point))
   }
 
-  /** A friend's highlight under the point, while friends' notes are shown. */
+  /** The highlight under the point of a friend whose notes are shown. */
   function friendHighlightAt(pageNumber: number, point: number[]): FriendAnnotation | undefined {
-    return showFriends.value ? friendItems.value.find((a) => hits(a, pageNumber, point)) : undefined
+    return visibleFriendItems.value.find((a) => hits(a, pageNumber, point))
   }
 
   return {
@@ -123,8 +136,9 @@ export function useAnnotations(bookId: string) {
     sorted,
     friendItems,
     friendsSorted,
-    showFriends,
-    setShowFriends,
+    noteFriends,
+    hiddenFriends,
+    toggleFriend,
     canAnnotate,
     load,
     add,
