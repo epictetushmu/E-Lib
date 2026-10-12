@@ -44,6 +44,7 @@ pkgs.mkShell {
     unzip
     openssl
     curl
+    gitleaks # .githooks/pre-commit secret scan
     nodejs # for package.json / Playwright E2E tests (qa/tests)
 
     # Playwright's own browser download doesn't run on NixOS (missing FHS
