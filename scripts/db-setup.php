@@ -182,6 +182,12 @@ $indexPlan = [
             'key' => ['book_id' => 1, 'review_user_id' => 1, 'created_at' => 1],
             'options' => ['name' => 'idx_book_review_created'],
         ],
+        [
+            // "Does this reply have answers?" — asked on every reply delete, and per ancestor while
+            // deleteReply clears placeholders left with nothing under them.
+            'key' => ['parent_id' => 1],
+            'options' => ['name' => 'idx_parent'],
+        ],
     ],
     'Friendships' => [
         [

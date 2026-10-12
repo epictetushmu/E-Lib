@@ -326,11 +326,14 @@ onMounted(() => {
   loadProfile()
   loadSaved()
   loadNotifications()
-  loadFriends()
-  loadSharing() // so the Friends tab opens complete, not with the card popping in
-  // /profile?tab=friends — where the friend page's back link and friend notices land.
-  const tab = route.query.tab
-  if (typeof tab === 'string' && tabs.includes(tab as Tab)) selectTab(tab as Tab)
+  // /profile?tab=friends — where the friend page's back link lands. Opening the Friends tab loads friends and
+  // sharing itself; otherwise load them now, for the requests badge and so the tab opens complete.
+  const tab = typeof route.query.tab === 'string' && tabs.includes(route.query.tab as Tab) ? (route.query.tab as Tab) : null
+  if (tab) selectTab(tab)
+  if (tab !== 'friends') {
+    loadFriends()
+    loadSharing()
+  }
 })
 </script>
 

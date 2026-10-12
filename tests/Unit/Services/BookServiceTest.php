@@ -427,13 +427,14 @@ class BookServiceTest extends ServiceTestCase
     }
 
     /**
+     * A loaded book document, as the controller passes it.
+     *
      * @param list<array<string, mixed>> $reviews
+     * @return array<string, mixed>
      */
-    private function bookWithReviews(array $reviews): Books
+    private function book(array $reviews): array
     {
-        $books = $this->createMock(Books::class);
-        $books->method('getBookDetails')->willReturn(['reviews' => $reviews]);
-        return $books;
+        return ['_id' => 'b1', 'reviews' => $reviews];
     }
 
     public function testRepliesAreThreadedUnderTheirReview(): void
@@ -443,13 +444,16 @@ class BookServiceTest extends ServiceTestCase
             ['_id' => 'r1', 'review_user_id' => 'alice', 'user_id' => 'bob', 'username' => 'Bob', 'text' => 'Agreed'],
             ['_id' => 'r2', 'review_user_id' => 'alice', 'user_id' => 'alice', 'username' => 'Alice', 'text' => 'Thanks'],
         ]);
-        $service = $this->service($this->bookWithReviews([
+        $books = $this->createMock(Books::class);
+        $books->expects($this->never())->method('getBookDetails'); // the controller already loaded it
+        $service = $this->service($books);
+        $this->inject($service, 'replies', $replies);
+
+        $replies->expects($this->once())->method('forBook')->with('b1');
+        $reviews = $service->getReviewsWithReplies($this->book([
             ['user_id' => 'alice', 'rating' => 5, 'comment' => 'Great'],
             ['user_id' => 'carol', 'rating' => 3, 'comment' => 'Fine'],
         ]));
-        $this->inject($service, 'replies', $replies);
-
-        $reviews = $service->getReviewsWithReplies('b1');
 
         $this->assertSame(['Agreed', 'Thanks'], array_column($reviews[0]['replies'], 'text'));
         $this->assertSame([], $reviews[1]['replies']);
@@ -459,10 +463,10 @@ class BookServiceTest extends ServiceTestCase
     {
         $replies = $this->createMock(ReviewReplies::class);
         $replies->expects($this->never())->method('add');
-        $service = $this->service($this->bookWithReviews([['user_id' => 'alice', 'rating' => 5]]));
+        $service = $this->service();
         $this->inject($service, 'replies', $replies);
 
-        $this->assertNotNull($service->addReply('b1', 'deleted-author', null, 'bob', 'Bob', 'Hello?'));
+        $this->assertNotNull($service->addReply($this->book([['user_id' => 'alice', 'rating' => 5]]), 'deleted-author', null, 'bob', 'Bob', 'Hello?'));
     }
 
     public function testCannotAnswerAReplyFromAnotherThreadOrADeletedOne(): void
@@ -474,12 +478,38 @@ class BookServiceTest extends ServiceTestCase
             ['ok', ['book_id' => 'b1', 'review_user_id' => 'alice', 'deleted' => false]],
         ]);
         $replies->expects($this->once())->method('add')->with('b1', 'alice', 'ok');
-        $service = $this->service($this->bookWithReviews([['user_id' => 'alice'], ['user_id' => 'carol']]));
+        $service = $this->service();
+        $this->inject($service, 'replies', $replies);
+        $book = $this->book([['user_id' => 'alice'], ['user_id' => 'carol']]);
+
+        $this->assertNotNull($service->addReply($book, 'alice', 'other', 'bob', 'Bob', 'x'));
+        $this->assertNotNull($service->addReply($book, 'alice', 'gone', 'bob', 'Bob', 'x'));
+        $this->assertNull($service->addReply($book, 'alice', 'ok', 'bob', 'Bob', 'x'));
+    }
+
+    public function testANewReviewStartsWithAnEmptyThread(): void
+    {
+        // A reply that raced the user's earlier review being deleted must not reappear under the new one.
+        $books = $this->createMock(Books::class);
+        $books->method('saveReview')->willReturn(['modifiedCount' => 1]); // the push matched: a new review
+        $replies = $this->createMock(ReviewReplies::class);
+        $replies->expects($this->once())->method('deleteForReview')->with('b1', 'alice');
+        $service = $this->service($books);
         $this->inject($service, 'replies', $replies);
 
-        $this->assertNotNull($service->addReply('b1', 'alice', 'other', 'bob', 'Bob', 'x'));
-        $this->assertNotNull($service->addReply('b1', 'alice', 'gone', 'bob', 'Bob', 'x'));
-        $this->assertNull($service->addReply('b1', 'alice', 'ok', 'bob', 'Bob', 'x'));
+        $service->saveReview('b1', ['user_id' => 'alice', 'rating' => 4, 'comment' => 'Good']);
+    }
+
+    public function testEditingAReviewKeepsItsThread(): void
+    {
+        $books = $this->createMock(Books::class);
+        $books->method('saveReview')->willReturn(['modifiedCount' => 0]); // the edit matched; the push didn't
+        $replies = $this->createMock(ReviewReplies::class);
+        $replies->expects($this->never())->method('deleteForReview');
+        $service = $this->service($books);
+        $this->inject($service, 'replies', $replies);
+
+        $service->saveReview('b1', ['user_id' => 'alice', 'rating' => 5, 'comment' => 'Even better']);
     }
 
     public function testDeletingAnAnsweredReplyLeavesAPlaceholder(): void
@@ -518,7 +548,8 @@ class BookServiceTest extends ServiceTestCase
 
     public function testDeletingAReviewTakesItsThreadAndRecountsTheRating(): void
     {
-        $books = $this->bookWithReviews([]);
+        $books = $this->createMock(Books::class);
+        $books->method('getBookDetails')->willReturn(['reviews' => []]); // the rating recount reads it
         $books->method('removeReview')->with('b1', 'alice')->willReturn(true);
         $books->expects($this->once())->method('updateBookRating')->with('b1', 0.0, 0);
         $replies = $this->createMock(ReviewReplies::class);

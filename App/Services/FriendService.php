@@ -21,6 +21,9 @@ class FriendService
      * reading activity (loans, downloads) and notes — written as private until the switch existed — are off.
      * Notes are shown only inside the reader (AnnotationService::listForFriends), never on the friend page.
      */
+    /** What BookCard.vue shows; the projection for books on a friend's page. */
+    private const BOOK_CARD_FIELDS = ['title' => 1, 'author' => 1, 'year' => 1, 'categories' => 1];
+
     public const SHARING_DEFAULTS = ['saved' => true, 'reviews' => true, 'loans' => false, 'downloads' => false, 'notes' => false];
 
     private Friendships $friendships;
@@ -227,21 +230,33 @@ class FriendService
     }
 
     /**
+     * The public ones among these books, in the given order, in one query, with only what a book card shows:
+     * never storage paths, other readers' embedded reviews or the indexer's state (as the catalog strips).
+     * Drafts stay hidden: a friend sees what any reader could open.
+     *
      * @param array<int, mixed> $bookIds
      * @return list<array<string, mixed>>
      */
     private function publicBooks(array $bookIds): array
     {
-        $books = [];
-        foreach (array_unique(array_map('strval', $bookIds)) as $bookId) {
-            $book = $this->books->getBookDetails($bookId);
-            // Drafts stay hidden: a friend sees what any reader could open.
-            if ($book && ($book['status'] ?? null) === 'public') {
-                BookDisplayHelper::applyThumbnailForApi($book);
-                $books[] = $book;
-            }
+        $ids = array_values(array_unique(array_filter(
+            array_map('strval', $bookIds),
+            fn ($id) => preg_match('/^[0-9a-f]{24}$/', $id) === 1
+        )));
+        if ($ids === []) {
+            return [];
         }
-        return $books;
+        $byId = [];
+        foreach (
+            $this->books->findAll(
+                ['_id' => ['$in' => array_map([MongoHelper::class, 'createObjectId'], $ids)], 'status' => 'public'],
+                ['projection' => self::BOOK_CARD_FIELDS, 'limit' => 0]
+            ) as $book
+        ) {
+            BookDisplayHelper::applyThumbnailForApi($book);
+            $byId[BookDisplayHelper::bookIdString($book)] = $book;
+        }
+        return array_values(array_filter(array_map(fn ($id) => $byId[$id] ?? null, $ids)));
     }
 
     /**

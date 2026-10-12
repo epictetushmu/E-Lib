@@ -25,10 +25,17 @@ class FriendServiceTest extends ServiceTestCase
         $users = $this->createMock(Users::class);
         $users->method('getUserById')->willReturn($friend);
         $books = $this->createMock(Books::class);
-        $books->method('getBookDetails')->willReturnCallback(fn (string $id) => match ($id) {
-            self::PUBLIC_BOOK => ['_id' => $id, 'title' => 'Public', 'status' => 'public'],
-            self::DRAFT_BOOK => ['_id' => $id, 'title' => 'Draft', 'status' => 'draft'],
-            default => null,
+        // Stands in for Mongo: answers the $in + status filter the way the database would.
+        $books->method('findAll')->willReturnCallback(function (array $filter) {
+            $stored = [
+                self::PUBLIC_BOOK => ['_id' => self::PUBLIC_BOOK, 'title' => 'Public', 'status' => 'public'],
+                self::DRAFT_BOOK => ['_id' => self::DRAFT_BOOK, 'title' => 'Draft', 'status' => 'draft'],
+            ];
+            $wanted = array_map('strval', $filter['_id']['$in']);
+            return array_values(array_filter(
+                $stored,
+                fn ($b) => in_array($b['_id'], $wanted, true) && $b['status'] === $filter['status']
+            ));
         });
         $books->method('reviewedBy')->willReturn([
             ['_id' => self::PUBLIC_BOOK, 'title' => 'Public', 'author' => 'A', 'reviews' => [['rating' => 5, 'comment' => 'Great']]],
@@ -65,6 +72,41 @@ class FriendServiceTest extends ServiceTestCase
         $this->inject($service, 'users', $users);
 
         $this->assertSame([self::FRIEND => 'Nikos'], $service->friendsSharing(self::USER, 'notes'));
+    }
+
+    public function testFriendsBooksComeFromOneQueryWithOnlyBookCardFields(): void
+    {
+        $friendships = $this->createMock(Friendships::class);
+        $friendships->method('areFriends')->willReturn(true);
+        $users = $this->createMock(Users::class);
+        $users->method('getUserById')->willReturn([
+            'username' => 'b',
+            // Saved order is kept; a malformed id is skipped rather than breaking the query.
+            'savedBooks' => [self::DRAFT_BOOK, 'not-an-id', self::PUBLIC_BOOK, self::PUBLIC_BOOK],
+        ]);
+        $books = $this->createMock(Books::class);
+        $books->expects($this->never())->method('getBookDetails');
+        $books->expects($this->once())->method('findAll')
+            ->with(
+                $this->callback(fn ($f) => $f['status'] === 'public' && count($f['_id']['$in']) === 2),
+                $this->callback(function ($options) {
+                    // An inclusion projection: storage paths, everyone's reviews and indexer state never load.
+                    $this->assertSame(['title', 'author', 'year', 'categories'], array_keys($options['projection']));
+                    return true;
+                })
+            )
+            ->willReturn([['_id' => self::PUBLIC_BOOK, 'title' => 'Public']]);
+        $books->method('reviewedBy')->willReturn([]);
+
+        /** @var FriendService $service */
+        $service = $this->makeService(FriendService::class, 'friendships', $friendships);
+        $this->inject($service, 'users', $users);
+        $this->inject($service, 'books', $books);
+        $library = $service->library(self::USER, self::FRIEND);
+
+        $this->assertNotNull($library);
+        $this->assertSame(['Public'], array_column($library['saved'] ?? [], 'title'));
+        $this->assertSame('/api/v1/books/' . self::PUBLIC_BOOK . '/thumbnail', $library['saved'][0]['thumbnail'] ?? null);
     }
 
     public function testLibraryIsHiddenFromNonFriends(): void

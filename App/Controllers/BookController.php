@@ -11,7 +11,6 @@ use App\Includes\ResponseHandler;
 use App\Helpers\FileHelper;
 use App\Helpers\BookDisplayHelper;
 use App\Helpers\Database\MongoHelper;
-use App\Models\ReviewReplies;
 
 class BookController
 {
@@ -780,8 +779,14 @@ class BookController
             ResponseHandler::respond(false, 'Book ID is required', 400);
             return;
         }
+        // Same rule as posting a reply: a draft's reviews and threads are only for admins.
+        $book = $this->bookService->getBookDetails($bookId);
+        if (!$book || $this->isHiddenFromCaller($book)) {
+            ResponseHandler::respond(false, 'Book not found', 404);
+            return;
+        }
 
-        $reviews = $this->bookService->getReviewsWithReplies($bookId);
+        $reviews = $this->bookService->getReviewsWithReplies($book);
         if ($reviews) {
             ResponseHandler::respond(true, $reviews, 200);
         } else {
@@ -825,13 +830,21 @@ class BookController
         $data = $this->jsonBody();
         $text = $this->replyText($data);
         $reviewUserId = (string) ($data['review_user_id'] ?? '');
-        $parentId = is_string($data['parent_id'] ?? null) && $data['parent_id'] !== '' ? $data['parent_id'] : null;
         if ($text === null || $reviewUserId === '') {
+            return;
+        }
+        // Absent/null/'' answers the review; anything else must be a reply id, never silently dropped.
+        $parentId = $data['parent_id'] ?? null;
+        if ($parentId === '') {
+            $parentId = null;
+        }
+        if ($parentId !== null && !(is_string($parentId) && preg_match('/^[0-9a-f]{24}$/', $parentId))) {
+            ResponseHandler::respond(false, 'parent_id must be a reply id', 400);
             return;
         }
         $user = (new UserService())->getUserById($userId);
         $username = (string) ($user['username'] ?? 'Anonymous User');
-        $error = $this->bookService->addReply($bookId, $reviewUserId, $parentId, $userId, $username, $text);
+        $error = $this->bookService->addReply($book, $reviewUserId, $parentId, $userId, $username, $text);
         if ($error !== null) {
             ResponseHandler::respond(false, $error, 404);
             return;
@@ -885,8 +898,8 @@ class BookController
     private function replyText(array $data): ?string
     {
         $text = trim(is_string($data['text'] ?? null) ? $data['text'] : '');
-        if ($text === '' || mb_strlen($text) > ReviewReplies::MAX_LENGTH) {
-            ResponseHandler::respond(false, 'A reply needs 1 to ' . ReviewReplies::MAX_LENGTH . ' characters', 400);
+        if ($text === '' || mb_strlen($text) > BookService::REPLY_MAX_LENGTH) {
+            ResponseHandler::respond(false, 'A reply needs 1 to ' . BookService::REPLY_MAX_LENGTH . ' characters', 400);
             return null;
         }
         return $text;

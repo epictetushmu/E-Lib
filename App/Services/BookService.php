@@ -22,6 +22,9 @@ class BookService
     private NotificationService $notifications;
     private ReviewReplies $replies;
 
+    /** Longest reply, in characters (controllers check it before calling addReply/editReply). */
+    public const REPLY_MAX_LENGTH = ReviewReplies::MAX_LENGTH;
+
     public function __construct()
     {
         $this->book = new Books();
@@ -700,6 +703,14 @@ class BookService
         // Add the review to the book, or replace this user's existing one
         $result = $this->book->saveReview($bookId, $review);
 
+        // A new review (the push matched, rather than the edit) starts with an empty thread. Clears any reply
+        // that slipped in while a previous review by this user was being deleted: addReply checks the review
+        // exists and then inserts, so a reply racing deleteReview can outlive its review, and threads are keyed
+        // by book + review author, so it would otherwise reappear under this one.
+        if (is_array($result) && ($result['modifiedCount'] ?? 0) > 0 && isset($review['user_id'])) {
+            $this->replies->deleteForReview($bookId, (string) $review['user_id']);
+        }
+
         if ($result) {
             // Update the book's average rating
             $this->updateBookRating($bookId);
@@ -724,14 +735,16 @@ class BookService
     }
 
     /**
-     * The book's reviews, each with its reply thread (oldest reply first) under `replies`.
+     * The book's reviews, each with its reply thread (oldest reply first) under `replies`. Takes the book the
+     * caller already loaded (and checked the reader may see), so it isn't read twice.
      *
+     * @param array<string, mixed> $book
      * @return list<array<string, mixed>>
      */
-    public function getReviewsWithReplies(string $bookId): array
+    public function getReviewsWithReplies(array $book): array
     {
         $threads = [];
-        foreach ($this->replies->forBook($bookId) as $reply) {
+        foreach ($this->replies->forBook(BookDisplayHelper::bookIdString($book)) as $reply) {
             $threads[(string) $reply['review_user_id']][] = [
                 'id' => (string) $reply['_id'],
                 'parent_id' => isset($reply['parent_id']) ? (string) $reply['parent_id'] : null,
@@ -745,25 +758,27 @@ class BookService
         }
         return array_map(
             fn ($review) => $review + ['replies' => $threads[(string) ($review['user_id'] ?? '')] ?? []],
-            $this->getBookReviews($bookId)
+            self::reviewsOf($book)
         );
     }
 
     /**
      * Reply to the review that $reviewUserId wrote on the book — to the review itself, or (with
-     * $parentId) to a reply in its thread.
+     * $parentId) to a reply in its thread. Takes the book the caller already loaded.
      *
+     * @param array<string, mixed> $book
      * @return string|null Null on success, else why not
      */
     public function addReply(
-        string $bookId,
+        array $book,
         string $reviewUserId,
         ?string $parentId,
         string $userId,
         string $username,
         string $text
     ): ?string {
-        $reviewExists = in_array($reviewUserId, array_map('strval', array_column($this->getBookReviews($bookId), 'user_id')), true);
+        $bookId = BookDisplayHelper::bookIdString($book);
+        $reviewExists = in_array($reviewUserId, array_map('strval', array_column(self::reviewsOf($book), 'user_id')), true);
         if (!$reviewExists) {
             return 'That review no longer exists';
         }
@@ -844,7 +859,18 @@ class BookService
     public function getBookReviews(string $bookId): array
     {
         $book = $this->book->getBookDetails($bookId);
-        if (!$book || empty($book['reviews'])) {
+        return $book ? self::reviewsOf($book) : [];
+    }
+
+    /**
+     * A book document's embedded reviews as plain arrays (BSON documents from the driver otherwise).
+     *
+     * @param array<string, mixed> $book
+     * @return list<array<string, mixed>>
+     */
+    public static function reviewsOf(array $book): array
+    {
+        if (empty($book['reviews'])) {
             return [];
         }
 
