@@ -5,7 +5,7 @@ namespace App\Includes;
 
 class SessionManager
 {
-    public static function initialize()
+    public static function initialize(): bool
     {
         // Start the session if not already started and if headers haven't been sent
         if (session_status() === PHP_SESSION_NONE) {
@@ -13,6 +13,17 @@ class SessionManager
                 // Configure session to be more resilient
                 ini_set('session.use_only_cookies', 1);
                 ini_set('session.use_strict_mode', 1);
+
+                // Caddy (docker-compose) terminates TLS and forwards plain HTTP with this header;
+                // $_SERVER['HTTPS'] alone only reflects the browser<->Caddy hop, not what PHP sees.
+                $isHttps = ($_SERVER['HTTPS'] ?? '') === 'on'
+                    || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+
+                session_set_cookie_params([
+                    'secure' => $isHttps,
+                    'httponly' => true,
+                    'samesite' => 'Lax',
+                ]);
 
                 // Start the session
                 session_start();
@@ -22,25 +33,6 @@ class SessionManager
             }
         }
 
-        // Set global variables
-        global $isLoggedIn;
-        $isLoggedIn = isset($_SESSION['user_id']);
-
-        return $isLoggedIn;
-    }
-
-    public static function getCurrentUser()
-    {
-        return $_SESSION['user'] ?? null;
-    }
-
-    public static function getCurrentUserId()
-    {
-        return $_SESSION['user_id'] ?? null;
-    }
-
-    public static function isLoggedIn()
-    {
         return isset($_SESSION['user_id']);
     }
 }

@@ -1,0 +1,18 @@
+.login-form {
+  text-align: center;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.switch-link {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.cas-block {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}

@@ -79,9 +79,8 @@ try {
     }
     echo "   - User retrieved successfully\n";
 
-    echo "7. Testing Users::updateById (via updateProfile)\n";
-    $updateProfile = ['name' => 'Updated User Name'];
-    $usersModel->updateProfile($userId, $updateProfile);
+    echo "7. Testing Users::updateById (via updateUser)\n";
+    $usersModel->updateUser($userId, ['name' => 'Updated User Name']);
     $updatedUser = $usersModel->getUserById($userId);
     if ($updatedUser['name'] !== 'Updated User Name') {
         throw new Exception("Failed to update user profile");

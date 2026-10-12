@@ -10,7 +10,7 @@ use App\Repository\DatabaseRepository;
  */
 class DatabaseFactory
 {
-    private static $database = null;
+    private static ?DatabaseInterface $database = null;
 
     public static function getDatabase(): DatabaseInterface
     {

@@ -1,0 +1,35 @@
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+}
+
+.app-shell--immersive {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.app-shell--immersive .app-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0.5rem;
+  z-index: 100;
+  background: var(--color-navy);
+  color: #fff;
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius);
+}
+
+.skip-link:focus {
+  top: 0.5rem;
+}

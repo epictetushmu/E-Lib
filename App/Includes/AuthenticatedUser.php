@@ -33,13 +33,26 @@ class AuthenticatedUser
     }
 
     /**
-     * Check if the current user session has admin privileges.
+     * Check if the current user (session or Bearer JWT) has admin privileges.
      */
     public static function isAdmin(): bool
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        return !empty($_SESSION['user_id']) && !empty($_SESSION['isAdmin']) && $_SESSION['isAdmin'] === true;
+        if (!empty($_SESSION['user_id']) && !empty($_SESSION['isAdmin'])) {
+            return true;
+        }
+        $headers = function_exists('getallheaders') ? (getallheaders() ?: []) : [];
+        $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+        if (!$authHeader || !str_starts_with($authHeader, 'Bearer ')) {
+            return false;
+        }
+        $token = trim(substr($authHeader, 7));
+        if ($token === '') {
+            return false;
+        }
+        $decoded = JwtHelper::validateToken($token);
+        return $decoded !== null && !empty($decoded->isAdmin);
     }
 }

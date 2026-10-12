@@ -1,0 +1,209 @@
+.upload-pdf-page {
+  padding: 2.5rem 1.5rem;
+  max-width: 760px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.drop-area {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  text-align: center;
+  background: var(--color-surface);
+}
+
+.drop-area.dragging {
+  border-color: var(--color-primary);
+  background: var(--color-bg);
+}
+
+.drop-area p {
+  margin: 0;
+}
+
+.drop-area .btn {
+  margin-left: 0.5rem;
+}
+
+.drop-hint {
+  margin-top: 0.6rem !important;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.files-list {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+}
+
+/* One file per row, separated by a rule rather than boxed: the page is the container. */
+.file-row {
+  padding: 1rem 0 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.file-row.success {
+  border-left: 3px solid var(--color-success);
+  padding-left: 0.75rem;
+}
+
+.file-row.failed {
+  border-left: 3px solid var(--color-danger);
+  padding-left: 0.75rem;
+}
+
+.file-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+
+.file-name {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+.file-fields {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 0.6fr 1fr;
+  gap: 0.6rem 0.75rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.field > span,
+.field > label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.field input,
+.field textarea {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.45rem 0.6rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field.full {
+  grid-column: 1 / -1;
+}
+
+.file-source,
+.file-reason {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.file-reason {
+  color: var(--color-danger);
+}
+
+.defaults {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1.5rem;
+  margin: 0;
+  padding: 1rem 0 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.defaults legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: 0.25rem;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  color: var(--color-navy);
+}
+
+.defaults .field {
+  flex: 1 1 18rem;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-bottom: 0.55rem;
+  font-size: 0.9rem;
+}
+
+.upload-status {
+  margin-top: 1.25rem;
+}
+
+.progress-bar-track {
+  height: 0.6rem;
+  background: var(--color-border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width 0.2s ease;
+}
+
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
+@media (max-width: 560px) {
+  .upload-pdf-page {
+    padding: 1.75rem 1rem 2.5rem;
+  }
+
+  .file-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .field.wide {
+    grid-column: 1 / -1;
+  }
+
+  .drop-area .btn {
+    display: block;
+    width: fit-content;
+    margin: 0.6rem auto 0;
+  }
+}

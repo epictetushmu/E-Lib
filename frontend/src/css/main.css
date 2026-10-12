@@ -1,0 +1,336 @@
+:root {
+  /* Limestone, fresco and olive — Crete, not a generic reading room. */
+  --color-bg: #ece3d2;
+  --color-surface: #fbf8f1;
+  --color-text: #211c30;
+  --color-text-muted: #5a5340;
+  --color-border: #dad0ba;
+  --color-primary: #a6432a;
+  --color-primary-hover: #8b3722;
+  --color-accent: #a67c29;
+  --color-accent-text: #7a5a1b;
+  --color-danger: #9c3b3b;
+  --color-success: #5c6b3d;
+  --color-navy: #211c30;
+  --color-navy-rgb: 33, 28, 48;
+  --font-serif: 'Literata', 'Iowan Old Style', 'Times New Roman', serif;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --radius: 4px;
+  --shadow-sm: 0 1px 2px rgba(var(--color-navy-rgb), 0.1);
+  --shadow-md: 0 6px 18px rgba(var(--color-navy-rgb), 0.14);
+  /* Highlight inks, also reused by diagram shape fills. */
+  --ink-saffron: #f2c94c;
+  --ink-olive: #a9bf6b;
+  --ink-aegean: #7fbcd6;
+  --ink-rose: #e9a0a0;
+}
+
+.hl-saffron {
+  --ink: var(--ink-saffron);
+}
+
+.hl-olive {
+  --ink: var(--ink-olive);
+}
+
+.hl-aegean {
+  --ink: var(--ink-aegean);
+}
+
+.hl-rose {
+  --ink: var(--ink-rose);
+}
+
+.meander {
+  height: 10px;
+  background-repeat: repeat-x;
+  background-size: 32px 10px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 8'%3E%3Cpath d='M0 8 L0 2 L4 2 L4 6 L8 6 L8 0 L12 0 L12 4 L16 4' fill='none' stroke='%23211C30' stroke-width='1.6'/%3E%3C/svg%3E");
+}
+
+.meander--on-dark {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 8'%3E%3Cpath d='M0 8 L0 2 L4 2 L4 6 L8 6 L8 0 L12 0 L12 4 L16 4' fill='none' stroke='%23A67C29' stroke-width='1.6'/%3E%3C/svg%3E");
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  color: var(--color-navy);
+  line-height: 1.2;
+  margin: 0 0 0.5em;
+}
+
+h1 {
+  font-size: 2.25rem;
+}
+
+h2 {
+  font-size: 1.75rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+}
+
+h4 {
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.container {
+  width: 100%;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 0.55rem 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-muted);
+}
+
+/* Text-only button: Cancel and similar secondary actions. */
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.link-btn:hover:not(:disabled) {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.link-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Shared shell for native <dialog> modals (diagram editor, equation editor, diagram viewer). */
+.dialog-shell {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-md);
+}
+
+.dialog-shell::backdrop {
+  background: rgba(var(--color-navy-rgb), 0.55);
+}
+
+.dialog-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.dialog-head h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.3rem;
+  color: var(--color-text);
+}
+
+.dialog-close {
+  border: none;
+  background: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.form-field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.75rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.alert {
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.alert-danger {
+  background: #f6e3e3;
+  color: var(--color-danger);
+  border: 1px solid #e3bcbc;
+}
+
+.alert-success {
+  background: #e3f0e8;
+  color: var(--color-success);
+  border: 1px solid #bfdfcc;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.grid-books {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 2rem auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.navbar :focus-visible,
+.site-footer :focus-visible {
+  outline-color: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .container {
+    padding: 0 1rem;
+  }
+}

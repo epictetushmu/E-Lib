@@ -7,19 +7,25 @@ use App\Helpers\Database\MongoHelper;
 
 class UserService
 {
-    private $user;
+    private Users $user;
 
     public function __construct()
     {
         $this->user = new Users();
     }
 
-    public function getUserByEmail($email)
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getUserByEmail(string $email): ?array
     {
         return $this->user->getUserByEmail($email);
     }
 
-    public function registerUser($userName, $email, $password)
+    /**
+     * @return array<string, mixed>
+     */
+    public function registerUser(string $userName, string $email, string $password): array
     {
         $user = [
             'username' => $userName,
@@ -31,17 +37,26 @@ class UserService
         return $this->user->registerUser($user);
     }
 
-    public function getUserById($id)
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getUserById(string $id): ?array
     {
         return $this->user->getUserById($id);
     }
 
-    public function saveBook($userId, $bookId)
+    /**
+     * @return array<string, mixed>|bool
+     */
+    public function saveBook(string $userId, string $bookId): array|bool
     {
         return $this->user->saveBook($userId, $bookId);
     }
 
-    public function getSavedBooks($userId)
+    /**
+     * @return list<string>
+     */
+    public function getSavedBooks(string $userId): array
     {
         $user = $this->getUserById($userId);
         if (empty($user['savedBooks'])) {
@@ -54,7 +69,7 @@ class UserService
     /**
      * @return list<string>
      */
-    public function getDownloadedBookIds($userId): array
+    public function getDownloadedBookIds(string $userId): array
     {
         $user = $this->getUserById($userId);
         if (empty($user['downloadedBooks'])) {
@@ -71,7 +86,10 @@ class UserService
         return $result !== false;
     }
 
-    public function removeBook($userId, $bookId)
+    /**
+     * @return array<string, mixed>|bool
+     */
+    public function removeBook(string $userId, string $bookId): array|bool
     {
         return $this->user->removeBook($userId, $bookId);
     }
@@ -80,7 +98,7 @@ class UserService
      * Update user profile information
      *
      * @param string $userId The ID of the user to update
-     * @param array $updates Associative array of fields to update
+     * @param array<string, mixed> $updates Associative array of fields to update
      * @return bool True on success, false on failure
      */
     public function updateUser($userId, array $updates)

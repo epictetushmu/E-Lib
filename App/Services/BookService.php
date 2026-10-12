@@ -3,49 +3,518 @@
 namespace App\Services;
 
 use App\Models\Books;
+use App\Models\Loans;
+use App\Models\ReviewReplies;
+use App\Models\Users;
+use App\Helpers\BookDisplayHelper;
+use App\Helpers\Database\MongoHelper;
 use MongoDB\BSON\UTCDateTime;
 
 class BookService
 {
-    private $book;
+    public const DEFAULT_AUTHOR = 'Unknown Author';
+    public const DEFAULT_LOAN_DAYS = 14;
+    public const DUE_SOON_DAYS = 2;
+    private const LIBRARY_TIMEZONE = 'Europe/Athens';
+
+    private Books $book;
+    private Loans $loans;
+    private NotificationService $notifications;
+    private ReviewReplies $replies;
+
+    /** Longest reply, in characters (controllers check it before calling addReply/editReply). */
+    public const REPLY_MAX_LENGTH = ReviewReplies::MAX_LENGTH;
 
     public function __construct()
     {
         $this->book = new Books();
+        $this->loans = new Loans();
+        $this->notifications = new NotificationService();
+        $this->replies = new ReviewReplies();
     }
 
-    public function getAllBooks()
+    /**
+     * Copies a book is lent with. For a PDF: 0 = open access; more means it can only be read while
+     * borrowed, and is never downloadable. For a physical book: copies on the shelf (0 = reference only).
+     *
+     * @param array<string, mixed> $book
+     */
+    public static function loanCopies(array $book): int
+    {
+        return max(0, (int) ($book['loan_copies'] ?? 0));
+    }
+
+    /**
+     * @param array<string, mixed> $book
+     */
+    public static function isPhysical(array $book): bool
+    {
+        return ($book['file_type'] ?? null) === 'physical';
+    }
+
+    /**
+     * @param array<string, mixed> $book
+     */
+    private static function loanDays(array $book): int
+    {
+        return (int) ($book['loan_days'] ?? 0) ?: self::DEFAULT_LOAN_DAYS;
+    }
+
+    /**
+     * Whether the caller may read the book's PDF: public (or they're an admin), and for a lent book an
+     * active loan. The rule streamBookFile applies, for anything that shows the book's text elsewhere.
+     *
+     * @param array<string, mixed> $book
+     */
+    public function canRead(array $book, ?string $userId, bool $isAdmin): bool
+    {
+        if ($isAdmin) {
+            return true;
+        }
+        if (($book['status'] ?? null) !== 'public') {
+            return false;
+        }
+        return self::loanCopies($book) === 0
+            || ($userId !== null && $this->hasActiveLoan(BookDisplayHelper::bookIdString($book), $userId));
+    }
+
+    public function hasActiveLoan(string $bookId, string $userId): bool
+    {
+        return $this->loans->activeFor($bookId, $userId) !== null;
+    }
+
+    /**
+     * Reader takes a copy: a PDF loan starts now (or on the copy held for them), a physical copy is held
+     * for pickup. While anyone is waiting, free copies go to the waitlist first.
+     *
+     * @param array<string, mixed> $book
+     * @return array{due_at: ?string, pickup_by: ?string}|'full'|'queue' 'queue' = join the waitlist instead
+     */
+    public function borrow(string $bookId, array $book, string $userId): array|string
+    {
+        if ($this->loans->activeFor($bookId, $userId) === null && $this->loans->waitlist($bookId) !== []) {
+            return 'queue';
+        }
+        $copies = self::loanCopies($book);
+        $slot = self::isPhysical($book)
+            ? $this->loans->reserve($bookId, $userId, $copies)
+            : $this->loans->borrow($bookId, $userId, $copies, self::loanDays($book));
+        if ($slot === null) {
+            return 'full';
+        }
+        $due = self::isoDate($slot['due_at'] ?? null);
+        return ['due_at' => $due, 'pickup_by' => $due === null ? self::isoDate($slot['free_at']) : null];
+    }
+
+    /**
+     * Queue for a book whose copies are all out. Null on success, else why not.
+     *
+     * @param array<string, mixed> $book
+     */
+    public function joinWaitlist(string $bookId, array $book, string $userId): ?string
+    {
+        if ($this->loans->activeFor($bookId, $userId) !== null) {
+            return 'You already have this book';
+        }
+        $free = self::loanCopies($book) - $this->loans->activeCount($bookId);
+        if ($free > 0 && $this->loans->waitlist($bookId) === []) {
+            return 'A copy is available: borrow it instead';
+        }
+        $this->loans->joinWaitlist($bookId, $userId);
+        return null;
+    }
+
+    public function leaveWaitlist(string $bookId, string $userId): void
+    {
+        $this->loans->leaveWaitlist($bookId, $userId);
+    }
+
+    /**
+     * Extend a loan by the book's loan period from today. Refused while someone is waiting for the book;
+     * overdue loans only by a librarian ($asAdmin).
+     *
+     * @param array<string, mixed> $book
+     * @return string|null The new due date, or why it can't be renewed (prefixed "!")
+     */
+    public function renew(string $bookId, array $book, string $userId, bool $asAdmin): ?string
+    {
+        if ($this->loans->waitlist($bookId) !== []) {
+            return '!Someone is waiting for this book, so it can\'t be renewed';
+        }
+        $loan = $this->loans->renew($bookId, $userId, self::loanDays($book), $asAdmin);
+        if (is_string($loan)) {
+            return '!' . $loan;
+        }
+        if (self::isPhysical($book)) {
+            $this->notifications->notify(
+                $userId,
+                $bookId,
+                'Renewed: ' . $book['title'],
+                sprintf('"%s" is renewed. It\'s now due back on %s.', $book['title'], self::humanDate($loan['due_at']))
+            );
+        }
+        return self::isoDate($loan['due_at']);
+    }
+
+    /**
+     * Librarian hands a physical copy to a reader (their reservation, or a walk-in).
+     *
+     * @param array<string, mixed> $book
+     * @return string|null Due date, or null when they already have it out or no copy is free
+     */
+    public function checkOut(string $bookId, array $book, string $userId): ?string
+    {
+        $loan = $this->loans->checkOut($bookId, $userId, self::loanCopies($book), self::loanDays($book));
+        if ($loan === null) {
+            return null;
+        }
+        $due = (string) self::isoDate($loan['due_at']);
+        $this->notifications->notify(
+            $userId,
+            $bookId,
+            'Checked out: ' . $book['title'],
+            sprintf('You borrowed "%s". Please return it to the library by %s.', $book['title'], self::humanDate($loan['due_at']))
+        );
+        return $due;
+    }
+
+    /**
+     * End a hold: return a PDF, cancel a reservation, or (librarian) check a physical copy back in.
+     *
+     * @param array<string, mixed>|null $book Null when the book has been deleted
+     * @return bool False when the user held nothing
+     */
+    public function returnBook(string $bookId, ?array $book, string $userId): bool
+    {
+        $loan = $this->loans->returnBook($bookId, $userId);
+        if ($loan === null) {
+            return false;
+        }
+        if (($loan['kind'] ?? null) === 'physical' && $loan['returned_at'] !== null) {
+            $title = $book['title'] ?? 'your book';
+            $this->notifications->notify(
+                $userId,
+                $bookId,
+                'Returned: ' . $title,
+                sprintf('"%s" was checked back in on %s. Thank you!', $title, self::humanDate($loan['returned_at']))
+            );
+        }
+        if ($book !== null) {
+            $this->promoteWaitlist($bookId, $book);
+        }
+        return true;
+    }
+
+    /**
+     * Hold each free copy for the next reader in line and tell them. Runs after every return and, for
+     * copies that free themselves (lapsed holds, ended PDF loans), from the scheduler.
+     *
+     * @param array<string, mixed> $book
+     */
+    public function promoteWaitlist(string $bookId, array $book): int
+    {
+        $copies = self::loanCopies($book);
+        $physical = self::isPhysical($book);
+        $promoted = 0;
+        foreach ($this->loans->waitlist($bookId) as $entry) {
+            $userId = (string) $entry['user_id'];
+            if ($this->loans->activeFor($bookId, $userId) !== null) {
+                $this->loans->leaveWaitlist($bookId, $userId);
+                continue;
+            }
+            if ($copies - $this->loans->activeCount($bookId) < 1) {
+                break;
+            }
+            $slot = $this->loans->reserve($bookId, $userId, $copies, $physical ? 'physical' : 'digital');
+            if ($slot === null) {
+                break;
+            }
+            $this->loans->leaveWaitlist($bookId, $userId);
+            $until = self::humanDate($slot['free_at']);
+            $this->notifications->notify(
+                $userId,
+                $bookId,
+                'Ready for you: ' . $book['title'],
+                $physical
+                    ? sprintf('A copy of "%s" is waiting for you at the library desk until %s.', $book['title'], $until)
+                    : sprintf('A copy of "%s" is held for you until %s. Open the book to start reading.', $book['title'], $until)
+            );
+            $promoted++;
+        }
+        return $promoted;
+    }
+
+    /**
+     * True when the user's hold on the book is a reservation not yet picked up.
+     */
+    public function hasReservation(string $bookId, string $userId): bool
+    {
+        $slot = $this->loans->activeFor($bookId, $userId);
+        return $slot !== null && $slot['due_at'] === null;
+    }
+
+    /**
+     * What the book page shows about lending: copies, how many are free, and the caller's hold.
+     *
+     * @param array<string, mixed> $book
+     * @return array<string, mixed> copies, available, loan_days, pickup_days, waiting (queue length), and the
+     *   caller's due_at / pickup_by / renewals_left / position (1-based place in the queue, null if not in it)
+     */
+    public function loanStatus(string $bookId, array $book, ?string $userId): array
+    {
+        $copies = self::loanCopies($book);
+        $mine = $userId === null ? null : $this->loans->activeFor($bookId, $userId);
+        $due = self::isoDate($mine['due_at'] ?? null);
+        $queue = array_map(fn ($w) => (string) $w['user_id'], $this->loans->waitlist($bookId));
+        $place = $userId === null ? false : array_search($userId, $queue, true);
+        $history = $due === null ? null : $this->loans->findHistory((string) $mine['history_id']);
+        return [
+            'copies' => $copies,
+            'available' => max(0, $copies - $this->loans->activeCount($bookId)),
+            'loan_days' => self::loanDays($book),
+            'pickup_days' => self::isPhysical($book) ? Loans::PICKUP_DAYS : Loans::DIGITAL_HOLD_DAYS,
+            'waiting' => count($queue),
+            'position' => $place === false ? null : $place + 1,
+            'due_at' => $due,
+            'pickup_by' => $mine !== null && $due === null ? self::isoDate($mine['free_at']) : null,
+            'renewals_left' => $history === null ? null : max(0, Loans::MAX_RENEWALS - (int) ($history['renewals'] ?? 0)),
+        ];
+    }
+
+    /**
+     * Loan records with book title and borrower filled in — all of them (admin) or one reader's.
+     *
+     * Status: digital → active | returned | expired; physical → reserved | not_collected | cancelled |
+     * out | overdue | returned.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function loanHistory(?string $userId = null): array
+    {
+        // ponytail: newest 1000 only, add paging when a library outgrows it
+        $loans = $this->loans->history($userId === null ? [] : ['user_id' => $userId], 1000);
+        $ids = fn (string $field) => array_values(array_unique(array_map(
+            fn ($loan) => MongoHelper::createObjectId((string) $loan[$field]),
+            $loans
+        )));
+        $byId = function (array $docs): array {
+            $map = [];
+            foreach ($docs as $doc) {
+                $map[(string) $doc['_id']] = $doc;
+            }
+            return $map;
+        };
+        $books = $byId($this->book->findAll(['_id' => ['$in' => $ids('book_id')]], [
+            'projection' => ['title' => 1, 'author' => 1, 'shelf_location' => 1], 'limit' => 0,
+        ]));
+        $users = $userId !== null ? [] : $byId((new Users())->findAll(['_id' => ['$in' => $ids('user_id')]], [
+            'projection' => ['username' => 1, 'email' => 1], 'limit' => 0,
+        ]));
+
+        return array_map(function ($loan) use ($books, $users) {
+            $book = $books[$loan['book_id']] ?? null;
+            $user = $users[$loan['user_id']] ?? null;
+            return [
+                'id' => (string) $loan['_id'],
+                'kind' => $loan['kind'] ?? 'digital',
+                'book_id' => $loan['book_id'],
+                'book_title' => $book['title'] ?? null,
+                'book_author' => $book['author'] ?? null,
+                'shelf_location' => $book['shelf_location'] ?? null,
+                'user_id' => $loan['user_id'],
+                'username' => $user['username'] ?? null,
+                'email' => $user['email'] ?? null,
+                'reserved_at' => self::isoDate($loan['reserved_at'] ?? null),
+                'pickup_by' => self::isoDate($loan['pickup_by'] ?? null),
+                'borrowed_at' => self::isoDate($loan['borrowed_at'] ?? null),
+                'due_at' => self::isoDate($loan['due_at'] ?? null),
+                'returned_at' => self::isoDate($loan['returned_at'] ?? null),
+                'cancelled_at' => self::isoDate($loan['cancelled_at'] ?? null),
+                'renewals' => (int) ($loan['renewals'] ?? 0),
+                'status' => self::loanState($loan),
+            ];
+        }, $loans);
+    }
+
+    /**
+     * Everything time-driven, run every minute by scripts/scheduler.php: hand freed copies to the
+     * waitlist, remind readers of due dates and overdue books (once per loan), and send queued emails.
+     *
+     * @return array<string, int> How much of each was done
+     */
+    public function runScheduledTasks(): array
+    {
+        $done = ['promoted' => 0, 'due_soon' => 0, 'overdue' => 0];
+        foreach ($this->loans->waitedForBookIds() as $bookId) {
+            $book = $this->book->getBookDetails($bookId);
+            if ($book === null) {
+                continue;
+            }
+            $done['promoted'] += $this->promoteWaitlist($bookId, $book);
+        }
+
+        $remind = [
+            'due_soon' => [$this->loans->dueSoonUnnotified(self::DUE_SOON_DAYS), 'due_soon_notified_at', 'Due soon: %s',
+                '"%s" is due back on %s. Renew it from the book page if you need longer.'],
+            'overdue' => [$this->loans->overdueUnnotified(), 'overdue_notified_at', 'Overdue: %s',
+                '"%s" was due back on %s. Please return it to the library.'],
+        ];
+        foreach ($remind as $key => [$loans, $field, $subject, $text]) {
+            foreach ($loans as $loan) {
+                $book = $this->book->getBookDetails((string) $loan['book_id']);
+                $title = (string) ($book['title'] ?? 'a library book');
+                $this->notifications->notify(
+                    (string) $loan['user_id'],
+                    (string) $loan['book_id'],
+                    sprintf($subject, $title),
+                    sprintf($text, $title, self::humanDate($loan['due_at']))
+                );
+                $this->loans->markNotified((string) $loan['_id'], $field);
+                $done[$key]++;
+            }
+        }
+
+        $done['emails'] = $this->notifications->sendPendingEmails();
+        return $done;
+    }
+
+    /**
+     * @param array<string, mixed> $loan A LoanHistory document
+     */
+    public static function loanState(array $loan, ?int $now = null): string
+    {
+        $now ??= time();
+        $ts = fn (string $field) => ($loan[$field] ?? null) instanceof UTCDateTime
+            ? $loan[$field]->toDateTime()->getTimestamp()
+            : null;
+        if ($ts('returned_at') !== null) {
+            return 'returned';
+        }
+        if ($ts('cancelled_at') !== null) {
+            return 'cancelled';
+        }
+        $due = $ts('due_at');
+        if (($loan['kind'] ?? 'digital') === 'digital') {
+            return $due !== null && $due > $now ? 'active' : 'expired';
+        }
+        if ($due === null) {
+            return ($ts('pickup_by') ?? 0) > $now ? 'reserved' : 'not_collected';
+        }
+        return $due > $now ? 'out' : 'overdue';
+    }
+
+    /** dd-mm-yyyy in the library's local time, for notification text (the app itself runs in UTC). */
+    private static function humanDate(mixed $date): string
+    {
+        return $date instanceof UTCDateTime
+            ? $date->toDateTime()->setTimezone(new \DateTimeZone(self::LIBRARY_TIMEZONE))->format('d-m-Y')
+            : '';
+    }
+
+    private static function isoDate(mixed $date): ?string
+    {
+        return $date instanceof UTCDateTime ? $date->toDateTime()->format(DATE_ATOM) : null;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function getAllBooks(): array
     {
         return $this->book->getAllBooks();
     }
 
-    public function getFeaturedBooks()
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function getFeaturedBooks(): array
     {
         return $this->book->getFeaturedBooks();
     }
 
-    public function deleteBook($id)
+    /**
+     * @return array<string, mixed>
+     */
+    public function deleteBook(string $id): array
     {
         return $this->book->deleteBook($id);
     }
 
-    public function getPublicBooks()
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function getPublicBooks(): array
     {
         return $this->book->getPublicBooks();
     }
 
+    /**
+     * @return list<string>
+     */
+    public function getCategories(): array
+    {
+        return $this->book->getDistinctCategories();
+    }
+
+    public const CATALOG_PAGE_SIZE = 24;
+
+    /**
+     * Catalog search with facets (see Books::catalog). Untrusted query-string input is normalised
+     * here: unknown filters/sorts are ignored, values are trimmed strings, capped in count and length.
+     *
+     * @param array<string, mixed> $params Raw $_GET: q, category[], format[], author[], year_from, year_to, sort, page
+     * @return array{
+     *     books: list<array<string, mixed>>, total: int, page: int, pageSize: int,
+     *     facets: array<string, list<array{value: string, count: int}>>, years: array{min: int, max: int}|null
+     * }
+     */
+    public function catalog(array $params, bool $publicOnly): array
+    {
+        $strings = function (mixed $value): array {
+            $values = is_array($value) ? $value : [$value];
+            $values = array_map(fn ($v) => is_scalar($v) ? mb_substr(trim((string) $v), 0, 200) : '', $values);
+            return array_slice(array_values(array_unique(array_filter($values, fn ($v) => $v !== ''))), 0, 20);
+        };
+        $filters = [
+            'category' => $strings($params['category'] ?? []),
+            'format' => array_map('strtolower', $strings($params['format'] ?? [])),
+            'author' => $strings($params['author'] ?? []),
+        ];
+        $year = fn (string $key) => is_string($params[$key] ?? null) && preg_match('/^\d{1,4}$/', trim($params[$key]))
+            ? (int) $params[$key]
+            : null;
+        $years = [$year('year_from'), $year('year_to')];
+        if ($years[0] !== null && $years[1] !== null && $years[0] > $years[1]) {
+            $years = [$years[1], $years[0]];
+        }
+        $sort = is_string($params['sort'] ?? null) && isset(Books::CATALOG_SORTS[$params['sort']]) ? $params['sort'] : 'title';
+        $page = max(1, min(1000, (int) ($params['page'] ?? 1)));
+        $text = is_string($params['q'] ?? null) ? mb_substr(trim($params['q']), 0, 200) : '';
+
+        $skip = ($page - 1) * self::CATALOG_PAGE_SIZE;
+        $result = $this->book->catalog($text, $filters, $years, $publicOnly, $sort, $skip, self::CATALOG_PAGE_SIZE);
+        return $result + ['page' => $page, 'pageSize' => self::CATALOG_PAGE_SIZE];
+    }
+
+    /**
+     * @param array<int, string> $categories
+     * @return array<string, mixed>|false
+     */
     public function updateBook(
-        $id,
+        string $id,
         string $title,
         string $author,
         string $year,
         string $description,
         array $categories,
         string $status,
-        $featured,
+        mixed $featured,
         string $isbn,
-        bool $downloadable = true
-    ) {
+        bool $downloadable = true,
+        ?int $loanCopies = null,
+        ?int $loanDays = null,
+        ?string $shelfLocation = null
+    ): array|false {
         // Add validation here
 
         // Properly handle featured parameter conversion to boolean
@@ -62,6 +531,9 @@ class BookService
             'categories' => $categories,
             'isbn' => $isbn,
             'downloadable' => $downloadable,
+            'loan_copies' => $loanCopies,
+            'loan_days' => $loanDays,
+            'shelf_location' => $shelfLocation,
             'featured' => $featuredBool,
             'status' => $status,
             'updated_at' => new UTCDateTime()
@@ -70,11 +542,63 @@ class BookService
         return $this->book->updateBook($id, $book);
     }
 
-    public function getBookDetails($id)
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getBookDetails(string $id): ?array
     {
         return $this->book->getBookDetails($id);
     }
 
+    /**
+     * Catalogue a book that only exists on the library's shelves: no file, lent by copies.
+     * file_type/file_extension "physical" is what the catalog's Format filter shows.
+     *
+     * @param array<int, string> $categories
+     * @return array<string, mixed>
+     */
+    public function addPhysicalBook(
+        string $title,
+        string $author,
+        string $year,
+        string $description,
+        array $categories,
+        string $isbn,
+        string $status,
+        int $copies,
+        int $loanDays,
+        string $shelfLocation,
+        ?string $thumbnail = null
+    ): array {
+        return $this->book->addBook([
+            'title' => $title,
+            'author' => trim($author) !== '' ? trim($author) : self::DEFAULT_AUTHOR,
+            'year' => (int) $year,
+            'description' => $description,
+            'categories' => $categories,
+            'isbn' => $isbn,
+            'file_path' => null,
+            'file_type' => 'physical',
+            'file_extension' => 'physical',
+            'thumbnail' => $thumbnail,
+            'created_at' => new UTCDateTime(),
+            'updated_at' => new UTCDateTime(),
+            'status' => $status === 'public' ? 'public' : 'draft',
+            'views' => 0,
+            'downloads' => 0,
+            'featured' => false,
+            'downloadable' => false,
+            'loan_copies' => $copies,
+            'loan_days' => $loanDays,
+            'shelf_location' => $shelfLocation,
+            'reviews' => [],
+        ]);
+    }
+
+    /**
+     * @param array<int, string> $categories
+     * @return array<string, mixed>
+     */
     public function addBook(
         string $title,
         string $author,
@@ -82,17 +606,17 @@ class BookService
         string $description,
         array $categories,
         string $isbn,
-        $filePath = null,
-        $thumbnailPath = null,
+        ?string $filePath = null,
+        ?string $thumbnailPath = null,
         bool $downloadable = true,
         string $fileType = 'pdf',
         string $fileExtension = 'pdf'
-    ) {
+    ): array {
         // Add validation here
 
         $book = [
             'title' => $title,
-            'author' => $author,
+            'author' => trim($author) !== '' ? trim($author) : self::DEFAULT_AUTHOR,
             'year' => (int)$year,
             'description' => $description,
             'categories' => $categories,
@@ -116,20 +640,29 @@ class BookService
 
     /**
      * Search for books based on multiple criteria
+     *
+     * @param array<string, mixed>|string $params
+     * @param bool $publicOnly Restrict results to status: 'public' (callers pass true for
+     *                         any non-admin/unauthenticated caller so drafts stay hidden)
+     * @return list<array<string, mixed>>
      */
-    public function searchBooks($params)
+    public function searchBooks(array|string $params, bool $publicOnly = false): array
     {
         // If only a string is passed, treat it as a title search (backwards compatibility)
         if (is_string($params)) {
             $params = ['title' => $params];
         }
 
+        // preg_quote() escapes regex metacharacters in the user-supplied term before it
+        // reaches MongoDB's $regex (PCRE) evaluation — an unescaped term lets a caller submit
+        // a pathological pattern (e.g. nested quantifiers) that costs catastrophic-backtracking
+        // CPU time per document scanned (CWE-1333); this is a substring search, not a regex API.
         $query = [];
         if (!empty($params['title'])) {
-            $query['title'] = ['$regex' => $params['title'], '$options' => 'i'];
+            $query['title'] = ['$regex' => preg_quote((string) $params['title']), '$options' => 'i'];
         }
         if (!empty($params['author'])) {
-            $query['author'] = ['$regex' => $params['author'], '$options' => 'i'];
+            $query['author'] = ['$regex' => preg_quote((string) $params['author']), '$options' => 'i'];
         }
         if (!empty($params['category'])) {
             $query['categories'] = ['$in' => [$params['category']]];
@@ -139,19 +672,23 @@ class BookService
             return [];
         }
 
+        if ($publicOnly) {
+            $query['status'] = 'public';
+        }
+
         try {
-            $books = $this->book->searchBooks($query);
-            if (is_array($books)) {
-                return $books; // Ensure all matching books are returned
-            }
-            return []; // Return an empty array if no matches are found
+            return $this->book->searchBooks($query);
         } catch (\Exception $e) {
             error_log("Search error: " . $e->getMessage());
             return [];
         }
     }
 
-    public function addReview($bookId, $review, $rating = null)
+    /**
+     * @param array<string, mixed> $review
+     * @return array<string, mixed>|false
+     */
+    public function saveReview(string $bookId, array $review, mixed $rating = null): array|false
     {
         // Make sure rating is included
         if (isset($rating) && !isset($review['rating'])) {
@@ -163,8 +700,16 @@ class BookService
             $review['created_at'] = date('Y-m-d H:i:s');
         }
 
-        // Add the review to the book
-        $result = $this->book->addReview($bookId, $review);
+        // Add the review to the book, or replace this user's existing one
+        $result = $this->book->saveReview($bookId, $review);
+
+        // A new review (the push matched, rather than the edit) starts with an empty thread. Clears any reply
+        // that slipped in while a previous review by this user was being deleted: addReply checks the review
+        // exists and then inserts, so a reply racing deleteReview can outlive its review, and threads are keyed
+        // by book + review author, so it would otherwise reappear under this one.
+        if (is_array($result) && ($result['modifiedCount'] ?? 0) > 0 && isset($review['user_id'])) {
+            $this->replies->deleteForReview($bookId, (string) $review['user_id']);
+        }
 
         if ($result) {
             // Update the book's average rating
@@ -174,7 +719,124 @@ class BookService
         return $result;
     }
 
-    public function getBookByTitle($title)
+    /**
+     * Delete the user's review of a book, with its reply thread, and recount the book's rating.
+     *
+     * @return bool Whether they had a review to delete
+     */
+    public function deleteReview(string $bookId, string $userId): bool
+    {
+        if (!$this->book->removeReview($bookId, $userId)) {
+            return false;
+        }
+        $this->replies->deleteForReview($bookId, $userId);
+        $this->updateBookRating($bookId);
+        return true;
+    }
+
+    /**
+     * The book's reviews, each with its reply thread (oldest reply first) under `replies`. Takes the book the
+     * caller already loaded (and checked the reader may see), so it isn't read twice.
+     *
+     * @param array<string, mixed> $book
+     * @return list<array<string, mixed>>
+     */
+    public function getReviewsWithReplies(array $book): array
+    {
+        $threads = [];
+        foreach ($this->replies->forBook(BookDisplayHelper::bookIdString($book)) as $reply) {
+            $threads[(string) $reply['review_user_id']][] = [
+                'id' => (string) $reply['_id'],
+                'parent_id' => isset($reply['parent_id']) ? (string) $reply['parent_id'] : null,
+                'user_id' => isset($reply['user_id']) ? (string) $reply['user_id'] : null,
+                'username' => (string) ($reply['username'] ?? ''),
+                'text' => (string) $reply['text'],
+                'deleted' => !empty($reply['deleted']),
+                'created_at' => self::isoDate($reply['created_at'] ?? null),
+                'updated_at' => self::isoDate($reply['updated_at'] ?? null),
+            ];
+        }
+        return array_map(
+            fn ($review) => $review + ['replies' => $threads[(string) ($review['user_id'] ?? '')] ?? []],
+            self::reviewsOf($book)
+        );
+    }
+
+    /**
+     * Reply to the review that $reviewUserId wrote on the book — to the review itself, or (with
+     * $parentId) to a reply in its thread. Takes the book the caller already loaded.
+     *
+     * @param array<string, mixed> $book
+     * @return string|null Null on success, else why not
+     */
+    public function addReply(
+        array $book,
+        string $reviewUserId,
+        ?string $parentId,
+        string $userId,
+        string $username,
+        string $text
+    ): ?string {
+        $bookId = BookDisplayHelper::bookIdString($book);
+        $reviewExists = in_array($reviewUserId, array_map('strval', array_column(self::reviewsOf($book), 'user_id')), true);
+        if (!$reviewExists) {
+            return 'That review no longer exists';
+        }
+        if ($parentId !== null) {
+            $parent = $this->replies->find($parentId);
+            $sameThread = $parent !== null && $parent['book_id'] === $bookId && $parent['review_user_id'] === $reviewUserId;
+            if (!$sameThread || !empty($parent['deleted'])) {
+                return 'That reply no longer exists';
+            }
+        }
+        $this->replies->add($bookId, $reviewUserId, $parentId, $userId, $username, $text);
+        return null;
+    }
+
+    /**
+     * Edit a reply — only its author can.
+     */
+    public function editReply(string $replyId, string $userId, string $text): bool
+    {
+        if ($this->replies->findOwned($replyId, $userId) === null) {
+            return false;
+        }
+        $this->replies->updateOwned($replyId, $userId, $text);
+        return true;
+    }
+
+    /**
+     * Delete a reply — only its author can. If others answered it, it stays as a placeholder so their
+     * answers keep their place; otherwise it goes, along with any placeholders left with nothing under them.
+     */
+    public function deleteReply(string $replyId, string $userId): bool
+    {
+        $reply = $this->replies->findOwned($replyId, $userId);
+        if ($reply === null) {
+            return false;
+        }
+        if ($this->replies->hasAnswers($replyId)) {
+            $this->replies->markDeleted($replyId);
+            return true;
+        }
+        $this->replies->remove($replyId);
+        // Walk up: a placeholder whose last answer just went has nothing left to hold a place for.
+        $parentId = $reply['parent_id'] ?? null;
+        while ($parentId !== null) {
+            $parent = $this->replies->find((string) $parentId);
+            if ($parent === null || empty($parent['deleted']) || $this->replies->hasAnswers((string) $parentId)) {
+                break;
+            }
+            $this->replies->remove((string) $parentId);
+            $parentId = $parent['parent_id'] ?? null;
+        }
+        return true;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function getBookByTitle(string $title): ?array
     {
         return $this->book->getBookByTitle($title);
     }
@@ -182,35 +844,46 @@ class BookService
     /**
      * Update book's average rating based on all reviews
      */
-    private function updateBookRating($bookId)
+    private function updateBookRating(string $bookId): void
     {
-        $book = $this->getBookDetails($bookId);
-        if (!$book || empty($book['reviews'])) {
-            return false;
-        }
-
-        $totalRating = 0;
-        $count = 0;
-
-        foreach ($book['reviews'] as $review) {
-            if (isset($review['rating'])) {
-                $totalRating += $review['rating'];
-                $count++;
-            }
-        }
-
-        $averageRating = $count > 0 ? round($totalRating / $count, 1) : 0;
-
-        // Update the book with the new average rating
-        return $this->book->updateBookRating($bookId, $averageRating, $count);
+        // getBookReviews() turns the driver's BSONArray/BSONDocument values into plain arrays array_column() accepts.
+        $ratings = array_column($this->getBookReviews($bookId), 'rating');
+        $count = count($ratings);
+        // No reviews left (the last one was deleted): no rating rather than a stale one.
+        $this->book->updateBookRating($bookId, $count === 0 ? 0.0 : round(array_sum($ratings) / $count, 1), $count);
     }
 
-    public function getBookReviews($bookId)
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function getBookReviews(string $bookId): array
     {
         $book = $this->book->getBookDetails($bookId);
-        if ($book) {
-            return $book['reviews'] ?? [];
+        return $book ? self::reviewsOf($book) : [];
+    }
+
+    /**
+     * A book document's embedded reviews as plain arrays (BSON documents from the driver otherwise).
+     *
+     * @param array<string, mixed> $book
+     * @return list<array<string, mixed>>
+     */
+    public static function reviewsOf(array $book): array
+    {
+        if (empty($book['reviews'])) {
+            return [];
         }
-        return [];
+
+        $reviews = $book['reviews'];
+        $reviews = is_object($reviews) && method_exists($reviews, 'getArrayCopy')
+            ? $reviews->getArrayCopy()
+            : (array) $reviews;
+
+        return array_values(array_map(
+            fn ($review) => is_object($review) && method_exists($review, 'getArrayCopy')
+                ? $review->getArrayCopy()
+                : (array) $review,
+            $reviews
+        ));
     }
 }

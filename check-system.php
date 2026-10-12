@@ -17,11 +17,7 @@
 // Change to application root directory
 chdir(__DIR__);
 
-// Define color codes for terminal output
-define('GREEN', "\033[0;32m");
-define('RED', "\033[0;31m");
-define('YELLOW', "\033[1;33m");
-define('RESET', "\033[0m");
+require_once __DIR__ . '/scripts/cli-output.php';
 
 // Parse command line options
 $options = getopt('', ['verbose', 'fix']);
@@ -131,26 +127,12 @@ if (file_exists('.env')) {
 
 // Check file structure
 $requiredDirs = ['App', 'public', 'vendor'];
-$requiredFiles = [
-    'App/Views/Partials/Header.php',
-    'App/Views/Partials/Footer.php',
-    'App/Views/Components/AddBook.php'
-];
 
 foreach ($requiredDirs as $dir) {
     if (is_dir($dir)) {
         $results['passed'][] = "Directory: $dir";
     } else {
         $results['failed'][] = "Directory: $dir (missing)";
-        $allPassed = false;
-    }
-}
-
-foreach ($requiredFiles as $file) {
-    if (file_exists($file)) {
-        $results['passed'][] = "File: $file";
-    } else {
-        $results['failed'][] = "File: $file (missing)";
         $allPassed = false;
     }
 }
@@ -176,24 +158,6 @@ try {
     }
 } catch (Exception $e) {
     $results['warnings'][] = "MongoDB connection check failed: " . $e->getMessage();
-}
-
-// Check if views can be included
-$viewsBasePath = __DIR__ . '/App/Views/';
-$includeSuccess = true;
-
-// Test that we can include a component without errors
-ob_start();
-try {
-    // Simulate component environment
-    $activePage = 'test';
-    include $viewsBasePath . 'Partials/Header.php';
-    $results['passed'][] = "Component inclusion: Header.php";
-} catch (Exception $e) {
-    $includeSuccess = false;
-    $results['failed'][] = "Component inclusion: Header.php - " . $e->getMessage();
-} finally {
-    ob_end_clean();
 }
 
 // Display results

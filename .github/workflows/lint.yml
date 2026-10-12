@@ -28,3 +28,33 @@ jobs:
 
       - name: PHPStan
         run: composer run analyse
+
+      - name: PHPUnit
+        run: composer run test
+
+  js-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: ESLint (frontend)
+        run: cd frontend && npm run lint
+
+      - name: vue-tsc typecheck
+        run: cd frontend && npm run typecheck
+
+      - name: Install e2e tooling dependencies
+        run: npm ci
+
+      - name: ESLint (qa/)
+        run: npm run lint

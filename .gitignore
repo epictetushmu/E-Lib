@@ -1,5 +1,6 @@
 # Environment file with sensitive information
 .env
+.env.production
 
 # IDE files
 .vscode/
@@ -18,6 +19,7 @@ logs/
 
 #Ignore certificates 
 /certificates/
+caddy-ca/
 
 #Ignore assets folder 
 *.pdf
@@ -29,9 +31,11 @@ logs/
 # PHP tooling
 .phpstan.result.cache
 .phpcs-cache
+.phpunit.cache/
 
 # Node / frontend tooling
 node_modules/
+/public/dist/
 
 # Playwright (local E2E runs)
 playwright-report/

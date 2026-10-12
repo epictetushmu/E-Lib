@@ -14,18 +14,34 @@ use InvalidArgumentException;
 class JwtHelper
 {
     /**
+     * Resolve the JWT signing secret from the environment at call time (not at process
+     * start), so a value loaded from .env after bootstrap.php ran is actually honored.
+     * Falls back to a hardcoded dev-only key outside production; fails closed in
+     * production rather than silently signing/verifying tokens with a known secret.
+     */
+    private static function getSecretKey(): string
+    {
+        $key = Environment::get('JWT_SECRET_KEY');
+        if ($key) {
+            return (string) $key;
+        }
+
+        if (Environment::get('APP_ENV') === 'production') {
+            throw new \RuntimeException('JWT_SECRET_KEY is not configured; refusing to sign/verify tokens in production');
+        }
+
+        return 'your-secret-key-for-development-only';
+    }
+
+    /**
      * Generate a JWT token with the provided payload
      *
-     * @param array $payload Data to include in the token
+     * @param array<string, mixed> $payload Data to include in the token
      * @return string The generated JWT token
      */
     public static function generateToken($payload)
     {
-        if (!defined('JWT_SECRET_KEY')) {
-            throw new \RuntimeException('JWT_SECRET_KEY is not defined');
-        }
-
-        $key = JWT_SECRET_KEY;
+        $key = self::getSecretKey();
         $payload['iat'] = time(); // Issued at
         $payload['exp'] = time() + 3600; // Expiration time (1 hour)
         return JWT::encode($payload, $key, 'HS256');
@@ -39,12 +55,8 @@ class JwtHelper
      */
     public static function validateToken($token)
     {
-        if (!defined('JWT_SECRET_KEY')) {
-            throw new \RuntimeException('JWT_SECRET_KEY is not defined');
-        }
-
         try {
-            $key = JWT_SECRET_KEY;
+            $key = self::getSecretKey();
             $decoded = JWT::decode($token, new Key($key, 'HS256'));
             return $decoded;
         } catch (ExpiredException $e) {
@@ -71,19 +83,12 @@ class JwtHelper
      * Useful for debugging
      *
      * @param string $token The JWT token to validate
-     * @return array with success status and error message if failed
+     * @return array<string, mixed> with success status and error message if failed
      */
     public static function getTokenValidationError($token)
     {
-        if (!defined('JWT_SECRET_KEY')) {
-            return [
-                'success' => false,
-                'error' => 'JWT_SECRET_KEY is not defined'
-            ];
-        }
-
         try {
-            $key = JWT_SECRET_KEY;
+            $key = self::getSecretKey();
             $decoded = JWT::decode($token, new Key($key, 'HS256'));
             return [
                 'success' => true,

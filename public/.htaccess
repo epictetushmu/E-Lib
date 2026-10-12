@@ -1,9 +1,15 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    
+
     # Handle direct access to the public folder
     RewriteBase /
-    
+
+    # Uploaded book documents must never be served as static files: that bypasses the
+    # auth/status/downloadable checks in BookController (viewBook/streamBookFile/downloadBook),
+    # which read them straight off disk via PHP, not through this URL. Force every request
+    # for a raw document through those controller actions instead.
+    RewriteRule ^assets/uploads/documents/ - [F,L]
+
     # If the requested resource doesn't exist, pass to index.php
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

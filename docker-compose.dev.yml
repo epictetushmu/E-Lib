@@ -1,0 +1,73 @@
+# Local development overrides — never used on the server.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+# or put COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml in your local .env and just run `docker compose up -d`.
+services:
+  app:
+    ports:
+      - "8081:80"
+    environment:
+      - APP_ENV=development
+      - APP_DEBUG=true
+    # NOTE: the bind-mount shadows the image-build-time public/dist/ (built by the Dockerfile's
+    # `npm run build`) with whatever's on the host. Run `cd frontend && npm run build` on the host
+    # first (or `npm run dev` against the Vite proxy instead of this container).
+    # Same container paths as the base file's volumes, so these replace them: code, uploads and
+    # logs all live on the host in dev.
+    volumes:
+      - .:/var/www/html
+      - ./public/assets/uploads:/var/www/html/public/assets/uploads
+      - ./storage/logs:/var/www/html/storage/logs
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    depends_on:
+      - mongo
+
+  scheduler:
+    environment:
+      - APP_ENV=development
+    volumes:
+      - .:/var/www/html
+
+  # Content search (COMPOSE_PROFILES=search in .env): the worker writes BookChunks + index_* fields
+  # into whatever MONGO_URI points at — point it at the local `mongo` below, not the real Atlas
+  # cluster — and the embedder downloads a 1.2GB model on first start and needs ~2GB RAM.
+  worker:
+    environment:
+      - APP_ENV=development
+    volumes:
+      - .:/var/www/html
+      - ./public/assets/uploads:/var/www/html/public/assets/uploads
+
+  embedder:
+    ports:
+      # Loopback only, so `php -S` + `php scripts/index-worker.php` on the host can use it
+      # (EMBEDDING_URL=http://127.0.0.1:8082). Still unreachable from other machines.
+      - "127.0.0.1:8082:11434"
+
+  # Throwaway local database, so local test runs never write to the real Atlas cluster. The Atlas
+  # Local image (not plain mongo) so Atlas Search / Vector Search — content search — work locally.
+  # Point the app at it with MONGO_URI=mongodb://root:example@mongo:27017/?directConnection=true
+  # (or 127.0.0.1:27017 from the host), then run `php scripts/db-setup.php` once.
+  # (CI doesn't use this — the GitHub workflows start their own mongo service container.)
+  mongo:
+    image: mongodb/mongodb-atlas-local:8.0
+    container_name: elib-mongo
+    restart: unless-stopped
+    ports:
+      # Bound to loopback only: the app container reaches mongo over the internal
+      # elib-network regardless of this mapping, which exists purely so a host-side
+      # client (Compass, mongosh) can connect for local debugging. Publishing to all
+      # interfaces (the Docker default for "27017:27017") would let anyone who can reach
+      # this host connect with the default root/example credentials below.
+      - "127.0.0.1:27017:27017"
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME:-root}
+      MONGODB_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-example}
+    volumes:
+      - atlas-data:/data/db
+      - atlas-config:/data/configdb
+    networks:
+      - elib-network
+
+volumes:
+  atlas-data:
+  atlas-config:

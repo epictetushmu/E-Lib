@@ -1,0 +1,186 @@
+.profile-page {
+  padding: 2.5rem 1.5rem;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.avatar-lg {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-navy);
+  font-weight: 700;
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profile-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tabs button {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.6rem 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.tabs button.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2.5rem 0;
+}
+
+.account-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 480px;
+}
+
+.account-card {
+  padding: 1.25rem 1.5rem;
+}
+
+.unread-badge {
+  margin-left: 0.4rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.loan-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.loan-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+}
+
+.loan-item.unread {
+  box-shadow: inset 3px 0 0 var(--color-primary), var(--shadow-sm);
+}
+
+.loan-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.loan-title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+}
+
+.loan-when {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.loan-side {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.btn-sm {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 560px) {
+  .loan-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Friends: the list is what you come for; adding friends and sharing sit beside it. */
+.friends-panel {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 860px) {
+  .friends-panel {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+
+.friends-heading {
+  margin: 1.25rem 0 0.6rem;
+  font-size: 1.05rem;
+}
+
+.friends-heading:first-child {
+  margin-top: 0;
+}
+
+.friends-main .empty-state {
+  padding: 1.5rem 0;
+}
+
+.friends-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sharing-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  cursor: pointer;
+}
+
+.sharing-option input {
+  accent-color: var(--color-primary);
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.sharing-hint {
+  margin: 0.75rem 0 0;
+}

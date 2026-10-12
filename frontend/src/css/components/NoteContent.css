@@ -1,0 +1,168 @@
+/* Rendered notes. Content arrives via v-html, so rules reach in with :deep. */
+.note-content {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.note-content :deep(> :first-child) {
+  margin-top: 0;
+}
+
+.note-content :deep(> :last-child) {
+  margin-bottom: 0;
+}
+
+.note-content :deep(p),
+.note-content :deep(ul),
+.note-content :deep(ol),
+.note-content :deep(pre),
+.note-content :deep(blockquote) {
+  margin: 0 0 0.55rem;
+}
+
+.note-content :deep(ul),
+.note-content :deep(ol) {
+  padding-left: 1.2rem;
+}
+
+.note-content :deep(h1),
+.note-content :deep(h2),
+.note-content :deep(h3) {
+  font-size: 0.95rem;
+  margin: 0.6rem 0 0.3rem;
+  color: var(--color-text);
+}
+
+.note-content :deep(a) {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+/* Code: an inked slip of paper, tokens in the reader's own palette rather than an editor theme. */
+.note-content :deep(code) {
+  font-family: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 0.8rem;
+}
+
+.note-content :deep(:not(pre) > code) {
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  background: var(--color-bg);
+}
+
+.note-content :deep(pre) {
+  padding: 0.6rem 0.7rem;
+  border-radius: var(--radius);
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-bg);
+  overflow-x: auto;
+  line-height: 1.45;
+}
+
+.note-content :deep(.hljs-keyword),
+.note-content :deep(.hljs-built_in),
+.note-content :deep(.hljs-selector-tag) {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.note-content :deep(.hljs-string),
+.note-content :deep(.hljs-attr),
+.note-content :deep(.hljs-template-variable) {
+  color: var(--color-success);
+}
+
+.note-content :deep(.hljs-number),
+.note-content :deep(.hljs-literal),
+.note-content :deep(.hljs-type) {
+  color: var(--color-accent-text);
+}
+
+.note-content :deep(.hljs-comment) {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.note-content :deep(.hljs-title),
+.note-content :deep(.hljs-function) {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+/* Maths: display equations scroll rather than overflow the narrow panel. */
+.note-content :deep(.katex-display) {
+  margin: 0.5rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.2rem 0;
+}
+
+.note-content :deep(.katex) {
+  font-size: 1.05em;
+}
+
+.note-content :deep(.katex-error) {
+  color: var(--color-danger);
+}
+
+/* Diagrams: scaled to the panel; the muted text is the can't-read-it message. */
+.note-content :deep(.note-diagram) {
+  margin: 0 0 0.55rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  overflow-x: auto;
+}
+
+.note-content :deep(.note-diagram[role='button']) {
+  cursor: zoom-in;
+}
+
+.note-content :deep(.note-diagram[role='button']:hover) {
+  border-color: var(--color-text-muted);
+}
+
+.note-content :deep(.note-diagram svg) {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  white-space: normal;
+}
+
+.note-content :deep(.note-diagram.is-invalid) {
+  color: var(--color-danger);
+  white-space: pre-wrap;
+}
+
+/* Full-size diagram viewer (native <dialog>). */
+.diagram-dialog {
+  max-width: 92vw;
+  max-height: 88vh;
+  padding: 2.5rem 1.5rem 1.5rem;
+}
+
+.diagram-dialog-body {
+  overflow: auto;
+}
+
+.diagram-dialog-body :deep(svg) {
+  display: block;
+  max-width: none !important;
+  min-width: min(60rem, 85vw);
+  height: auto;
+}
+
+.diagram-dialog-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+}
+
+.diagram-dialog-close:hover {
+  color: var(--color-text);
+}

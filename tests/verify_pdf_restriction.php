@@ -30,6 +30,17 @@ if ($result === false) {
     exit(1);
 }
 
+// A non-PDF renamed to .pdf must be rejected by its content
+$fakePdf = $mockFile;
+$fakePdf['name'] = 'renamed.pdf';
+echo "\nTesting upload of non-PDF content named renamed.pdf...\n";
+if ($fileHelper->storeFile($fakePdf) === false && $fileHelper->rejectReason === 'File is not a valid PDF.') {
+    echo "SUCCESS: Renamed non-PDF was rejected.\n";
+} else {
+    echo "FAILURE: Renamed non-PDF was not rejected by content.\n";
+    exit(1);
+}
+
 // Test PDF upload
 $mockPdf = [
     'name' => 'test.pdf',
@@ -51,15 +62,8 @@ $resultPdf = $fileHelper->storeFile($mockPdf);
 if ($resultPdf !== false && $resultPdf['extension'] === 'pdf') {
      echo "SUCCESS: PDF file was accepted.\n";
 } else {
-    // It might fail on move_uploaded_file because these are not actual uploaded files in a HTTP request context
-    // But storeFile checks move_uploaded_file which requires valid upload.
-    // We can't easily mock move_uploaded_file without runkit or similar.
-    // However, the logic check happens *before* move_uploaded_file for the extension.
-    // Wait, let's look at storeFile again.
-    
-    // It checks extension first.
-    // Then it tries to move.
-    
+    // Known CLI limitation: move_uploaded_file() requires a real HTTP upload, so this
+    // mock (past the extension check, which is what we're actually testing) still fails here.
     echo "NOTE: PDF acceptance test might fail due to move_uploaded_file restrictions in CLI, but we are checking if logic got that far.\n";
 }
 

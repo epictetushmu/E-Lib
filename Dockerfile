@@ -14,9 +14,11 @@ RUN apt-get update && apt-get install -y \
     openssl \
     libssl-dev \
     imagemagick \
-    default-jre \
+    poppler-utils \
     fonts-liberation \
     fontconfig \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
@@ -27,11 +29,8 @@ RUN docker-php-ext-install gd
 # OpenSSL is already built into PHP, just verify it's enabled
 RUN php -r 'if(!extension_loaded("openssl")) exit(1);'
 
-# Install LibreOffice with Java support and ImageMagick with Imagick PHP extension
+# Install the Imagick PHP extension
 RUN apt-get update && apt-get install -y \
-    libreoffice \
-    libreoffice-java-common \
-    imagemagick \
     libmagickwand-dev --no-install-recommends \
     && pecl install imagick \
     && docker-php-ext-enable imagick
@@ -62,6 +61,10 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install curl \
     && docker-php-ext-enable curl
 
+# Production php.ini defaults plus the app's upload/memory limits
+RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+COPY docker/php/prod.ini "$PHP_INI_DIR/conf.d/prod.ini"
+
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
@@ -78,22 +81,20 @@ RUN sed -i 's!/var/www/html!/var/www/html/public!g' /etc/apache2/sites-available
 # Copy composer files first for better caching
 COPY composer.json composer.lock* ./
 
-# Install dependencies
-RUN composer install
+# Install dependencies (no dev tools in the production image)
+RUN composer install --no-dev --no-scripts --no-autoloader
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /var/www/html/certificates \
-    /var/www/html/storage/logs \
+RUN mkdir -p /var/www/html/storage/logs \
     /var/www/html/public/uploads \
     /var/www/html/public/assets/uploads/documents \
     /var/www/html/public/assets/uploads/thumbnails \
     /var/www/html/cache \
-    # Create LibreOffice user profile with proper permissions
+    # Writable HOME config/cache (fontconfig etc.)
     /var/www/.config \
     /var/www/.cache \
     # Set proper permissions
-    && chmod -R 777 /var/www/html/certificates \
-    /var/www/html/storage \
+    && chmod -R 777 /var/www/html/storage \
     /var/www/html/public/uploads \
     /var/www/html/public/assets \
     /var/www/html/cache \
@@ -101,30 +102,22 @@ RUN mkdir -p /var/www/html/certificates \
     /var/www/.cache \
     && chown -R www-data:www-data /var/www/
 
-# Copy the MongoDB certificate setup script and entrypoint
-COPY setup-mongodb-cert.php docker-entrypoint.php ./
-
-# Try multiple certificate download methods during build
-RUN echo "Attempting certificate download during build..." \
-    && php -r 'file_put_contents("certificates/mongodb-ca.pem", file_get_contents("https://truststore.pki.mongodb.com/atlas-root-ca.pem") ?: "");' \
-    || echo "Primary certificate download method failed, will try alternatives..."
-
-# Run the certificate setup with fallback methods during build
-RUN php setup-mongodb-cert.php
+# Copy the entrypoint
+COPY docker-entrypoint.php ./
 
 # Copy the rest of the application
 COPY . .
 
-# Set the certificate path in environment
-ENV MONGO_CERT_FILE=/var/www/html/certificates/mongodb-ca.pem
+# Build the frontend SPA into public/dist/ (served as-is by PageRouter)
+RUN cd frontend && npm ci && npm run build
 
 # Generate optimized autoloader
-RUN composer dump-autoload --optimize
+RUN composer dump-autoload --optimize --no-dev
 
 # Environment variable indicating we're in Docker
 ENV DOCKER_ENV=true
 
-# Set HOME for LibreOffice user profile
+# Writable HOME for www-data (see the .config/.cache dirs above)
 ENV HOME=/var/www
 
 # Set proper permissions

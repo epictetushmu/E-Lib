@@ -8,12 +8,13 @@ use MongoDB\Driver\ServerApi;
 
 class MongoConnectionFactory
 {
-    private static $mongoClient = null;
+    private static ?Client $mongoClient = null;
 
     /**
+     * @param array<string, mixed> $options
      * @return \MongoDB\Database
      */
-    public static function create($type = 'mongo', $options = [])
+    public static function create(string $type = 'mongo', array $options = [])
     {
         $defaults = ['dbName' => 'LibraryDb'];
         $config = array_merge($defaults, $options);
@@ -28,6 +29,8 @@ class MongoConnectionFactory
     /**
      * URI options. Atlas works with the OS trust store — do not set tlsCAFile unless you must
      * (e.g. corporate proxy). MONGO_CERT_FILE is ignored here on purpose; use MONGO_TLS_CA_FILE only if needed.
+     *
+     * @return array<string, int|string>
      */
     private static function uriOptionsFromEnv(): array
     {

@@ -8,7 +8,7 @@ use App\Includes\Environment;
 
 class EmailService
 {
-    private $mailer;
+    private PHPMailer $mailer;
 
     public function __construct()
     {
@@ -35,7 +35,7 @@ class EmailService
      * @param string $fromEmail Sender email
      * @param string $fromName Sender name
      * @param string $message Email message content
-     * @param array $attachments Optional array of file attachments
+     * @param array<int, array<string, mixed>> $attachments Optional array of file attachments
      * @param string $subject Email subject
      * @return bool True if email was sent successfully, false otherwise
      */
@@ -84,31 +84,18 @@ class EmailService
     }
 
     /**
-     * Send a general email
-     *
-     * @param string $toEmail Recipient email
-     * @param string $toName Recipient name
-     * @param string $subject Email subject
-     * @param string $htmlBody HTML content
-     * @param string $textBody Plain text content
-     * @return bool True if email was sent successfully, false otherwise
+     * Plain message to a reader (loan notifications).
      */
-    public function sendEmail($toEmail, $toName, $subject, $htmlBody, $textBody = '')
+    public function sendToUser(string $toEmail, string $toName, string $subject, string $message): bool
     {
         try {
-            // Reset all recipients
             $this->mailer->clearAllRecipients();
-
-            // Add recipient
+            $this->mailer->clearAttachments();
+            $this->mailer->Timeout = 10;
             $this->mailer->addAddress($toEmail, $toName);
-
-            // Email content
-            $this->mailer->isHTML(true);
+            $this->mailer->isHTML(false);
             $this->mailer->Subject = $subject;
-            $this->mailer->Body = $htmlBody;
-            $this->mailer->AltBody = $textBody ?: strip_tags($htmlBody);
-
-            // Send email
+            $this->mailer->Body = $message;
             $this->mailer->send();
             return true;
         } catch (Exception $e) {

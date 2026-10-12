@@ -12,19 +12,6 @@ if (!$projectRoot) {
     die("Critical error: Unable to determine project root directory");
 }
 
-// Function to safely include a file with proper error handling
-function safeRequire($path)
-{
-    if (file_exists($path)) {
-        require_once $path;
-        return true;
-    }
-    return false;
-}
-
-// Check if we're in GitHub Actions environment
-$isGithubActions = getenv('GITHUB_ACTIONS') === 'true';
-
 // Try to include the autoloader first
 $autoloadPath = $projectRoot . '/vendor/autoload.php';
 if (file_exists($autoloadPath)) {
@@ -56,65 +43,8 @@ try {
     );
 }
 
-// Define all the required paths
-$requiredFiles = [
-    '/App/Router/BaseRouter.php',
-    '/App/Router/PageRouter.php',
-    '/App/Router/ApiRouter.php',
-    '/App/Database/DatabaseInterface.php',
-    '/App/Database/MongoDatabase.php',
-    '/App/Includes/Environment.php',
-    '/App/Integration/Database/MongoConnectionFactory.php'
-];
-
-// Try to include all required files
-$missingFiles = [];
-foreach ($requiredFiles as $file) {
-    $fullPath = $projectRoot . $file;
-    if (!safeRequire($fullPath)) {
-        $missingFiles[] = $fullPath;
-    }
-}
-
-// If there are missing files, display error and exit
-if (!empty($missingFiles)) {
-    echo "<h1>Critical Error: Missing Required Files</h1>";
-    echo "<p>The following files could not be found:</p><ul>";
-    foreach ($missingFiles as $file) {
-        echo "<li>$file</li>";
-    }
-    echo "</ul>";
-
-    echo "<h2>Debug Information</h2>";
-    echo "<p>Project Root: $projectRoot</p>";
-    echo "<p>Current Directory: " . getcwd() . "</p>";
-    echo "<p>Is GitHub Actions: " . ($isGithubActions ? 'Yes' : 'No') . "</p>";
-
-    if ($isGithubActions) {
-        echo "<h2>GitHub Actions Environment</h2>";
-        echo "<p>Directory Listing:</p><pre>";
-        // List directories to debug
-        echo shell_exec("ls -la $projectRoot");
-        echo shell_exec("ls -la $projectRoot/App");
-        echo "</pre>";
-    }
-
-    die();
-}
-
-// Environment already loaded above
-
-// Add the new integration folder to the manual includes
-safeRequire($projectRoot . '/App/Integration/Database/MongoConnectionFactory.php');
-
-// Verify the class exists
-if (!class_exists('App\Router\BaseRouter')) {
-    die("Critical error: App\\Router\\BaseRouter class not found despite loading file");
-}
-
 use App\Includes\SessionManager;
 use App\Router\BaseRouter;
-use App\Middleware\AuthMiddleware;
 use App\Middleware\LoggingMiddleware;
 use App\Middleware\JwtAuthMiddleware;
 
@@ -126,17 +56,9 @@ $router = new BaseRouter($baseUrl);
 
 // Add middleware
 $router->addMiddleware(new LoggingMiddleware());
-$router->addMiddleware(new AuthMiddleware([
-    // Protect profile and dashboard pages for logged-in users
-    ['path' => '/profile', 'method' => 'GET'],
-    ['path' => '/dashboard', 'method' => 'GET'],
-    ['path' => '/admin/logs', 'method' => 'GET'],
-    // Protect book management endpoints
-    ['path' => '/api/v1/books', 'method' => 'POST'],
-    ['path' => '/api/v1/books', 'method' => 'PUT'],
-    ['path' => '/api/v1/books', 'method' => 'DELETE'],
-]));
 
+// Page routes are all handled client-side by the SPA now (PageRouter just serves the shell);
+// only API endpoints need server-side auth, via JwtAuthMiddleware below.
 $router->addMiddleware(new JwtAuthMiddleware([
     // Protect user-specific and admin API endpoints
     ['path' => '/api/v1/user', 'method' => 'GET'],
@@ -145,11 +67,35 @@ $router->addMiddleware(new JwtAuthMiddleware([
     ['path' => '/api/v1/saved-books', 'method' => 'GET'],
     ['path' => '/api/v1/downloaded-books', 'method' => 'GET'],
     ['path' => '/api/v1/reviews', 'method' => 'POST'],
+    ['path' => '/api/v1/reviews', 'method' => 'DELETE'],
+    ['path' => '/api/v1/replies', 'method' => 'PUT'],
+    ['path' => '/api/v1/replies', 'method' => 'DELETE'],
     ['path' => '/api/v1/books/([0-9a-f]{24})/download', 'method' => 'GET'],
+    ['path' => '/api/v1/books/([0-9a-f]{24})/borrow', 'method' => 'POST'],
+    ['path' => '/api/v1/books/([0-9a-f]{24})/return', 'method' => 'POST'],
+    // Private highlights and notes
+    ['path' => '/api/v1/books/([0-9a-f]{24})/annotations', 'method' => 'GET'],
+    ['path' => '/api/v1/books/([0-9a-f]{24})/annotations', 'method' => 'POST'],
+    ['path' => '/api/v1/books/([0-9a-f]{24})/annotations/friends', 'method' => 'GET'],
+    ['path' => '/api/v1/annotations', 'method' => 'PUT'],
+    ['path' => '/api/v1/annotations', 'method' => 'DELETE'],
+    // Friends (prefix match covers /api/v1/friends/{id}/accept and /library)
+    ['path' => '/api/v1/user/sharing', 'method' => 'POST'],
+    ['path' => '/api/v1/friends', 'method' => 'GET'],
+    ['path' => '/api/v1/friends', 'method' => 'POST'],
+    ['path' => '/api/v1/friends', 'method' => 'DELETE'],
     ['path' => '/api/v1/admin/logs', 'method' => 'GET'],
+    ['path' => '/api/v1/admin/loans', 'method' => 'GET'],
+    ['path' => '/api/v1/admin/loans', 'method' => 'POST'],
+    ['path' => '/api/v1/user/notifications/read', 'method' => 'POST'],
+    ['path' => '/api/v1/admin/metadata-lookup', 'method' => 'GET'],
     ['path' => '/api/v1/update-profile', 'method' => 'POST'],
     ['path' => '/api/v1/change-password', 'method' => 'POST'],
-
+    // Book management endpoints (moved from session-based AuthMiddleware for SPA/JWT auth;
+    // prefix match also covers /api/v1/books/upload and /api/v1/books/{id})
+    ['path' => '/api/v1/books', 'method' => 'POST'],
+    ['path' => '/api/v1/books', 'method' => 'PUT'],
+    ['path' => '/api/v1/books', 'method' => 'DELETE'],
 
     // ...add more as needed
 ]));

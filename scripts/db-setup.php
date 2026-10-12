@@ -16,41 +16,21 @@
  * .env suggests a different name so that discrepancy isn't silently invisible.
  *
  * What it creates:
- *   - Collections: Books, Users
+ *   - Collections: Books, Users, Annotations, BookChunks
  *   - Indexes:
  *       Users:  unique index on email
- *       Books:  index on title, author, categories (multikey), and a
- *               compound index on {status, featured}
+ *       Books:  index on title, author, categories (multikey), a
+ *               compound index on {status, featured}, and index_status
+ *       BookChunks: {book_id, embedding_model, page}
+ *   - Atlas Search + Atlas Vector Search indexes on BookChunks for content search
+ *     (skipped with a warning on a MongoDB without Atlas Search, e.g. plain mongo in CI)
  *   - No sample/seed data — this script only provisions structure.
  *
  * Usage: php scripts/db-setup.php
  *    or: composer db:setup
  */
 
-define('GREEN', "\033[0;32m");
-define('RED', "\033[0;31m");
-define('YELLOW', "\033[1;33m");
-define('RESET', "\033[0m");
-
-function info(string $msg): void
-{
-    echo "  - {$msg}\n";
-}
-
-function success(string $msg): void
-{
-    echo GREEN . "  ✓ {$msg}\n" . RESET;
-}
-
-function warn(string $msg): void
-{
-    echo YELLOW . "  ⚠ {$msg}\n" . RESET;
-}
-
-function fail(string $msg): void
-{
-    fwrite(STDERR, RED . "  ✗ {$msg}\n" . RESET);
-}
+require_once __DIR__ . '/cli-output.php';
 
 const TARGET_DB = 'LibraryDb';
 
@@ -76,7 +56,7 @@ if ($envDbName !== '' && $envDbName !== false && $envDbName !== TARGET_DB) {
 echo "Connecting...\n";
 
 $uri = App\Includes\Environment::get('MONGO_URI', '');
-$masked = preg_replace('#(mongodb\+?srv?://[^:]+:)[^@]+@#', '$1***@', (string) $uri);
+$masked = preg_replace('#(mongodb(?:\+srv)?://[^:@/]+:)[^@]+@#', '$1***@', (string) $uri);
 info("URI (masked): {$masked}");
 
 try {
@@ -93,7 +73,7 @@ echo "\n";
 // --- Step 2: ensure collections exist ---
 echo "Ensuring collections...\n";
 
-$collectionsToCreate = ['Books', 'Users'];
+$collectionsToCreate = ['Books', 'Users', 'Annotations', 'BookChunks'];
 try {
     $existing = iterator_to_array($db->listCollectionNames());
 } catch (Throwable $e) {
@@ -150,6 +130,82 @@ $indexPlan = [
             'key' => ['status' => 1, 'featured' => 1],
             'options' => ['name' => 'idx_status_featured'],
         ],
+        [
+            // The content-search worker's claim query.
+            'key' => ['index_status' => 1],
+            'options' => ['name' => 'idx_index_status'],
+        ],
+    ],
+    'BookChunks' => [
+        [
+            // Per-book deletes/status updates, and the worker's resume cleanup.
+            'key' => ['book_id' => 1, 'embedding_model' => 1, 'page' => 1],
+            'options' => ['name' => 'idx_book_model_page'],
+        ],
+    ],
+    'Annotations' => [
+        [
+            // Every read is "this user's (or these friends') annotations for this book".
+            'key' => ['user_id' => 1, 'book_id' => 1, 'page' => 1],
+            'options' => ['name' => 'idx_user_book_page'],
+        ],
+    ],
+    'Loans' => [
+        [
+            // "Does this reader hold a copy?" and per-book active counts (book_id prefix; a book has few slots).
+            'key' => ['book_id' => 1, 'user_id' => 1, 'free_at' => 1],
+            'options' => ['name' => 'idx_book_user_free'],
+        ],
+    ],
+    'LoanHistory' => [
+        [
+            // The scheduler's every-minute overdue / due-soon scans: open physical loans by due date.
+            'key' => ['kind' => 1, 'returned_at' => 1, 'due_at' => 1],
+            'options' => ['name' => 'idx_kind_returned_due'],
+        ],
+        [
+            // A reader's own loans, newest first (profile → Loans).
+            'key' => ['user_id' => 1, '_id' => -1],
+            'options' => ['name' => 'idx_user_newest'],
+        ],
+    ],
+    'Waitlist' => [
+        [
+            // The queue for a book, in order; also serves the scheduler's distinct book_id.
+            'key' => ['book_id' => 1, 'joined_at' => 1],
+            'options' => ['name' => 'idx_book_joined'],
+        ],
+    ],
+    'ReviewReplies' => [
+        [
+            // A book's reply threads, oldest first; also per-review and per-book cascade deletes.
+            'key' => ['book_id' => 1, 'review_user_id' => 1, 'created_at' => 1],
+            'options' => ['name' => 'idx_book_review_created'],
+        ],
+        [
+            // "Does this reply have answers?" — asked on every reply delete, and per ancestor while
+            // deleteReply clears placeholders left with nothing under them.
+            'key' => ['parent_id' => 1],
+            'options' => ['name' => 'idx_parent'],
+        ],
+    ],
+    'Friendships' => [
+        [
+            // A reader's friends and requests (users holds both ids).
+            'key' => ['users' => 1, 'created_at' => -1],
+            'options' => ['name' => 'idx_users_created'],
+        ],
+    ],
+    'Notifications' => [
+        [
+            'key' => ['user_id' => 1, 'created_at' => -1],
+            'options' => ['name' => 'idx_user_created'],
+        ],
+        [
+            // The scheduler's queued-email pickup.
+            'key' => ['email_status' => 1, 'created_at' => 1],
+            'options' => ['name' => 'idx_email_status_created'],
+        ],
     ],
 ];
 
@@ -177,6 +233,66 @@ foreach ($indexPlan as $collectionName => $indexes) {
             }
             exit(1);
         }
+    }
+}
+
+echo "\n";
+
+// --- Step 4: Atlas Search / Vector Search indexes for content search ---
+echo "Ensuring Atlas Search indexes...\n";
+
+$searchIndexes = [
+    [
+        'name' => App\Models\BookChunks::TEXT_INDEX,
+        'type' => 'search',
+        'definition' => ['mappings' => ['dynamic' => false, 'fields' => [
+            // One standard-analyzed field plus Greek/English stemmed variants: the library is mixed-language.
+            'text' => [
+                'type' => 'string',
+                'analyzer' => 'lucene.standard',
+                'multi' => [
+                    'el' => ['type' => 'string', 'analyzer' => 'lucene.greek'],
+                    'en' => ['type' => 'string', 'analyzer' => 'lucene.english'],
+                ],
+            ],
+            'status' => ['type' => 'token'],
+        ]]],
+    ],
+    [
+        'name' => App\Models\BookChunks::VECTOR_INDEX,
+        'type' => 'vectorSearch',
+        'definition' => ['fields' => [
+            [
+                'type' => 'vector',
+                'path' => 'embedding',
+                // Must match the embedding model's output size (bge-m3: 1024).
+                'numDimensions' => (int) App\Includes\Environment::get('EMBEDDING_DIMENSIONS', 1024),
+                'similarity' => 'cosine',
+            ],
+            ['type' => 'filter', 'path' => 'status'],
+            ['type' => 'filter', 'path' => 'embedding_model'],
+        ]],
+    ],
+];
+
+$chunks = $db->selectCollection('BookChunks');
+foreach ($searchIndexes as $idx) {
+    try {
+        $exists = iterator_to_array($chunks->listSearchIndexes(['name' => $idx['name']])) !== [];
+        if ($exists) {
+            // Left as is rather than updated: updateSearchIndex() on a vectorSearch index is rejected
+            // ("mappings" is required) at least by atlas-local. To change one (e.g. a model with a
+            // different EMBEDDING_DIMENSIONS), drop it in Atlas and re-run this script.
+            info("Search index \"{$idx['name']}\" already exists on \"BookChunks\" — skipping.");
+        } else {
+            $chunks->createSearchIndex($idx['definition'], ['name' => $idx['name'], 'type' => $idx['type']]);
+            success("Search index \"{$idx['name']}\" created on \"BookChunks\" (Atlas builds it in the background).");
+        }
+    } catch (Throwable $e) {
+        warn(
+            "Could not ensure search index \"{$idx['name']}\": " . $e->getMessage() .
+            " — content search needs Atlas (or the mongodb/mongodb-atlas-local image)."
+        );
     }
 }
 

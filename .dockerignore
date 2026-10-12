@@ -1,24 +1,42 @@
-# Ignore the Dockerfile and docker-compose files
+# Compose/Docker files aren't needed inside the image
 Dockerfile
-docker-compose.yml
+docker-compose*.yml
 
-# Ignore the README file
 README.md
-
-# Ignore the vendor directory if using Composer
-vendor/
-
-# Ignore any log files
-*.log
-
-# Ignore temporary files
-*.tmp
-*.temp
-
-# Ignore system files
-.DS_Store
-Thumbs.db
-
-# Ignore IDE specific files
+.git
+.gitignore
 .idea/
 .vscode/
+
+# Secrets never go into the image — compose mounts .env at runtime
+.env
+.env.*
+
+# Composer/npm reinstall inside the image; root/frontend each have their own package-lock.json
+vendor/
+node_modules/
+frontend/node_modules/
+
+# The Dockerfile builds its own copy of the SPA
+public/dist/
+
+# Uploaded books/thumbnails live in the `uploads` volume, not the image — but keep the
+# placeholder images the app falls back to (the volume is seeded from the image on first start)
+public/assets/uploads/documents/*
+public/assets/uploads/thumbnails/*
+!public/assets/uploads/thumbnails/placeholder-*.jpg
+uploads/
+
+# Runtime state and local tooling output
+storage/logs/*
+cache/*
+tests/
+qa/
+playwright-report/
+test-results/
+CLAUDE-SECURITY-*/
+*.log
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db

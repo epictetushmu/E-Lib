@@ -5,20 +5,22 @@ namespace App\Middleware;
 
 class LoggingMiddleware implements MiddlewareInterface
 {
-    private $logFile;
+    private string $logFile;
 
     /**
      * Create logging middleware
      *
-     * @param string $logFile Path to log file
+     * @param string|null $logFile Path to log file
      */
-    public function __construct($logFile = null)
+    public function __construct(?string $logFile = null)
     {
         $this->logFile = $logFile ?: __DIR__ . '/../../storage/logs/requests.log';
     }
 
     /**
      * Process the request and log details
+     *
+     * @param array<string, mixed> $request
      */
     public function process(array $request, callable $next)
     {

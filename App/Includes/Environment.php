@@ -7,7 +7,7 @@ class Environment
     /**
      * Load environment variables from .env file
      */
-    public static function load($path = null): void
+    public static function load(?string $path = null): void
     {
         $path = $path ?? dirname(__DIR__, 2) . '/.env';
 
@@ -54,6 +54,9 @@ class Environment
 
     /**
      * Get environment variable
+     *
+     * @param mixed $default
+     * @return mixed
      */
     public static function get(string $key, $default = null)
     {

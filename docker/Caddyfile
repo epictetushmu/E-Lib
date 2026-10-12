@@ -1,0 +1,6 @@
+# Caddy's automatic HTTPS handles both cases with this same config:
+#   - DOMAIN=localhost (default)   -> self-signed "internal" cert for local dev
+#   - DOMAIN=your-real-domain.com  -> real cert auto-issued/renewed via Let's Encrypt
+{$DOMAIN:localhost} {
+	reverse_proxy app:80
+}

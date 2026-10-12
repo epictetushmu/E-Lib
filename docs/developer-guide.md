@@ -228,11 +228,7 @@ docker-compose build --no-cache
 
 ## Database Integration
 
-E-Lib supports both MongoDB and a file-based JSON database as a fallback.
-
-### MongoDB
-
-The primary database is MongoDB, accessed through the `MongoDatabase` class.
+E-Lib uses MongoDB as its sole datastore, accessed through the `MongoDatabase` class. There is no fallback — if the connection can't be established, the app fails to start (see `public/index.php`).
 
 Example MongoDB query:
 
@@ -241,10 +237,6 @@ Example MongoDB query:
 $filter = ['status' => 'public'];
 $books = $this->db->find('Books', $filter);
 ```
-
-### JSON Database Fallback
-
-If MongoDB is unavailable, the system falls back to a JSON-based file database.
 
 ## Authentication
 

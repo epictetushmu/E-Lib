@@ -24,7 +24,7 @@ if ($password !== '' && $password !== false) {
         $uri = str_replace('<db_password>', $encoded, $uri);
     }
 }
-$masked = preg_replace('#(mongodb\+?srv?://[^:]+:)[^@]+@#', '$1***@', (string) $uri);
+$masked = preg_replace('#(mongodb(?:\+srv)?://[^:@/]+:)[^@]+@#', '$1***@', (string) $uri);
 echo "URI (masked): {$masked}\n";
 
 try {

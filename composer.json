@@ -19,6 +19,11 @@
             "App/bootstrap.php"
         ]
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
     "config": {
         "platform-check": true,
         "allow-plugins": {
@@ -27,23 +32,31 @@
     },
     "require-dev": {
         "squizlabs/php_codesniffer": "^3.10",
-        "phpstan/phpstan": "^1.11"
+        "phpstan/phpstan": "^1.11",
+        "phpunit/phpunit": "^10"
     },
     "scripts": {
         "lint": "phpcs",
         "lint:fix": "phpcbf",
         "analyse": "phpstan analyse --memory-limit=512M",
+        "test": "phpunit",
         "check": [
             "@lint",
-            "@analyse"
+            "@analyse",
+            "@test"
         ],
-        "db:setup": "php scripts/db-setup.php"
+        "db:setup": "php scripts/db-setup.php",
+        "db:seed": "php scripts/seed-sample-books.php",
+        "admin:create": "php scripts/create-admin.php"
     },
     "scripts-descriptions": {
         "lint": "Run PHP_CodeSniffer (PSR-12, see phpcs.xml).",
         "lint:fix": "Auto-fix PHPCS violations where possible.",
         "analyse": "Run PHPStan static analysis (see phpstan.neon).",
-        "check": "Run lint + analyse (typical pre-commit / CI).",
-        "db:setup": "Provision MongoDB collections (Books, Users) and required indexes. Safe to re-run."
+        "test": "Run the PHPUnit unit test suite (see phpunit.xml).",
+        "check": "Run lint + analyse + test (typical pre-commit / CI).",
+        "db:setup": "Provision MongoDB collections (Books, Users) and required indexes. Safe to re-run.",
+        "db:seed": "Seed a handful of sample books with generated dummy PDFs/thumbnails. Safe to re-run.",
+        "admin:create": "Create or promote a user to admin: composer admin:create -- <email> <password> [username]"
     }
 }

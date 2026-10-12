@@ -30,7 +30,6 @@ $directories = [
     __DIR__ . '/public/uploads',
     __DIR__ . '/public/assets/uploads/documents',
     __DIR__ . '/public/assets/uploads/thumbnails',
-    __DIR__ . '/certificates',
     __DIR__ . '/cache'
 ];
 
@@ -44,40 +43,9 @@ foreach ($directories as $dir) {
     output("Directory $dir is ready");
 }
 
-// Ensure MongoDB certificate exists and is valid
-output('Checking MongoDB certificate...');
-$certFile = __DIR__ . '/certificates/mongodb-ca.pem';
-
-// Verify certificate and try to fix if needed
-if (!file_exists($certFile) || filesize($certFile) < 100) {
-    output('MongoDB certificate is missing or invalid, attempting to fix...');
-
-    // Try to run the cert setup script
-    output('Running MongoDB certificate setup script...');
-    include_once __DIR__ . '/setup-mongodb-cert.php';
-
-    // Double-check that the certificate now exists
-    if (!file_exists($certFile) || filesize($certFile) < 100) {
-        output('WARNING: MongoDB certificate still unavailable after setup attempts');
-        output('The application will attempt to use system CA certificates for MongoDB connections');
-    } else {
-        output('MongoDB certificate is now ready');
-    }
-} else {
-    output('MongoDB certificate is already available');
-}
-
-// Set environment variables for the certificate
-putenv("MONGO_CERT_FILE=$certFile");
-$_ENV['MONGO_CERT_FILE'] = $certFile;
-
 output('Setting Docker environment flag...');
 putenv("DOCKER_ENV=true");
 $_ENV['DOCKER_ENV'] = 'true';
-
-// Set proper permissions for the web server user
-output('Setting proper file permissions...');
-exec('chown -R www-data:www-data /var/www/html');
 
 output('E-Lib container setup complete!');
 output('Starting Apache server...');

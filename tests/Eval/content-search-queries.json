@@ -1,0 +1,19 @@
+[
+  {"query": "depth first search", "expect": "Algorithms"},
+  {"query": "dynamic programming edit distance", "expect": "Algorithms"},
+  {"query": "αλγόριθμοι ταξινόμησης", "expect": "Algorithms"},
+  {"query": "how to negotiate a higher salary", "expect": "Soft Skills"},
+  {"query": "staying productive and avoiding burnout", "expect": "Soft Skills"},
+  {"query": "διαπραγμάτευση μισθού", "expect": "Soft Skills"},
+  {"query": "how to configure OSPF on a router", "expect": "CCNA"},
+  {"query": "spanning tree protocol", "expect": "CCNA"},
+  {"query": "VLAN trunking between switches", "expect": "CCNA"},
+  {"query": "how big should links and buttons be so they are easy to click", "expect": "Usability"},
+  {"query": "which fonts are easiest to read on web pages", "expect": "Usability"},
+  {"query": "συντακτική ανάλυση", "expect": "Μεταγλωττιστών"},
+  {"query": "πίνακας συμβόλων", "expect": "Μεταγλωττιστών"},
+  {"query": "how does a compiler generate intermediate code", "expect": "Μεταγλωττιστών"},
+  {"query": "recipe for chocolate cake", "expect": null},
+  {"query": "history of the second world war", "expect": null},
+  {"query": "πώς να φυτέψω ντομάτες", "expect": null}
+]

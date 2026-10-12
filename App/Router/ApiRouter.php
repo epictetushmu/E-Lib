@@ -3,27 +3,34 @@
 namespace App\Router;
 
 // Include all necessary controllers
+use App\Controllers\AnnotationController;
 use App\Controllers\BookController;
+use App\Controllers\FriendController;
 use App\Controllers\UserController;
 use App\Includes\ResponseHandler;
 
 class ApiRouter
 {
-    private $routes = [];
+    /**
+     * @var array<int, array<string, mixed>>
+     */
+    private array $routes = [];
 
     public function __construct()
     {
         $this->defineRequests();
     }
 
-    private function defineRequests()
+    private function defineRequests(): void
     {
         $this->routes = [
             ['method' => 'GET', 'path' => '/api/v1/books', 'handler' => [new BookController(), 'getAllBooks']],
             ['method' => 'POST', 'path' => '/api/v1/books', 'handler' => [new BookController(), 'addBook']],
             ['method' => 'GET', 'path' => '/api/v1/books/list', 'handler' => [new BookController(), 'listBooks']],
             ['method' => 'GET', 'path' => '/api/v1/books/featured', 'handler' => [new BookController(), 'featuredBooks']],
-            ['method' => 'POST', 'path' => '/api/v1/books/mass-upload', 'handler' => [new BookController(), 'massUploadBooks']],
+            ['method' => 'GET', 'path' => '/api/v1/books/categories', 'handler' => [new BookController(), 'getCategories']],
+            ['method' => 'POST', 'path' => '/api/v1/books/physical', 'handler' => [new BookController(), 'addPhysicalBook']],
+            ['method' => 'POST', 'path' => '/api/v1/books/upload', 'handler' => [new BookController(), 'uploadBooks']],
             ['method' => 'GET', 'path' => '/api/v1/books/([0-9a-f]{24})', 'handler' => [new BookController(), 'viewBook']],
             ['method' => 'PUT', 'path' => '/api/v1/books/([0-9a-f]{24})', 'handler' => [new BookController(), 'updateBook']],
             ['method' => 'DELETE', 'path' => '/api/v1/books/([0-9a-f]{24})', 'handler' => [new BookController(), 'deleteBook']],
@@ -36,12 +43,48 @@ class ApiRouter
                 'handler' => [new BookController(), 'streamBookThumbnail'],
             ],
 
-            ['method' => 'GET', 'path' => '/api/v1/search/(\w+)', 'handler' => [new BookController(), 'searchBooks']],
+            ['method' => 'GET', 'path' => '/api/v1/search/([^/]+)', 'handler' => [new BookController(), 'searchBooks']],
+            ['method' => 'GET', 'path' => '/api/v1/content-search', 'handler' => [new BookController(), 'contentSearch']],
+            ['method' => 'GET', 'path' => '/api/v1/features', 'handler' => [new BookController(), 'features']],
+            ['method' => 'GET', 'path' => '/api/v1/catalog', 'handler' => [new BookController(), 'catalog']],
 
-            ['method' => 'POST', 'path' => '/api/v1/reviews', 'handler' => [new BookController(), 'addReview']],
+            ['method' => 'POST', 'path' => '/api/v1/reviews', 'handler' => [new BookController(), 'saveReview']],
             ['method' => 'GET', 'path' => '/api/v1/reviews/([0-9a-f]{24})', 'handler' => [new BookController(), 'getReviews']],
+            ['method' => 'DELETE', 'path' => '/api/v1/reviews/([0-9a-f]{24})', 'handler' => [new BookController(), 'deleteReview']],
+            ['method' => 'POST', 'path' => '/api/v1/reviews/([0-9a-f]{24})/replies', 'handler' => [new BookController(), 'addReply']],
+            ['method' => 'PUT', 'path' => '/api/v1/replies/([0-9a-f]{24})', 'handler' => [new BookController(), 'updateReply']],
+            ['method' => 'DELETE', 'path' => '/api/v1/replies/([0-9a-f]{24})', 'handler' => [new BookController(), 'deleteReply']],
+
+            // The signed-in user's private highlights and notes
+            [
+                'method' => 'GET',
+                'path' => '/api/v1/books/([0-9a-f]{24})/annotations',
+                'handler' => [new AnnotationController(), 'listForBook'],
+            ],
+            [
+                'method' => 'GET',
+                'path' => '/api/v1/books/([0-9a-f]{24})/annotations/friends',
+                'handler' => [new AnnotationController(), 'listFriendsForBook'],
+            ],
+            [
+                'method' => 'POST',
+                'path' => '/api/v1/books/([0-9a-f]{24})/annotations',
+                'handler' => [new AnnotationController(), 'create'],
+            ],
+            ['method' => 'PUT', 'path' => '/api/v1/annotations/([0-9a-f]{24})', 'handler' => [new AnnotationController(), 'update']],
+            ['method' => 'DELETE', 'path' => '/api/v1/annotations/([0-9a-f]{24})', 'handler' => [new AnnotationController(), 'delete']],
 
             ['method' => 'GET', 'path' => '/api/v1/books/([0-9a-f]{24})/download', 'handler' => [new BookController(), 'downloadBook']],
+            ['method' => 'POST', 'path' => '/api/v1/books/([0-9a-f]{24})/borrow', 'handler' => [new BookController(), 'borrowBook']],
+            ['method' => 'POST', 'path' => '/api/v1/books/([0-9a-f]{24})/return', 'handler' => [new BookController(), 'returnBook']],
+            ['method' => 'POST', 'path' => '/api/v1/books/([0-9a-f]{24})/renew', 'handler' => [new BookController(), 'renewBook']],
+            ['method' => 'POST', 'path' => '/api/v1/books/([0-9a-f]{24})/waitlist', 'handler' => [new BookController(), 'joinWaitlist']],
+            [
+                'method' => 'POST',
+                'path' => '/api/v1/books/([0-9a-f]{24})/waitlist/leave',
+                'handler' => [new BookController(), 'leaveWaitlist'],
+            ],
+            ['method' => 'POST', 'path' => '/api/v1/admin/loans/renew', 'handler' => [new BookController(), 'adminRenew']],
 
             ['method' => 'POST', 'path' => '/api/v1/signup', 'handler' => [new UserController(), 'handleSignup']],
             ['method' => 'POST', 'path' => '/api/v1/login', 'handler' => [new UserController(), 'handleLogin']],
@@ -53,6 +96,20 @@ class ApiRouter
             ['method' => 'POST', 'path' => '/api/v1/remove-book', 'handler' => [new UserController(), 'removeBook']],
             ['method' => 'GET', 'path' => '/api/v1/saved-books', 'handler' => [new UserController(), 'getSavedBooks']],
             ['method' => 'GET', 'path' => '/api/v1/downloaded-books', 'handler' => [new UserController(), 'getDownloadedBooks']],
+            ['method' => 'GET', 'path' => '/api/v1/admin/metadata-lookup', 'handler' => [new BookController(), 'metadataLookup']],
+            ['method' => 'GET', 'path' => '/api/v1/admin/loans', 'handler' => [new BookController(), 'adminLoans']],
+            ['method' => 'POST', 'path' => '/api/v1/admin/loans/checkout', 'handler' => [new BookController(), 'adminCheckOut']],
+            ['method' => 'POST', 'path' => '/api/v1/admin/loans/checkin', 'handler' => [new BookController(), 'adminCheckIn']],
+            ['method' => 'GET', 'path' => '/api/v1/user/loans', 'handler' => [new BookController(), 'userLoans']],
+            ['method' => 'GET', 'path' => '/api/v1/user/notifications', 'handler' => [new UserController(), 'getNotifications']],
+            ['method' => 'POST', 'path' => '/api/v1/user/notifications/read', 'handler' => [new UserController(), 'markNotificationsRead']],
+            ['method' => 'GET', 'path' => '/api/v1/user/sharing', 'handler' => [new FriendController(), 'getSharing']],
+            ['method' => 'POST', 'path' => '/api/v1/user/sharing', 'handler' => [new FriendController(), 'setSharing']],
+            ['method' => 'GET', 'path' => '/api/v1/friends', 'handler' => [new FriendController(), 'list']],
+            ['method' => 'POST', 'path' => '/api/v1/friends', 'handler' => [new FriendController(), 'request']],
+            ['method' => 'POST', 'path' => '/api/v1/friends/([0-9a-f]{24})/accept', 'handler' => [new FriendController(), 'accept']],
+            ['method' => 'DELETE', 'path' => '/api/v1/friends/([0-9a-f]{24})', 'handler' => [new FriendController(), 'remove']],
+            ['method' => 'GET', 'path' => '/api/v1/friends/([0-9a-f]{24})/library', 'handler' => [new FriendController(), 'library']],
             ['method' => 'GET', 'path' => '/api/v1/admin/logs', 'handler' => [new UserController(), 'viewLogs']],
             ['method' => 'POST', 'path' => '/api/v1/update-profile', 'handler' => [new UserController(), 'updateProfile']],
             ['method' => 'POST', 'path' => '/api/v1/change-password', 'handler' => [new UserController(), 'changePassword']],
@@ -60,7 +117,7 @@ class ApiRouter
         ];
     }
 
-    public function handleRequest($method, $path)
+    public function handleRequest(string $method, string $path): void
     {
 
         foreach ($this->routes as $route) {

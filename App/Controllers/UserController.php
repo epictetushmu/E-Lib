@@ -6,6 +6,8 @@ use App\Includes\Environment;
 use App\Services\UserService;
 use App\Services\BookService;
 use App\Services\EmailService;
+use App\Services\NotificationService;
+use MongoDB\BSON\UTCDateTime;
 use App\Includes\ResponseHandler;
 use App\Includes\JwtHelper;
 use App\Includes\AuthenticatedUser;
@@ -13,9 +15,9 @@ use App\Helpers\BookDisplayHelper;
 
 class UserController
 {
-    private $userService;
-    private $bookService;
-    private $emailService;
+    private UserService $userService;
+    private BookService $bookService;
+    private EmailService $emailService;
 
     public function __construct()
     {
@@ -32,21 +34,62 @@ class UserController
         return AuthenticatedUser::id();
     }
 
-    public function handleLogin()
+    /**
+     * Request body as an array, from $_POST or a JSON body.
+     *
+     * @return array<string, mixed>
+     */
+    private function getRequestData(): array
+    {
+        if (!empty($_POST)) {
+            return $_POST;
+        }
+        $input = json_decode(file_get_contents('php://input'), true);
+        return is_array($input) ? $input : [];
+    }
+
+    /**
+     * GET /api/v1/user/notifications — the caller's loan notices, newest first.
+     */
+    public function getNotifications(): void
+    {
+        $userId = $this->getAuthenticatedUserId();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'User not authenticated', 401);
+            return;
+        }
+        ResponseHandler::respond(true, array_map(fn ($n) => [
+            'id' => (string) $n['_id'],
+            'book_id' => $n['book_id'] ?? null,
+            'message' => $n['message'] ?? '',
+            'created_at' => ($n['created_at'] ?? null) instanceof UTCDateTime ? $n['created_at']->toDateTime()->format(DATE_ATOM) : null,
+            'read' => ($n['read_at'] ?? null) !== null,
+        ], (new NotificationService())->forUser($userId)));
+    }
+
+    /**
+     * POST /api/v1/user/notifications/read — mark them all read.
+     */
+    public function markNotificationsRead(): void
+    {
+        $userId = $this->getAuthenticatedUserId();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'User not authenticated', 401);
+            return;
+        }
+        (new NotificationService())->markAllRead($userId);
+        ResponseHandler::respond(true, 'OK');
+    }
+
+    public function handleLogin(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
 
-        if (empty($_POST)) {
-            $inputJSON = file_get_contents('php://input');
-            $input = json_decode($inputJSON, true);
-            $email = $input['email'] ?? null;
-            $password = $input['password'] ?? null;
-        } else {
-            $email = $_POST['email'] ?? null;
-            $password = $_POST['password'] ?? null;
-        }
+        $data = $this->getRequestData();
+        $email = $data['email'] ?? null;
+        $password = $data['password'] ?? null;
 
         try {
             $user = $this->userService->getUserByEmail($email);
@@ -65,8 +108,9 @@ class UserController
 
         if ($user && password_verify($password, $user['password'])) {
             $payload = [
-                'user_id' => $user['_id'],
-                'email' => $user['email']
+                'user_id' => (string) $user['_id'],
+                'email' => $user['email'],
+                'isAdmin' => $user['isAdmin'] ?? false,
             ];
             $token = JwtHelper::generateToken($payload);
 
@@ -89,7 +133,7 @@ class UserController
         }
     }
 
-    public function handleLogout()
+    public function handleLogout(): void
     {
         // Logout logic here...
         if (!isset($_SESSION['user_id'])) {
@@ -101,29 +145,17 @@ class UserController
         ResponseHandler::respond(true, 'Logout successful');
     }
 
-    public function handleSignup()
+    public function handleSignup(): void
     {
-
-        if (empty($_POST)) {
-            // Try to read from input stream (for JSON requests)
-            $inputJSON = file_get_contents('php://input');
-            error_log('Raw input: ' . $inputJSON);
-            $input = json_decode($inputJSON, true);
-
-            if ($input) {
-                $userName = $input['username'] ?? $input['name'] ?? null;
-                $email = $input['email'] ?? null;
-                $password = $input['password'] ?? null;
-            } else {
-                ResponseHandler::respond(false, 'No data received', 400);
-                return;
-            }
-        } else {
-            // Get from POST (SignUpForm uses name="name" for the username field)
-            $userName = $_POST['username'] ?? $_POST['name'] ?? null;
-            $email = $_POST['email'] ?? null;
-            $password = $_POST['password'] ?? null;
+        $data = $this->getRequestData();
+        if (empty($data)) {
+            ResponseHandler::respond(false, 'No data received', 400);
+            return;
         }
+        // SignUpForm uses name="name" for the username field.
+        $userName = $data['username'] ?? $data['name'] ?? null;
+        $email = $data['email'] ?? null;
+        $password = $data['password'] ?? null;
 
         // Continue with your validation
         if (empty($userName) || empty($email) || empty($password)) {
@@ -158,7 +190,7 @@ class UserController
         }
     }
 
-    public function getUser($id)
+    public function getUser(string $id): void
     {
         $user = $this->userService->getUserById($id);
         if ($user) {
@@ -201,7 +233,7 @@ class UserController
         ResponseHandler::respond(true, $user, 200);
     }
 
-    public function saveBook()
+    public function saveBook(): void
     {
         $userId = $this->getAuthenticatedUserId();
         if ($userId === null) {
@@ -209,13 +241,7 @@ class UserController
             return;
         }
 
-        if (empty($_POST)) {
-            $inputJSON = file_get_contents('php://input');
-            $input = json_decode($inputJSON, true);
-            $bookId = $input['book_id'] ?? null;
-        } else {
-            $bookId = $_POST['book_id'] ?? null;
-        }
+        $bookId = $this->getRequestData()['book_id'] ?? null;
 
         if (empty($bookId)) {
             ResponseHandler::respond(false, 'Book ID is required', 400);
@@ -229,7 +255,7 @@ class UserController
         }
     }
 
-    public function getSavedBooks()
+    public function getSavedBooks(): void
     {
         $userId = $this->getAuthenticatedUserId();
         if ($userId === null) {
@@ -250,7 +276,7 @@ class UserController
         ResponseHandler::respond(true, $books, 200);
     }
 
-    public function getDownloadedBooks()
+    public function getDownloadedBooks(): void
     {
         $userId = $this->getAuthenticatedUserId();
         if ($userId === null) {
@@ -271,7 +297,7 @@ class UserController
         ResponseHandler::respond(true, $books, 200);
     }
 
-    public function removeBook()
+    public function removeBook(): void
     {
         $userId = $this->getAuthenticatedUserId();
         if ($userId === null) {
@@ -279,13 +305,7 @@ class UserController
             return;
         }
 
-        if (empty($_POST)) {
-            $inputJSON = file_get_contents('php://input');
-            $input = json_decode($inputJSON, true);
-            $bookId = $input['book_id'] ?? null;
-        } else {
-            $bookId = $_POST['book_id'] ?? null;
-        }
+        $bookId = $this->getRequestData()['book_id'] ?? null;
 
         if (empty($bookId)) {
             ResponseHandler::respond(false, 'Book ID is required', 400);
@@ -302,7 +322,7 @@ class UserController
     /**
      * View error logs (admin only)
      */
-    public function viewLogs()
+    public function viewLogs(): void
     {
         // Check if user is admin
         if (session_status() === PHP_SESSION_NONE) {
@@ -352,48 +372,19 @@ class UserController
 
     /**
      * Helper method to get the last N lines of a file
+     *
+     * @return list<string>
      */
-    private function getTailOfFile($filePath, $lines = 100)
+    private function getTailOfFile(string $filePath, int $lines = 100): array
     {
-        $handle = fopen($filePath, "r");
-        $linecounter = $lines;
-        $pos = -2;
-        $beginning = false;
-        $text = [];
-
-        while ($linecounter > 0) {
-            $t = " ";
-            while ($t != "\n") {
-                if (fseek($handle, $pos, SEEK_END) == -1) {
-                    $beginning = true;
-                    break;
-                }
-                $t = fgetc($handle);
-                $pos--;
-            }
-
-            if ($beginning) {
-                rewind($handle);
-            }
-
-            $text[] = fgets($handle);
-
-            if ($beginning) {
-                break;
-            }
-
-            $linecounter--;
-        }
-
-        fclose($handle);
-        return array_reverse($text);
+        return array_slice(file($filePath, FILE_IGNORE_NEW_LINES) ?: [], -$lines);
     }
 
     /**
      * Update user profile information
      * Currently supports updating username
      */
-    public function updateProfile()
+    public function updateProfile(): void
     {
         $userId = $this->getAuthenticatedUserId();
         if ($userId === null) {
@@ -503,25 +494,17 @@ class UserController
         }
     }
 
-    public function support()
+    public function support(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
 
-        // Process form data
-        $name = $_POST['name'] ?? 'Anonymous';
-        $email = $_POST['email'] ?? 'no-reply@example.com';
-        $message = $_POST['message'] ?? null;
-
-        // For regular JSON requests (backward compatibility)
-        if (empty($_POST) && empty($_FILES)) {
-            $inputJSON = file_get_contents('php://input');
-            $input = json_decode($inputJSON, true);
-            $name = $input['name'] ?? $name;
-            $email = $input['email'] ?? $email;
-            $message = $input['message'] ?? $message;
-        }
+        // Process form data (or a JSON body, for backward compatibility)
+        $data = $this->getRequestData();
+        $name = $data['name'] ?? 'Anonymous';
+        $email = $data['email'] ?? 'no-reply@example.com';
+        $message = $data['message'] ?? null;
 
         if (empty($message)) {
             ResponseHandler::respond(false, 'Message is required', 400);
@@ -557,18 +540,25 @@ class UserController
                         continue;
                     }
 
-                    // Validate mime type
-                    $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                    // Validate mime type by sniffing the actual bytes (not the client-supplied
+                    // filename/Content-Type), and derive the stored extension from that same
+                    // allowlist — never from the client filename, which a file with faked magic
+                    // bytes plus a ".php" name would otherwise smuggle straight into the webroot
+                    // and hand mod_php a script to execute (CWE-434).
+                    $extensionsByMime = [
+                        'image/jpeg' => 'jpg',
+                        'image/png' => 'png',
+                        'image/gif' => 'gif',
+                    ];
                     $finfo = new \finfo(FILEINFO_MIME_TYPE);
                     $mimeType = $finfo->file($_FILES['embedded_images']['tmp_name'][$i]);
 
-                    if (!in_array($mimeType, $allowedTypes)) {
+                    if (!isset($extensionsByMime[$mimeType])) {
                         continue;
                     }
 
                     // Generate unique filename
-                    $extension = pathinfo($_FILES['embedded_images']['name'][$i], PATHINFO_EXTENSION);
-                    $filename = uniqid('support_', true) . '.' . $extension;
+                    $filename = uniqid('support_', true) . '.' . $extensionsByMime[$mimeType];
                     $filepath = $uploadDir . $filename;
 
                     // Move the uploaded file to the destination
@@ -586,6 +576,8 @@ class UserController
             // Use the EmailService with PHPMailer to send email with attachments
             $result = $this->emailService->sendSupportEmail($email, $name, $message, $attachments);
 
+            $this->deleteSupportAttachments($attachments);
+
             if ($result) {
                 ResponseHandler::respond(true, 'Support request sent successfully', 200);
             } else {
@@ -594,7 +586,23 @@ class UserController
         } catch (\Exception $e) {
             // Log the error
             error_log('Error sending support email: ' . $e->getMessage());
+            $this->deleteSupportAttachments($attachments);
             ResponseHandler::respond(false, 'Failed to send support request. Please try again later.', 500);
+        }
+    }
+
+    /**
+     * Support attachments are only ever needed for the outgoing email — leaving them under
+     * the webroot indefinitely is unbounded exposure for no benefit once it's sent (or failed).
+     *
+     * @param array<int, array{path: string}> $attachments
+     */
+    private function deleteSupportAttachments(array $attachments): void
+    {
+        foreach ($attachments as $attachment) {
+            if (is_file($attachment['path'])) {
+                @unlink($attachment['path']);
+            }
         }
     }
 }

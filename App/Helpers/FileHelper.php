@@ -2,16 +2,21 @@
 
 namespace App\Helpers;
 
+use App\Includes\Environment;
+
 class FileHelper
 {
-    private $filePath;
-    private $fileType;
-    private $fileExtension;
+    private ?string $filePath;
+    private ?string $fileType = null;
+    private ?string $fileExtension = null;
+
+    /** Why the last storeFile() rejected the upload (null if it failed for a server-side reason). */
+    public ?string $rejectReason = null;
 
     /**
      * Constructor
      *
-     * @param string $filePath Path to the document file
+     * @param string|null $filePath Path to the document file
      */
     public function __construct($filePath = null)
     {
@@ -25,7 +30,7 @@ class FileHelper
     /**
      * Detect the file type and extension from a file
      */
-    private function detectFileType($filePath)
+    private function detectFileType(string $filePath): void
     {
         // Get file extension
         $this->fileExtension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
@@ -41,7 +46,7 @@ class FileHelper
     /**
      * Extracts a thumbnail image from the document
      */
-    public function extractThumbnail($filePath, $outputPath, $format = 'jpg')
+    public function extractThumbnail(string $filePath, string $outputPath, string $format = 'jpg'): bool
     {
         // If we don't know the file type yet, detect it
         if (empty($this->fileType)) {
@@ -62,7 +67,7 @@ class FileHelper
     /**
      * Extract thumbnail from PDF file (Imagick → pdftoppm → GD placeholder).
      */
-    private function extractPdfThumbnail($pdfPath, $outputPath, $format = 'jpg')
+    private function extractPdfThumbnail(string $pdfPath, string $outputPath, string $format = 'jpg'): bool
     {
         if (!file_exists($pdfPath) || !is_readable($pdfPath)) {
             error_log("PDF file not found or not readable: $pdfPath");
@@ -126,15 +131,15 @@ class FileHelper
     }
 
     /**
-     * First page → JPEG using Poppler's pdftoppm (works when PHP imagick is missing).
+     * Locate a Poppler binary (pdftoppm, pdftotext); PDFTOPPM_PATH / PDFTOTEXT_PATH override the search.
      */
-    private function resolvePdftoppmBinary(): ?string
+    private function resolvePopplerBinary(string $name): ?string
     {
-        $env = getenv('PDFTOPPM_PATH');
+        $env = Environment::get(strtoupper($name) . '_PATH');
         if (is_string($env) && $env !== '' && is_executable($env)) {
             return $env;
         }
-        foreach (['/opt/homebrew/bin/pdftoppm', '/usr/local/bin/pdftoppm', '/usr/bin/pdftoppm'] as $p) {
+        foreach (["/opt/homebrew/bin/$name", "/usr/local/bin/$name", "/usr/bin/$name"] as $p) {
             if (is_executable($p)) {
                 return $p;
             }
@@ -142,7 +147,7 @@ class FileHelper
         if (!function_exists('shell_exec')) {
             return null;
         }
-        $which = shell_exec('command -v pdftoppm 2>/dev/null');
+        $which = shell_exec('command -v ' . escapeshellarg($name) . ' 2>/dev/null');
         if (is_string($which)) {
             $w = trim($which);
             if ($w !== '' && is_executable($w)) {
@@ -152,9 +157,43 @@ class FileHelper
         return null;
     }
 
+    /**
+     * Text of every page of a PDF, in page order (index 0 = page 1). Pages without a text layer
+     * (scanned images) come back as empty strings so page numbers stay aligned with the PDF.
+     *
+     * @return list<string>
+     * @throws \RuntimeException When pdftotext is missing or fails
+     */
+    public function extractPageTexts(string $pdfPath): array
+    {
+        $bin = $this->resolvePopplerBinary('pdftotext');
+        if ($bin === null) {
+            throw new \RuntimeException('pdftotext (poppler-utils) is not installed');
+        }
+        // Written to a file rather than read through exec(): exec() strips trailing whitespace from
+        // every line, which eats the form feeds pdftotext uses as page separators.
+        $out = tempnam(sys_get_temp_dir(), 'elib_text_');
+        try {
+            $lines = [];
+            $code = 0;
+            exec(sprintf('%s -enc UTF-8 %s %s 2>&1', escapeshellarg($bin), escapeshellarg($pdfPath), escapeshellarg($out)), $lines, $code);
+            $text = file_get_contents($out);
+            if ($code !== 0 || $text === false) {
+                error_log("pdftotext failed for $pdfPath (code $code): " . implode(' ', $lines));
+                throw new \RuntimeException("Could not read the PDF's text (pdftotext exit code $code)");
+            }
+        } finally {
+            @unlink($out);
+        }
+        // Every page ends with a form feed, so the piece after the last one is always empty.
+        $pages = explode("\f", $text);
+        array_pop($pages);
+        return array_map('trim', $pages);
+    }
+
     private function extractPdfThumbnailWithPdftoppm(string $pdfPath, string $outputPath): bool
     {
-        $bin = $this->resolvePdftoppmBinary();
+        $bin = $this->resolvePopplerBinary('pdftoppm');
         if ($bin === null) {
             return false;
         }
@@ -196,7 +235,7 @@ class FileHelper
     /**
      * Use a placeholder image for the specified file type
      */
-    private function useTypePlaceholder($outputPath, $type = 'generic')
+    private function useTypePlaceholder(string $outputPath, string $type = 'generic'): bool
     {
         try {
             // Make sure output directory exists
@@ -206,17 +245,7 @@ class FileHelper
                 return false;
             }
 
-            // Determine which placeholder to use based on file type
-            $placeholderFile = 'placeholder-book.jpg'; // Default placeholder
-
-            switch ($type) {
-                case 'pdf':
-                    $placeholderFile = 'placeholder-pdf.jpg';
-                    break;
-                default:
-                    $placeholderFile = 'placeholder-pdf.jpg';
-                    break;
-            }
+            $placeholderFile = 'placeholder-pdf.jpg';
 
             // Path to placeholder file
             $placeholderPath = __DIR__ . '/../../public/assets/uploads/thumbnails/' . $placeholderFile;
@@ -263,22 +292,38 @@ class FileHelper
     }
 
     /**
+     * Absolute upload directory and public web path for a subdirectory under public/assets/uploads/.
+     * App/Helpers → project root is two levels up (not three — three was wrong and wrote outside E-Lib).
+     *
+     * @return array{0: string, 1: string}
+     */
+    private static function resolveUploadPaths(string $subDir): array
+    {
+        $uploadDir = getenv('DOCKER_ENV') === 'true' ? '/var/www/html/public' : dirname(__DIR__, 2) . '/public';
+        $webPath = '/assets/uploads/' . $subDir;
+        return [$uploadDir . $webPath, $webPath];
+    }
+
+    /**
+     * Store downloaded cover bytes as a thumbnail (physical books have no PDF to render one from).
+     * Returns the web path to keep in the book's `thumbnail`, or null when it can't be written.
+     */
+    public static function storeCover(string $image): ?string
+    {
+        [$dir, $webPath] = self::resolveUploadPaths('thumbnails');
+        if (!is_dir($dir) && !@mkdir($dir, 0777, true)) {
+            return null;
+        }
+        $name = 'cover-' . md5($image) . '.jpg';
+        return @file_put_contents("$dir/$name", $image) === false ? null : "$webPath/$name";
+    }
+
+    /**
      * Gets or creates a thumbnail for the document
      */
-    public function getThumbnail()
+    public function getThumbnail(): string
     {
-        // Use environment detection for Docker compatibility
-        if (getenv('DOCKER_ENV') === 'true') {
-            $uploadDir = '/var/www/html/public';
-            $thumbnailDir = $uploadDir . '/assets/uploads/thumbnails';
-            $webPath = '/assets/uploads/thumbnails';
-        } else {
-            // App/Helpers → project root is two levels up (not three — three was wrong and wrote outside E-Lib)
-            $projectRoot = dirname(__DIR__, 2);
-            $uploadDir = $projectRoot . '/public';
-            $thumbnailDir = $uploadDir . '/assets/uploads/thumbnails';
-            $webPath = '/assets/uploads/thumbnails';
-        }
+        [$thumbnailDir, $webPath] = $this->resolveUploadPaths('thumbnails');
 
         // Create the directory if it doesn't exist
         if (!is_dir($thumbnailDir)) {
@@ -308,9 +353,13 @@ class FileHelper
 
     /**
      * Stores a document file with a proper name
+     *
+     * @param array<string, mixed> $file
+     * @return array<string, mixed>|false
      */
     public function storeFile($file)
     {
+        $this->rejectReason = null;
         try {
             // Check if the upload was successful
             if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -335,24 +384,21 @@ class FileHelper
             $supportedTypes = ['pdf'];
 
             if (!in_array($fileExtension, $supportedTypes)) {
-                error_log("Invalid file extension: $fileExtension. Only PDF is supported.");
+                $this->rejectReason = 'Only PDF files are supported.';
+                return false;
+            }
+
+            // The extension is client-controlled; a real PDF starts with this header
+            if (@file_get_contents($fileTmpPath, false, null, 0, 5) !== '%PDF-') {
+                $this->rejectReason = 'File is not a valid PDF.';
                 return false;
             }
 
             // Generate a unique name for the file
             $newFileName = uniqid('doc_') . '.' . $fileExtension;
 
-            // Use environment detection for Docker compatibility
-            if (getenv('DOCKER_ENV') === 'true') {
-                $uploadDir = '/var/www/html/public';
-                $uploadFileDir = $uploadDir . '/assets/uploads/documents/';
-                $webPath = '/assets/uploads/documents';
-            } else {
-                $projectRoot = dirname(__DIR__, 2);
-                $uploadDir = $projectRoot . '/public';
-                $uploadFileDir = $uploadDir . '/assets/uploads/documents/';
-                $webPath = '/assets/uploads/documents';
-            }
+            [$uploadFileDir, $webPath] = $this->resolveUploadPaths('documents');
+            $uploadFileDir .= '/';
 
             // Create directory if it doesn't exist
             if (!is_dir($uploadFileDir)) {

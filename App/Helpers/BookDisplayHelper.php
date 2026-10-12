@@ -7,6 +7,9 @@ namespace App\Helpers;
  */
 class BookDisplayHelper
 {
+    /**
+     * @param array<string, mixed> $book
+     */
     public static function bookIdString(array $book): string
     {
         $id = $book['_id'] ?? null;
@@ -21,6 +24,8 @@ class BookDisplayHelper
 
     /**
      * Thumbnail URL that goes through PHP so legacy files (wrong disk path) still resolve.
+     *
+     * @param array<string, mixed> $book
      */
     public static function thumbnailUrl(array $book): string
     {
@@ -31,6 +36,9 @@ class BookDisplayHelper
         return '/api/v1/books/' . $id . '/thumbnail';
     }
 
+    /**
+     * @param array<string, mixed> $book
+     */
     public static function applyThumbnailForApi(array &$book): void
     {
         $book['thumbnail'] = self::thumbnailUrl($book);

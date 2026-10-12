@@ -36,18 +36,6 @@ if (!is_dir($logDir)) {
     mkdir($logDir, 0777, true);
 }
 
-// Additional application initialization
-$jwtKey = getenv('JWT_SECRET_KEY');
-if (!$jwtKey) {
-    // Only use this hardcoded key in development
-    define('JWT_SECRET_KEY', 'your-secret-key-for-development-only');
-    if ($isProduction) {
-        error_log('WARNING: JWT_SECRET_KEY environment variable is not set in production!');
-    }
-} else {
-    define('JWT_SECRET_KEY', $jwtKey);
-}
-
 // Initialize error handling to catch fatal errors
 register_shutdown_function(function () {
     $error = error_get_last();

@@ -8,7 +8,7 @@ interface MiddlewareInterface
     /**
      * Process the request and either pass to the next middleware or return a response
      *
-     * @param array $request Request data including path, method, etc.
+     * @param array<string, mixed> $request Request data including path, method, etc.
      * @param callable $next Next middleware to call
      * @return mixed Response or pass to next middleware
      */

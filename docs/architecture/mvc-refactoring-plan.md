@@ -64,23 +64,14 @@ namespace App\Repository;
 
 use App\Includes\Environment;
 use App\Database\DatabaseInterface;
-use App\Database\JsonDatabase;
 use App\Database\MongoDatabase;
-use Exception;
 
 class DatabaseRepository {
     private static $instance = null;
     private $database;
-    private $databaseName;
 
-    private function __construct($dbName = null) {
-        $this->databaseName = $dbName ? $dbName : Environment::get('DB_NAME', 'LibraryDb');
-        try {
-            $this->database = new MongoDatabase();
-        } catch (Exception $e) {
-            error_log("MongoDB Connection Error: " . $e->getMessage());
-            $this->database = new JsonDatabase();
-        }
+    private function __construct() {
+        $this->database = new MongoDatabase();
     }
 
     // Rest of the class...

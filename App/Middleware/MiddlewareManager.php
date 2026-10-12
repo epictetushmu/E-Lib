@@ -5,7 +5,10 @@ namespace App\Middleware;
 
 class MiddlewareManager
 {
-    private $middlewares = [];
+    /**
+     * @var array<int, MiddlewareInterface>
+     */
+    private array $middlewares = [];
 
     /**
      * Add middleware to the stack
@@ -22,7 +25,7 @@ class MiddlewareManager
     /**
      * Process the request through all middleware
      *
-     * @param array $request
+     * @param array<string, mixed> $request
      * @param callable $coreHandler Final handler to execute if all middleware pass
      * @return mixed
      */

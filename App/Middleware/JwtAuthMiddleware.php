@@ -8,13 +8,22 @@ use App\Middleware\MiddlewareInterface;
 
 class JwtAuthMiddleware implements MiddlewareInterface
 {
-    private $protectedPaths;
+    /**
+     * @var array<int, array<string, string>|string>
+     */
+    private array $protectedPaths;
 
+    /**
+     * @param array<int, array<string, string>|string> $protectedPaths
+     */
     public function __construct(array $protectedPaths = [])
     {
         $this->protectedPaths = $protectedPaths;
     }
 
+    /**
+     * @param array<string, mixed> $request
+     */
     public function process(array $request, callable $next)
     {
         $path = isset($request['path']) ? $request['path'] : '/';

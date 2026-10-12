@@ -2,7 +2,9 @@
 
 namespace App\Controllers;
 
+use App\Services\BookMetadataService;
 use App\Services\BookService;
+use App\Services\ContentSearchService;
 use App\Services\UserService;
 use App\Includes\AuthenticatedUser;
 use App\Includes\ResponseHandler;
@@ -12,16 +14,19 @@ use App\Helpers\Database\MongoHelper;
 
 class BookController
 {
-    private $bookService;
-    private $response;
+    /** Longer queries add nothing to search quality and only cost embedder time. */
+    private const MAX_CONTENT_QUERY_LENGTH = 300;
+
+    private BookService $bookService;
+    private ContentSearchService $contentSearchService;
 
     public function __construct()
     {
         $this->bookService = new BookService();
-        $this->response = new ResponseHandler();
+        $this->contentSearchService = new ContentSearchService();
     }
 
-    public function featuredBooks()
+    public function featuredBooks(): void
     {
         $books = $this->bookService->getFeaturedBooks();
         foreach ($books as &$book) {
@@ -31,32 +36,34 @@ class BookController
         }
         unset($book);
         if ($books) {
-            $this->response->respond(true, $books);
+            ResponseHandler::respond(true, $books);
         } else {
-            $this->response->respond(false, 'No books found', 404);
+            ResponseHandler::respond(false, 'No books found', 404);
         }
     }
 
-    public function deleteBook($id)
+    public function deleteBook(string $id): void
     {
         // Check if user is admin
         if (!AuthenticatedUser::isAdmin()) {
-            return $this->response->respond(false, 'Unauthorized: Admin privileges required', 403);
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
         }
 
         $response = $this->bookService->deleteBook($id);
         if ($response) {
-            return $this->response->respond(true, 'Book deleted successfully');
+            ResponseHandler::respond(true, 'Book deleted successfully');
         } else {
-            return $this->response->respond(false, 'Error deleting book', 400);
+            ResponseHandler::respond(false, 'Error deleting book', 400);
         }
     }
 
-    public function updateBook($id)
+    public function updateBook(string $id): void
     {
         // Check if user is admin
         if (!AuthenticatedUser::isAdmin()) {
-            return $this->response->respond(false, 'Unauthorized: Admin privileges required', 403);
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
         }
 
         // Read and decode JSON data from request body
@@ -72,7 +79,8 @@ class BookController
         // First get the current book data
         $currentBook = $this->bookService->getBookDetails($id);
         if (!$currentBook) {
-            return $this->response->respond(false, 'Book not found', 404);
+            ResponseHandler::respond(false, 'Book not found', 404);
+            return;
         }
 
         // Only update fields that are provided in the request
@@ -86,6 +94,10 @@ class BookController
         $downloadable = isset($data['downloadable']) ?
             ($data['downloadable'] === 'yes' || $data['downloadable'] === true || $data['downloadable'] === 'true') :
             ($currentBook['downloadable'] ?? true);
+        // Absent = keep what's stored (null is skipped by Books::updateBook); 0 copies = open access.
+        $loanCopies = isset($data['loan_copies']) ? min(1000, max(0, (int) $data['loan_copies'])) : null;
+        $loanDays = isset($data['loan_days']) ? min(365, max(1, (int) $data['loan_days'])) : null;
+        $shelfLocation = isset($data['shelf_location']) ? trim((string) $data['shelf_location']) : null;
 
         // Check if categories are being updated
         $categories = [];
@@ -114,17 +126,20 @@ class BookController
             $status,
             $featured,
             $isbn,
-            $downloadable
+            $downloadable,
+            $loanCopies,
+            $loanDays,
+            $shelfLocation
         );
 
         if ($response) {
-            return $this->response->respond(true, 'Book updated successfully');
+            ResponseHandler::respond(true, 'Book updated successfully');
         } else {
-            return $this->response->respond(false, 'Error updating book', 400);
+            ResponseHandler::respond(false, 'Error updating book', 400);
         }
     }
 
-    public function listBooks()
+    public function listBooks(): void
     {
         $books = $this->bookService->getPublicBooks();
         foreach ($books as &$book) {
@@ -134,56 +149,409 @@ class BookController
         }
         unset($book);
         if ($books) {
-            return $this->response->respond(true, $books);
+            ResponseHandler::respond(true, $books);
         } else {
-            return $this->response->respond(false, 'No books found', 404);
+            ResponseHandler::respond(false, 'No books found', 404);
         }
     }
 
-    public function getAllBooks()
-    {
-        $books = $this->bookService->getAllBooks();
-        if ($books) {
-            foreach ($books as &$book) {
-                BookDisplayHelper::applyThumbnailForApi($book);
-            }
-            unset($book);
-            return $this->response->respond(true, $books);
-        } else {
-            return $this->response->respond(false, 'No books found', 404);
-        }
-    }
-
-    public function viewBook($id)
-    {
-        $book = $this->bookService->getBookDetails($id);
-        if ($book) {
-            BookDisplayHelper::applyThumbnailForApi($book);
-            return $this->response->respond(true, $book);
-        } else {
-            return $this->response->respond(false, 'Book not found', 404);
-        }
-    }
-
-    public function searchBooks($search)
-    {
-        $books = $this->bookService->searchBooks($search);
-        if ($books) {
-            foreach ($books as &$book) {
-                BookDisplayHelper::applyThumbnailForApi($book);
-            }
-            unset($book);
-            return $this->response->respond(true, $books);
-        } else {
-            return $this->response->respond(false, 'No books found', 404);
-        }
-    }
-
-    public function addBook()
+    public function getAllBooks(): void
     {
         // Check if user is admin
         if (!AuthenticatedUser::isAdmin()) {
-            return $this->response->respond(false, 'Unauthorized: Admin privileges required', 403);
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+
+        $books = $this->bookService->getAllBooks();
+        if ($books) {
+            foreach ($books as &$book) {
+                unset($book['pdf_path']);
+                unset($book['file_path']);
+                unset($book['reviews']);
+                BookDisplayHelper::applyThumbnailForApi($book);
+            }
+            unset($book);
+            ResponseHandler::respond(true, $books);
+        } else {
+            ResponseHandler::respond(false, 'No books found', 404);
+        }
+    }
+
+    /**
+     * List the distinct categories already in use across all books, for picker/autocomplete UIs.
+     * An empty catalog is a valid state, not an error.
+     */
+    public function getCategories(): void
+    {
+        $categories = $this->bookService->getCategories();
+        ResponseHandler::respond(true, $categories);
+    }
+
+    public function viewBook(string $id): void
+    {
+        $book = $this->bookService->getBookDetails($id);
+        // Treat a hidden book as not found so its existence isn't disclosed either.
+        if ($book && $this->isHiddenFromCaller($book)) {
+            $book = null;
+        }
+        if ($book) {
+            unset($book['pdf_path'], $book['file_path']);
+            BookDisplayHelper::applyThumbnailForApi($book);
+            if (BookService::loanCopies($book) > 0) {
+                $book['loan'] = $this->bookService->loanStatus($id, $book, AuthenticatedUser::id());
+            }
+            ResponseHandler::respond(true, $book);
+        } else {
+            ResponseHandler::respond(false, 'Book not found', 404);
+        }
+    }
+
+    /**
+     * POST /api/v1/books/{id}/borrow — a PDF loan starts now; a physical copy is reserved for pickup.
+     */
+    public function borrowBook(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        $book = $this->bookService->getBookDetails($id);
+        if (!$book || $this->isHiddenFromCaller($book)) {
+            ResponseHandler::respond(false, 'Book not found', 404);
+            return;
+        }
+        if (BookService::loanCopies($book) === 0) {
+            $why = BookService::isPhysical($book) ? 'This book can only be read in the library' : 'This book is open access';
+            ResponseHandler::respond(false, $why, 400);
+            return;
+        }
+        $hold = $this->bookService->borrow($id, $book, $userId);
+        if (is_string($hold)) {
+            $why = $hold === 'queue' ? 'Others are waiting for this book.' : 'All copies are on loan.';
+            ResponseHandler::respond(false, "$why Join the waitlist to get the next copy.", 409);
+            return;
+        }
+        ResponseHandler::respond(true, $hold);
+    }
+
+    /**
+     * POST /api/v1/books/{id}/waitlist — queue for a book whose copies are all out.
+     */
+    public function joinWaitlist(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        $book = $userId === null ? null : $this->bookService->getBookDetails($id);
+        if ($userId === null || !$book || $this->isHiddenFromCaller($book) || BookService::loanCopies($book) === 0) {
+            ResponseHandler::respond(false, 'Book not found', 404);
+            return;
+        }
+        $error = $this->bookService->joinWaitlist($id, $book, $userId);
+        ResponseHandler::respond($error === null, $error ?? 'You\'re on the waitlist', $error === null ? 200 : 409);
+    }
+
+    /**
+     * POST /api/v1/books/{id}/waitlist/leave
+     */
+    public function leaveWaitlist(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        $this->bookService->leaveWaitlist($id, $userId);
+        ResponseHandler::respond(true, 'You left the waitlist');
+    }
+
+    /**
+     * POST /api/v1/books/{id}/renew — extend the caller's own loan.
+     */
+    public function renewBook(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        $book = $userId === null ? null : $this->bookService->getBookDetails($id);
+        if ($userId === null || !$book) {
+            ResponseHandler::respond(false, 'Book not found', 404);
+            return;
+        }
+        $this->respondRenewal($this->bookService->renew($id, $book, $userId, false));
+    }
+
+    /**
+     * POST /api/v1/admin/loans/renew {book_id, user_id} — renew at the desk (overdue loans too).
+     */
+    public function adminRenew(): void
+    {
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+        $data = $this->jsonBody();
+        $bookId = (string) ($data['book_id'] ?? '');
+        $userId = (string) ($data['user_id'] ?? '');
+        $book = preg_match('/^[0-9a-f]{24}$/', $bookId) ? $this->bookService->getBookDetails($bookId) : null;
+        if (!$book || !preg_match('/^[0-9a-f]{24}$/', $userId)) {
+            ResponseHandler::respond(false, 'Invalid book or user', 400);
+            return;
+        }
+        $this->respondRenewal($this->bookService->renew($bookId, $book, $userId, true));
+    }
+
+    private function respondRenewal(?string $result): void
+    {
+        if ($result === null || str_starts_with($result, '!')) {
+            ResponseHandler::respond(false, $result === null ? 'Could not renew' : substr($result, 1), 409);
+            return;
+        }
+        ResponseHandler::respond(true, ['due_at' => $result]);
+    }
+
+    /**
+     * POST /api/v1/books/{id}/return — give a PDF back early, or cancel a physical reservation.
+     * Physical copies that were picked up are checked in by a librarian (adminCheckIn).
+     */
+    public function returnBook(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        $book = $this->bookService->getBookDetails($id);
+        if ($book && BookService::isPhysical($book) && !$this->bookService->hasReservation($id, $userId)) {
+            ResponseHandler::respond(false, 'Bring the book back to the library to return it', 400);
+            return;
+        }
+        $this->bookService->returnBook($id, $book, $userId);
+        ResponseHandler::respond(true, 'Done');
+    }
+
+    /**
+     * GET /api/v1/admin/loans — every loan: who borrowed what and when (admin only).
+     */
+    public function adminLoans(): void
+    {
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+        ResponseHandler::respond(true, $this->bookService->loanHistory());
+    }
+
+    /**
+     * GET /api/v1/user/loans — the caller's own loans and reservations.
+     */
+    public function userLoans(): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        ResponseHandler::respond(true, $this->bookService->loanHistory($userId));
+    }
+
+    /**
+     * POST /api/v1/admin/loans/checkout {book_id, email} — hand a physical copy over at the desk:
+     * the reader's reservation becomes a loan, or a walk-in takes a free copy.
+     */
+    public function adminCheckOut(): void
+    {
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+        $data = $this->jsonBody();
+        $bookId = is_string($data['book_id'] ?? null) ? $data['book_id'] : '';
+        $book = preg_match('/^[0-9a-f]{24}$/', $bookId) ? $this->bookService->getBookDetails($bookId) : null;
+        if (!$book || !BookService::isPhysical($book) || BookService::loanCopies($book) === 0) {
+            ResponseHandler::respond(false, 'Not a lendable physical book', 400);
+            return;
+        }
+        $user = (new UserService())->getUserByEmail(trim((string) ($data['email'] ?? '')));
+        if (!$user) {
+            ResponseHandler::respond(false, 'No reader with that email', 404);
+            return;
+        }
+        $dueAt = $this->bookService->checkOut($bookId, $book, (string) $user['_id']);
+        if ($dueAt === null) {
+            ResponseHandler::respond(false, 'They already have this book out, or no copy is free', 409);
+            return;
+        }
+        ResponseHandler::respond(true, ['due_at' => $dueAt, 'username' => $user['username'] ?? null]);
+    }
+
+    /**
+     * POST /api/v1/admin/loans/checkin {book_id, user_id} — a physical copy is back on the shelf
+     * (also ends a reservation or a PDF loan early).
+     */
+    public function adminCheckIn(): void
+    {
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+        $data = $this->jsonBody();
+        $bookId = (string) ($data['book_id'] ?? '');
+        $userId = (string) ($data['user_id'] ?? '');
+        if (!preg_match('/^[0-9a-f]{24}$/', $bookId) || !preg_match('/^[0-9a-f]{24}$/', $userId)) {
+            ResponseHandler::respond(false, 'Invalid book or user', 400);
+            return;
+        }
+        if (!$this->bookService->returnBook($bookId, $this->bookService->getBookDetails($bookId), $userId)) {
+            ResponseHandler::respond(false, 'This reader has no current loan of that book', 404);
+            return;
+        }
+        ResponseHandler::respond(true, 'Checked in');
+    }
+
+    /**
+     * POST /api/v1/books/physical — catalogue a book that's on the library's shelves (no file).
+     */
+    public function addPhysicalBook(): void
+    {
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+        $data = $this->jsonBody();
+        $text = fn (string $key) => trim(is_string($data[$key] ?? null) ? $data[$key] : '');
+        $categories = array_values(array_filter(
+            is_array($data['categories'] ?? null) ? $data['categories'] : [],
+            'is_string'
+        ));
+        // Physical books have no PDF to render a thumbnail from: use Open Library's cover when there is one.
+        $cover = $text('isbn') === '' ? null : (new BookMetadataService())->coverImage($text('isbn'));
+        try {
+            $response = $this->bookService->addPhysicalBook(
+                $text('title'),
+                $text('author'),
+                (string) ($data['year'] ?? ''),
+                $text('description'),
+                $categories,
+                $text('isbn'),
+                $text('status'),
+                min(1000, max(0, (int) ($data['loan_copies'] ?? 1))),
+                min(365, max(1, (int) ($data['loan_days'] ?? BookService::DEFAULT_LOAN_DAYS))),
+                $text('shelf_location'),
+                $cover === null ? null : FileHelper::storeCover($cover)
+            );
+        } catch (\InvalidArgumentException $e) {
+            ResponseHandler::respond(false, json_decode($e->getMessage(), true) ?: $e->getMessage(), 400);
+            return;
+        }
+        if (isset($response['error'])) {
+            ResponseHandler::respond(false, 'Error adding book', 500);
+            return;
+        }
+        ResponseHandler::respond(true, $response);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function jsonBody(): array
+    {
+        $data = json_decode((string) file_get_contents('php://input'), true);
+        return is_array($data) ? $data : [];
+    }
+
+    public function searchBooks(string $search): void
+    {
+        // Zero matches is a normal outcome for a search, not an error — respond
+        // with 200 + an empty array so the frontend's "No books found" message
+        // (as opposed to its generic network-error message) is reachable; axios
+        // treats any non-2xx status as a rejected promise regardless of body.
+        $publicOnly = !AuthenticatedUser::isAdmin();
+        $books = $this->bookService->searchBooks(urldecode($search), $publicOnly);
+        foreach ($books as &$book) {
+            unset($book['pdf_path'], $book['file_path'], $book['reviews']);
+            BookDisplayHelper::applyThumbnailForApi($book);
+        }
+        unset($book);
+        ResponseHandler::respond(true, $books);
+    }
+
+    /**
+     * GET /api/v1/content-search?q=... — books whose pages match the query by words or meaning,
+     * each with its best pages (page number + snippet) for deep-linking into the reader.
+     */
+    /**
+     * GET /api/v1/features — optional features this deployment has switched on, so the SPA can hide
+     * what isn't available.
+     */
+    /**
+     * GET /api/v1/admin/metadata-lookup?isbn=&title=&author= — Google Books details to pre-fill the upload form.
+     * A miss is a successful null, so the form just keeps what it has.
+     */
+    public function metadataLookup(): void
+    {
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
+        }
+        $str = fn (string $key) => is_string($_GET[$key] ?? null) ? mb_substr($_GET[$key], 0, 300) : '';
+        ResponseHandler::respond(true, (new BookMetadataService())->lookup($str('isbn'), $str('title'), $str('author')));
+    }
+
+    public function features(): void
+    {
+        ResponseHandler::respond(true, ['contentSearch' => ContentSearchService::enabled()]);
+    }
+
+    /**
+     * GET /api/v1/catalog — title/author search with subject, format, author and decade filters and
+     * facet counts. An empty query lists the whole catalog. Drafts only for admins.
+     */
+    public function catalog(): void
+    {
+        try {
+            $result = $this->bookService->catalog($_GET, !AuthenticatedUser::isAdmin());
+        } catch (\Exception $e) {
+            error_log('Catalog search failed: ' . $e->getMessage());
+            ResponseHandler::respond(false, 'Search is unavailable right now. Try again in a moment.', 503);
+            return;
+        }
+        foreach ($result['books'] as &$book) {
+            BookDisplayHelper::applyThumbnailForApi($book);
+        }
+        unset($book);
+        ResponseHandler::respond(true, $result);
+    }
+
+    public function contentSearch(): void
+    {
+        if (!ContentSearchService::enabled()) {
+            ResponseHandler::respond(false, 'Content search is turned off on this server', 404);
+            return;
+        }
+        $query = trim((string) ($_GET['q'] ?? ''));
+        if ($query === '') {
+            ResponseHandler::respond(true, []);
+            return;
+        }
+        if (mb_strlen($query) > self::MAX_CONTENT_QUERY_LENGTH) {
+            ResponseHandler::respond(false, 'Search query is too long (max ' . self::MAX_CONTENT_QUERY_LENGTH . ' characters)', 400);
+            return;
+        }
+
+        $results = $this->contentSearchService->search($query, !AuthenticatedUser::isAdmin());
+        foreach ($results as &$result) {
+            unset($result['book']['pdf_path'], $result['book']['file_path'], $result['book']['reviews']);
+            BookDisplayHelper::applyThumbnailForApi($result['book']);
+        }
+        unset($result);
+        ResponseHandler::respond(true, $results);
+    }
+
+    public function addBook(): void
+    {
+        // Check if user is admin
+        if (!AuthenticatedUser::isAdmin()) {
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
         }
 
         // Extract form data
@@ -199,16 +567,19 @@ class BookController
 
         // Validate required fields
         if (empty($title)) {
-            return $this->response->respond(false, 'Title is required', 400);
+            ResponseHandler::respond(false, 'Title is required', 400);
+            return;
         }
 
         if ($this->bookService->getBookByTitle($title)) {
-            return $this->response->respond(false, 'Book already exists', 400);
+            ResponseHandler::respond(false, 'Book already exists', 400);
+            return;
         }
 
         // Check file upload (see https://www.php.net/manual/en/features.file-upload.errors.php)
         if (!isset($_FILES['bookFile'])) {
-            return $this->response->respond(false, 'No file uploaded (missing bookFile).', 400);
+            ResponseHandler::respond(false, 'No file uploaded (missing bookFile).', 400);
+            return;
         }
         $uploadErr = (int) ($_FILES['bookFile']['error'] ?? UPLOAD_ERR_NO_FILE);
         if ($uploadErr !== UPLOAD_ERR_OK) {
@@ -220,7 +591,8 @@ class BookController
                 default => 'PDF file upload error (code ' . $uploadErr . ').',
             };
             error_log('bookFile upload error: ' . $uploadErr);
-            return $this->response->respond(false, $msg, 400);
+            ResponseHandler::respond(false, $msg, 400);
+            return;
         }
 
         // Initialize FileHelper with temporary path
@@ -230,8 +602,13 @@ class BookController
         $storedFile = $fileHelper->storeFile($_FILES['bookFile']);
 
         if (!$storedFile) {
+            if ($fileHelper->rejectReason !== null) {
+                ResponseHandler::respond(false, $fileHelper->rejectReason, 400);
+                return;
+            }
             error_log("Failed to store file");
-            return $this->response->respond(false, 'Error storing file', 500);
+            ResponseHandler::respond(false, 'Error storing file', 500);
+            return;
         }
 
         error_log("PDF stored successfully at: " . $storedFile['path']);
@@ -259,18 +636,18 @@ class BookController
         );
 
         if ($response) {
-            return $this->response->respond(true, $response);
+            ResponseHandler::respond(true, $response);
         } else {
-            return $this->response->respond(false, 'Error adding book', 400);
+            ResponseHandler::respond(false, 'Error adding book', 400);
         }
     }
 
     /**
      * Handle secure book download
      *
-     * @param string $bookId MongoDB ID of the book to download
+     * @param string|null $bookId MongoDB ID of the book to download
      */
-    public function downloadBook($bookId = null)
+    public function downloadBook(?string $bookId = null): void
     {
         $userId = AuthenticatedUser::id();
         if ($userId === null) {
@@ -294,8 +671,15 @@ class BookController
             return;
         }
 
-        // Check if the book is downloadable
-        if (isset($book['downloadable']) && $book['downloadable'] === false) {
+        // Self-registration is open to anyone, so holding a valid session doesn't imply
+        // the book has been published yet — drafts stay admin-only regardless of login.
+        if ($this->isHiddenFromCaller($book)) {
+            ResponseHandler::respond(false, 'Book not found or has no PDF', 404);
+            return;
+        }
+
+        // Lent books can only be read while borrowed, so a download would outlive the loan.
+        if ((isset($book['downloadable']) && $book['downloadable'] === false) || BookService::loanCopies($book) > 0) {
             ResponseHandler::respond(false, 'This book is not available for download', 403);
             return;
         }
@@ -336,16 +720,12 @@ class BookController
     }
 
     /**
-     * Add a new book review
+     * Add or edit the current user's review of a book (one review per user per book)
      */
-    public function addReview()
+    public function saveReview(): void
     {
-        // Check authentication
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        if (empty($_SESSION['user_id'])) {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
             ResponseHandler::respond(false, 'Authentication required', 401);
             return;
         }
@@ -368,10 +748,10 @@ class BookController
         }
 
         $userService = new \App\Services\UserService();
-        $user = $userService->getUserById($_SESSION['user_id']);
+        $user = $userService->getUserById($userId);
 
         $review = [
-            'user_id' => $_SESSION['user_id'],
+            'user_id' => $userId,
             'username' => $user['username'] ?? 'Anonymous User',
             'rating' => $rating,
             'comment' => $input['comment'],
@@ -380,12 +760,12 @@ class BookController
 
         // Save review
         $bookService = new BookService();
-        $result = $bookService->addReview($input['book_id'], $review);
+        $result = $bookService->saveReview($input['book_id'], $review);
 
         if ($result) {
-            ResponseHandler::respond(true, 'Review added successfully');
+            ResponseHandler::respond(true, 'Review saved successfully');
         } else {
-            ResponseHandler::respond(false, 'Failed to add review', 500);
+            ResponseHandler::respond(false, 'Failed to save review', 500);
         }
     }
 
@@ -393,14 +773,20 @@ class BookController
      * Get reviews for a book
      * @param string $bookId
      */
-    public function getReviews($bookId)
+    public function getReviews(string $bookId): void
     {
         if (empty($bookId)) {
             ResponseHandler::respond(false, 'Book ID is required', 400);
             return;
         }
+        // Same rule as posting a reply: a draft's reviews and threads are only for admins.
+        $book = $this->bookService->getBookDetails($bookId);
+        if (!$book || $this->isHiddenFromCaller($book)) {
+            ResponseHandler::respond(false, 'Book not found', 404);
+            return;
+        }
 
-        $reviews = $this->bookService->getBookReviews($bookId);
+        $reviews = $this->bookService->getReviewsWithReplies($book);
         if ($reviews) {
             ResponseHandler::respond(true, $reviews, 200);
         } else {
@@ -409,10 +795,121 @@ class BookController
     }
 
     /**
-     * Handle mass upload of PDF books
-     * Processes multiple PDF files at once with common metadata
+     * DELETE /api/v1/reviews/{bookId} — delete the caller's own review of the book (and its replies).
      */
-    public function massUploadBooks()
+    public function deleteReview(string $bookId): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        if (!$this->bookService->deleteReview($bookId, $userId)) {
+            ResponseHandler::respond(false, 'You have no review of this book', 404);
+            return;
+        }
+        ResponseHandler::respond(true, 'Review deleted');
+    }
+
+    /**
+     * POST /api/v1/reviews/{bookId}/replies {review_user_id, parent_id?, text} — reply to a review, or
+     * (parent_id) to a reply in its thread.
+     */
+    public function addReply(string $bookId): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        $book = $this->bookService->getBookDetails($bookId);
+        if (!$book || $this->isHiddenFromCaller($book)) {
+            ResponseHandler::respond(false, 'Book not found', 404);
+            return;
+        }
+        $data = $this->jsonBody();
+        $text = $this->replyText($data);
+        $reviewUserId = (string) ($data['review_user_id'] ?? '');
+        if ($text === null || $reviewUserId === '') {
+            return;
+        }
+        // Absent/null/'' answers the review; anything else must be a reply id, never silently dropped.
+        $parentId = $data['parent_id'] ?? null;
+        if ($parentId === '') {
+            $parentId = null;
+        }
+        if ($parentId !== null && !(is_string($parentId) && preg_match('/^[0-9a-f]{24}$/', $parentId))) {
+            ResponseHandler::respond(false, 'parent_id must be a reply id', 400);
+            return;
+        }
+        $user = (new UserService())->getUserById($userId);
+        $username = (string) ($user['username'] ?? 'Anonymous User');
+        $error = $this->bookService->addReply($book, $reviewUserId, $parentId, $userId, $username, $text);
+        if ($error !== null) {
+            ResponseHandler::respond(false, $error, 404);
+            return;
+        }
+        ResponseHandler::respond(true, 'Reply posted');
+    }
+
+    /**
+     * PUT /api/v1/replies/{id} {text} — edit the caller's own reply.
+     */
+    public function updateReply(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        $text = $this->replyText($this->jsonBody());
+        if ($text === null) {
+            return;
+        }
+        if (!$this->bookService->editReply($id, $userId, $text)) {
+            ResponseHandler::respond(false, 'Reply not found', 404);
+            return;
+        }
+        ResponseHandler::respond(true, 'Reply updated');
+    }
+
+    /**
+     * DELETE /api/v1/replies/{id} — delete the caller's own reply.
+     */
+    public function deleteReply(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        if (!$this->bookService->deleteReply($id, $userId)) {
+            ResponseHandler::respond(false, 'Reply not found', 404);
+            return;
+        }
+        ResponseHandler::respond(true, 'Reply deleted');
+    }
+
+    /**
+     * The trimmed reply text from a request body, or null (after responding 400) when it's empty or too long.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function replyText(array $data): ?string
+    {
+        $text = trim(is_string($data['text'] ?? null) ? $data['text'] : '');
+        if ($text === '' || mb_strlen($text) > BookService::REPLY_MAX_LENGTH) {
+            ResponseHandler::respond(false, 'A reply needs 1 to ' . BookService::REPLY_MAX_LENGTH . ' characters', 400);
+            return null;
+        }
+        return $text;
+    }
+
+    /**
+     * Handle PDF upload
+     * Processes one or more PDF files at once with common metadata
+     */
+    public function uploadBooks(): void
     {
         // Verify authentication (session should already be checked by middleware)
         if (session_status() === PHP_SESSION_NONE) {
@@ -421,12 +918,14 @@ class BookController
 
         // Check if user is admin - utilizing the session data set during login
         if (!AuthenticatedUser::isAdmin()) {
-            return $this->response->respond(false, 'Unauthorized: Admin privileges required', 403);
+            ResponseHandler::respond(false, 'Unauthorized: Admin privileges required', 403);
+            return;
         }
 
         // Validate if files were uploaded
         if (empty($_FILES['books']) || !is_array($_FILES['books']['name'])) {
-            return $this->response->respond(false, 'No PDF files submitted', 400);
+            ResponseHandler::respond(false, 'No PDF files submitted', 400);
+            return;
         }
 
         // Get default metadata that will apply to all books unless overridden
@@ -481,7 +980,7 @@ class BookController
                 ? filter_var($metadata['downloadable'], FILTER_VALIDATE_BOOLEAN)
                 : $defaultDownloadable;
             $year = $metadata['year'] ?? '';
-            $description = $metadata['description'] ?? 'Uploaded via mass upload feature';
+            $description = $metadata['description'] ?? 'Uploaded via the upload feature';
             $isbn = $metadata['isbn'] ?? '';
 
             try {
@@ -492,7 +991,7 @@ class BookController
                 if (!$pdfPath || !is_array($pdfPath)) {
                     $results['failed'][] = [
                         'filename' => $file['name'],
-                        'reason' => 'Failed to store PDF'
+                        'reason' => $fileHelper->rejectReason ?? 'Failed to store PDF'
                     ];
                     continue;
                 }
@@ -519,30 +1018,10 @@ class BookController
                 );
 
                 if ($response) {
+                    $bookId = $this->extractInsertedId($response);
+
                     // If book was added successfully, update its status
                     if ($status !== 'draft') {
-                        // Extract the book ID from the response
-                        $bookId = null;
-
-                        // Handle specific response format with data.insertedId pattern
-                        if (is_array($response) && isset($response['data']) && isset($response['data']['insertedId'])) {
-                            $bookId = $response['data']['insertedId'];
-                        } elseif (is_string($response)) {
-                            // Handle direct string ID
-                            $bookId = $response;
-                        } elseif (is_array($response) && isset($response['_id'])) {
-                            // Handle _id object scenario
-                            if (is_object($response['_id']) && method_exists($response['_id'], '__toString')) {
-                                $bookId = $response['_id']->__toString();
-                            } elseif (is_string($response['_id'])) {
-                                $bookId = $response['_id'];
-                            }
-                        } elseif (is_array($response) && isset($response['insertedId'])) {
-                            // Handle direct insertedId at the root level
-                            $bookId = $response['insertedId'];
-                        }
-
-                        // Only attempt update if we successfully extracted an ID
                         if ($bookId) {
                             $this->bookService->updateBook(
                                 $bookId,
@@ -557,32 +1036,14 @@ class BookController
                                 $downloadable
                             );
                         } else {
-                            error_log("ERROR: Could not extract book ID from response during mass upload");
+                            error_log("ERROR: Could not extract book ID from response during upload");
                         }
-                    }
-
-                    // Use the same ID extraction logic for the results section
-                    $resultId = null;
-
-                    if (is_array($response) && isset($response['data']) && isset($response['data']['insertedId'])) {
-                        $resultId = $response['data']['insertedId'];
-                    } elseif (is_string($response)) {
-                        $resultId = $response;
-                    } elseif (is_array($response) && isset($response['_id'])) {
-                        $resultId = is_object($response['_id']) && method_exists($response['_id'], '__toString')
-                            ? $response['_id']->__toString()
-                            : (is_string($response['_id']) ? $response['_id'] : json_encode($response));
-                    } elseif (is_array($response) && isset($response['insertedId'])) {
-                        $resultId = $response['insertedId'];
-                    } else {
-                        // Neither array (handled above) nor string (handled above) at this point
-                        $resultId = json_encode($response);
                     }
 
                     $results['success'][] = [
                         'filename' => $file['name'],
                         'title' => $title,
-                        'id' => $resultId
+                        'id' => $bookId ?? json_encode($response)
                     ];
                 } else {
                     $results['failed'][] = [
@@ -591,7 +1052,7 @@ class BookController
                     ];
                 }
             } catch (\Exception $e) {
-                error_log('Mass upload error: ' . $e->getMessage());
+                error_log('Upload error: ' . $e->getMessage());
                 $results['failed'][] = [
                     'filename' => $file['name'],
                     'reason' => 'Processing error: ' . $e->getMessage()
@@ -602,7 +1063,7 @@ class BookController
         // Log the upload activity
         error_log(sprintf(
             "User %s uploaded %d books (%d successful, %d failed)",
-            $_SESSION['user_id'],
+            AuthenticatedUser::id() ?? 'unknown',
             $fileCount,
             count($results['success']),
             count($results['failed'])
@@ -610,12 +1071,12 @@ class BookController
 
         // Return response with results
         if (empty($results['failed'])) {
-            return $this->response->respond(true, [
+            ResponseHandler::respond(true, [
                 'message' => 'All books uploaded successfully',
                 'results' => $results
             ]);
         } else {
-            return $this->response->respond(
+            ResponseHandler::respond(
                 count($results['success']) > 0,
                 [
                     'message' => count($results['success']) > 0
@@ -626,6 +1087,40 @@ class BookController
                 count($results['success']) > 0 ? 207 : 400
             );
         }
+    }
+
+    /**
+     * A non-public (draft) book is invisible to anyone but an admin — used by every
+     * unauthenticated/lightly-authenticated book route (view/preview/download) since none of
+     * them carry JWT middleware of their own.
+     *
+     * @param array<string, mixed> $book
+     */
+    private function isHiddenFromCaller(array $book): bool
+    {
+        return ($book['status'] ?? null) !== 'public' && !AuthenticatedUser::isAdmin();
+    }
+
+    /**
+     * Extract the inserted book's ID from a Books::addBook() result, whatever shape it comes in
+     * (data.insertedId, a BSON _id object/string, or a root-level insertedId). Null when none match.
+     */
+    private function extractInsertedId(mixed $response): ?string
+    {
+        if (is_array($response) && isset($response['data']['insertedId'])) {
+            return (string) $response['data']['insertedId'];
+        }
+        if (is_array($response) && isset($response['_id'])) {
+            $id = $response['_id'];
+            if (is_object($id) && method_exists($id, '__toString')) {
+                return (string) $id;
+            }
+            return is_string($id) ? $id : null;
+        }
+        if (is_array($response) && isset($response['insertedId'])) {
+            return (string) $response['insertedId'];
+        }
+        return null;
     }
 
     /**
@@ -654,7 +1149,7 @@ class BookController
      * Serve cover image; uses the same filesystem resolution as PDFs (fixes legacy wrong upload dirs).
      * Public (no JWT) — catalog thumbnails are not treated as secrets.
      */
-    public function streamBookThumbnail($bookId = null)
+    public function streamBookThumbnail(?string $bookId = null): void
     {
         if (!$bookId || !preg_match('/^[0-9a-f]{24}$/', $bookId)) {
             http_response_code(400);
@@ -706,13 +1201,13 @@ class BookController
     /**
      * Stream book PDF for in-browser preview (public; no JWT required).
      *
-     * @param string $bookId MongoDB ID of the book to stream
+     * @param string|null $bookId MongoDB ID of the book to stream
      */
-    public function streamBookFile($bookId = null)
+    public function streamBookFile(?string $bookId = null): void
     {
         // Validate book ID
         if (!$bookId || !preg_match('/^[0-9a-f]{24}$/', $bookId)) {
-            $this->response->respond(false, 'Invalid book ID', 400);
+            ResponseHandler::respond(false, 'Invalid book ID', 400);
             return;
         }
 
@@ -723,15 +1218,33 @@ class BookController
         // Get book details from database
         $book = $this->bookService->getBookDetails($bookId);
 
+        // Online preview has no JWT middleware of its own, so the check has to happen here.
+        if ($book && $this->isHiddenFromCaller($book)) {
+            $book = null;
+        }
+
         $relativePath = $book['file_path'] ?? $book['pdf_path'] ?? '';
         if (!$book || $relativePath === '') {
-            $this->response->respond(false, 'Book not found or has no file', 404);
+            ResponseHandler::respond(false, 'Book not found or has no file', 404);
             return;
+        }
+
+        // Lent books: the PDF only goes to someone holding a copy.
+        if (BookService::loanCopies($book) > 0 && !AuthenticatedUser::isAdmin()) {
+            $userId = AuthenticatedUser::id();
+            if ($userId === null) {
+                ResponseHandler::respond(false, 'Log in and borrow this book to read it', 401);
+                return;
+            }
+            if (!$this->bookService->hasActiveLoan($bookId, $userId)) {
+                ResponseHandler::respond(false, 'Borrow this book to read it', 403);
+                return;
+            }
         }
 
         $filePath = $this->resolveStoredPublicFile($relativePath);
         if ($filePath === null) {
-            $this->response->respond(false, 'File not found or not accessible', 404);
+            ResponseHandler::respond(false, 'File not found or not accessible', 404);
             return;
         }
 
@@ -745,7 +1258,7 @@ class BookController
              // If for some reason a non-PDF is requested (legacy data), we might want to block it or
              // try to serve it as PDF (which might fail in browser but acts as a restriction)
              // For strict restriction:
-             // $this->response->respond(false, 'Only PDF files are supported', 400);
+             // ResponseHandler::respond(false, 'Only PDF files are supported', 400);
              // return;
              // But existing files might still need to be accessible if we didn't delete them.
              // However, the requirement is "Restrict to PDF Only", implying we drop support.

@@ -8,10 +8,10 @@ use App\Middleware\MiddlewareManager;
 
 class BaseRouter
 {
-    private $apiRouter;
-    private $pageRouter;
-    private $baseUrl;
-    private $middlewareManager;
+    private ApiRouter $apiRouter;
+    private PageRouter $pageRouter;
+    private string $baseUrl;
+    private MiddlewareManager $middlewareManager;
 
     /**
      * Constructor
@@ -38,7 +38,7 @@ class BaseRouter
         return $this;
     }
 
-    public function handleRequest()
+    public function handleRequest(): void
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);

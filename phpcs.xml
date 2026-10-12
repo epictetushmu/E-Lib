@@ -4,7 +4,6 @@
 
     <file>App</file>
     <file>public/index.php</file>
-    <file>setup-mongodb-cert.php</file>
     <file>docker-entrypoint.php</file>
     <file>check-system.php</file>
     <file>scripts</file>
@@ -22,10 +21,11 @@
     <rule ref="PSR1.Files.SideEffects">
         <exclude-pattern>App/bootstrap.php</exclude-pattern>
         <exclude-pattern>public/index.php</exclude-pattern>
-        <exclude-pattern>setup-mongodb-cert.php</exclude-pattern>
         <exclude-pattern>docker-entrypoint.php</exclude-pattern>
         <exclude-pattern>check-system.php</exclude-pattern>
         <exclude-pattern>scripts/db-setup.php</exclude-pattern>
+        <exclude-pattern>scripts/seed-sample-books.php</exclude-pattern>
+        <exclude-pattern>scripts/create-admin.php</exclude-pattern>
     </rule>
 
     <rule ref="Generic.Files.LineLength">

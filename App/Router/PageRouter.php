@@ -2,48 +2,19 @@
 
 namespace App\Router;
 
-use App\Controllers\PageController;
 use App\Includes\Environment;
-use App\Includes\ResponseHandler;
 use App\Services\CasService;
-
-// require_once(__DIR__ . '/../../vendor/autoload.php');
-// use Firebase\JWT\JWT;
-// use Firebase\JWT\Key;
 
 class PageRouter
 {
-    private $routes = [];
-    private $casService;
+    private CasService $casService;
 
     public function __construct()
     {
-        $this->defineRoutes();
         $this->casService = new CasService();
-        // Remove the setSecurityHeaders call from constructor - will call it at the right time
     }
 
-    private function defineRoutes()
-    {
-        $this->routes = [
-            ['path' => '/index', 'handler' => [new PageController(), 'home']],
-            ['path' => '/', 'handler' => [new PageController(), 'home']],
-            ['path' => '/view-books', 'handler' => [new PageController(), 'viewBooks']],
-            ['path' => '/profile', 'handler' => [new PageController(), 'profile']],
-            ['path' => '/read/([0-9a-f]{24})', 'handler' => [new PageController(), 'readBook']],
-            ['path' => '/book/([0-9a-f]{24})', 'handler' => [new PageController(), 'viewBook']],
-            ['path' => '/add-book', 'handler' => [new PageController(), 'addBookForm']],
-            ['path' => '/search_results', 'handler' => [new PageController(), 'searchBooks']],
-            ['path' => '/error', 'handler' => [new PageController(), 'error']],
-            ['path' => '/dashboard', 'handler' => [new PageController(), 'dashboard']],
-            ['path' => '/signup', 'handler' => [new PageController(), 'signup']],
-            ['path' => '/login', 'handler' => [new PageController(), 'login']],
-            ['path' => '/admin/logs', 'handler' => [new PageController(), 'viewLogs']],
-            ['path' => '/docs', 'handler' => [new PageController(), 'docs']],
-        ];
-    }
-
-    public function handleRequest($path)
+    public function handleRequest(string $path): void
     {
         // Set security headers at the beginning of request handling
         // but only if no output has been sent yet
@@ -53,42 +24,62 @@ class PageRouter
 
         $pathOnly = parse_url($path, PHP_URL_PATH);
 
-        // CAS login was previously handled on the /login path
-        // Now we'll handle it differently
-        if (strpos($pathOnly, '/cas-login') === 0) {
+        // CAS SSO callback: validate the ticket, mint a JWT, hand it to the SPA via a URL
+        // fragment (never sent to/logged by the server) for AuthCallback.vue to pick up.
+        if (strpos((string) $pathOnly, '/cas-login') === 0) {
             $ticket = $_GET['ticket'] ?? null;
-            // Use Environment to get the application URL
-            $serviceUrl = Environment::get('APP_URL', 'http://localhost:8080') . '/cas-login';
+            // LoginForm.vue embeds a single-use nonce in the service URL's own query string
+            // before redirecting to CAS, and AuthCallback.vue refuses the token unless this
+            // same nonce comes back — binding the round trip to the tab that started it, so an
+            // externally-supplied #token= link (from a valid JWT obtained some other way) can't
+            // be adopted as a session. The service URL used here must match, character for
+            // character, the one CAS was given at login time, or ticket validation fails.
+            $state = $_GET['state'] ?? null;
+            $appUrl = rtrim((string) Environment::get('APP_URL', 'http://localhost:8080'), '/');
+            $serviceUrl = $appUrl . '/cas-login'
+                . (is_string($state) && $state !== '' ? '?state=' . rawurlencode($state) : '');
 
-            if ($ticket && $this->casService->authenticate($ticket, $serviceUrl)) {
-                // Redirect to home with a success parameter for the UI to handle
-                if (!headers_sent()) {
-                    header('Location: /?login=success');
-                    exit;
+            $token = (is_string($ticket) && $ticket !== '')
+                ? $this->casService->authenticateAndIssueToken($ticket, $serviceUrl)
+                : null;
+
+            if (!headers_sent()) {
+                $fragment = '';
+                if ($token !== null) {
+                    $fragment = '#token=' . $token;
+                    if (is_string($state) && $state !== '') {
+                        $fragment .= '&state=' . rawurlencode($state);
+                    }
                 }
-            } else {
-                // Redirect to home with error parameter
-                if (!headers_sent()) {
-                    header('Location: /?login=failed');
-                    exit;
-                }
+                header('Location: ' . $appUrl . '/auth/callback' . $fragment);
+                exit;
             }
             return;
         }
 
-
-        foreach ($this->routes as $route) {
-            if (preg_match('#^' . $route['path'] . '$#', $pathOnly, $matches)) {
-                call_user_func_array($route['handler'], $matches);
-                return;
-            }
-        }
-
-        $pageController = new PageController();
-        $pageController->error();
+        // Everything else is a client-side route handled by the Vue SPA; static files under
+        // public/dist/ are served directly by Apache/PHP's built-in server before this runs,
+        // so anything reaching here just needs the SPA shell.
+        $this->serveSpaShell();
     }
 
-    private function setSecurityHeaders()
+    private function serveSpaShell(): void
+    {
+        $indexPath = dirname(__DIR__, 2) . '/public/dist/index.html';
+
+        if (!is_file($indexPath)) {
+            http_response_code(503);
+            echo 'Frontend build not found. Run: cd frontend && npm ci && npm run build';
+            return;
+        }
+
+        if (!headers_sent()) {
+            header('Content-Type: text/html; charset=UTF-8');
+        }
+        readfile($indexPath);
+    }
+
+    private function setSecurityHeaders(): void
     {
         // Security headers
         header('X-Content-Type-Options: nosniff');
