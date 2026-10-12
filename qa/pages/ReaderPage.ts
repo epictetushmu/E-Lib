@@ -23,7 +23,6 @@ export class ReaderPage extends BasePage {
   readonly highlights: Locator;
   readonly friendHighlights: Locator;
   readonly friendNoteItems: Locator;
-  readonly showFriendNotes: Locator;
   readonly notesPrivacy: Locator;
   readonly notesToggle: Locator;
   readonly notesPanel: Locator;
@@ -57,7 +56,6 @@ export class ReaderPage extends BasePage {
     this.noteItems = this.notesPanel.getByTestId('note-item');
     this.friendHighlights = page.locator('.friend-highlight');
     this.friendNoteItems = this.notesPanel.getByTestId('friend-note-item');
-    this.showFriendNotes = this.notesPanel.getByTestId('show-friend-notes');
     this.notesPrivacy = this.notesPanel.getByTestId('notes-privacy');
     this.noteOnPageEditor = this.notesPanel.getByLabel(/^Note on page \d+$/);
     this.addNoteButton = this.notesPanel.getByRole('button', { name: 'Add note' });
@@ -143,6 +141,11 @@ export class ReaderPage extends BasePage {
     const box = await mark.boundingBox();
     if (!box) throw new Error('Highlight is not on screen');
     await this.page.mouse.click(box.x + Math.min(12, box.width / 2), box.y + box.height / 2);
+  }
+
+  /** The notes-panel pill that turns one friend's notes on or off (aria-pressed says which). */
+  friendFilter(userId: string): Locator {
+    return this.notesPanel.getByTestId(`friend-filter-${userId}`);
   }
 
   /** Clicks a friend's underlined highlight on the page, which opens it in the notes panel. */
