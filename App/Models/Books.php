@@ -211,6 +211,22 @@ class Books extends BaseModel
     }
 
     /**
+     * Public books the user reviewed, each with only that user's review in `reviews`.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function reviewedBy(string $userId): array
+    {
+        return $this->findAll(
+            ['status' => 'public', 'reviews.user_id' => $userId],
+            [
+                'projection' => ['title' => 1, 'author' => 1, 'reviews' => ['$elemMatch' => ['user_id' => $userId]]],
+                'limit' => 0,
+            ]
+        );
+    }
+
+    /**
      * Save a user's review of a book: edits their existing review, or adds one if they have none.
      *
      * @param string $bookId Book ID

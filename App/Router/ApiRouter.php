@@ -5,6 +5,7 @@ namespace App\Router;
 // Include all necessary controllers
 use App\Controllers\AnnotationController;
 use App\Controllers\BookController;
+use App\Controllers\FriendController;
 use App\Controllers\UserController;
 use App\Includes\ResponseHandler;
 
@@ -97,6 +98,11 @@ class ApiRouter
             ['method' => 'GET', 'path' => '/api/v1/user/loans', 'handler' => [new BookController(), 'userLoans']],
             ['method' => 'GET', 'path' => '/api/v1/user/notifications', 'handler' => [new UserController(), 'getNotifications']],
             ['method' => 'POST', 'path' => '/api/v1/user/notifications/read', 'handler' => [new UserController(), 'markNotificationsRead']],
+            ['method' => 'GET', 'path' => '/api/v1/friends', 'handler' => [new FriendController(), 'list']],
+            ['method' => 'POST', 'path' => '/api/v1/friends', 'handler' => [new FriendController(), 'request']],
+            ['method' => 'POST', 'path' => '/api/v1/friends/([0-9a-f]{24})/accept', 'handler' => [new FriendController(), 'accept']],
+            ['method' => 'DELETE', 'path' => '/api/v1/friends/([0-9a-f]{24})', 'handler' => [new FriendController(), 'remove']],
+            ['method' => 'GET', 'path' => '/api/v1/friends/([0-9a-f]{24})/library', 'handler' => [new FriendController(), 'library']],
             ['method' => 'GET', 'path' => '/api/v1/admin/logs', 'handler' => [new UserController(), 'viewLogs']],
             ['method' => 'POST', 'path' => '/api/v1/update-profile', 'handler' => [new UserController(), 'updateProfile']],
             ['method' => 'POST', 'path' => '/api/v1/change-password', 'handler' => [new UserController(), 'changePassword']],

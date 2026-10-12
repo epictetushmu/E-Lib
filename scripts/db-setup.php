@@ -183,6 +183,13 @@ $indexPlan = [
             'options' => ['name' => 'idx_book_review_created'],
         ],
     ],
+    'Friendships' => [
+        [
+            // A reader's friends and requests (users holds both ids).
+            'key' => ['users' => 1, 'created_at' => -1],
+            'options' => ['name' => 'idx_users_created'],
+        ],
+    ],
     'Notifications' => [
         [
             'key' => ['user_id' => 1, 'created_at' => -1],
