@@ -73,6 +73,35 @@ export class BookDetailPage extends BasePage {
     return this.page.getByLabel(`Shelf ${callNumber}`);
   }
 
+  /** A review in the list, by its author's username. */
+  review(username: string): Locator {
+    return this.page.getByTestId('review').filter({ has: this.page.getByText(username, { exact: true }) });
+  }
+
+  /** Every reply under a review or a reply, at any depth. */
+  replies(parent: Locator): Locator {
+    return parent.getByTestId('reply');
+  }
+
+  /** Answers the review itself. */
+  async replyTo(review: Locator, text: string): Promise<void> {
+    await review.getByTestId('review-reply-button').click();
+    await review.getByTestId('review-reply-input').fill(text);
+    await review.getByTestId('review-post-reply-button').click();
+  }
+
+  /** Answers a reply, nesting the answer under it. */
+  async answer(reply: Locator, text: string): Promise<void> {
+    await reply.getByTestId('reply-button').first().click();
+    await reply.getByTestId('reply-input').fill(text);
+    await reply.getByTestId('post-reply-button').click();
+  }
+
+  /** Accepts the next confirm() dialog (deletes ask first). */
+  acceptNextConfirm(): void {
+    this.page.once('dialog', (dialog) => dialog.accept());
+  }
+
   /** Picks 1–5 stars and submits (or, if the user already reviewed the book, updates) a review with the given comment. */
   async writeReview(stars: number, comment: string): Promise<void> {
     await this.reviewForm.getByRole('radio', { name: `${stars} star${stars > 1 ? 's' : ''}` }).click();
