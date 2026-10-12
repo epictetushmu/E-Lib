@@ -29,7 +29,7 @@ test.describe('Friends', () => {
     const askerProfile = new ProfilePage(asker.page);
     await askerProfile.open();
     await askerProfile.sendFriendRequest(friend.user.email);
-    await expect(askerProfile.friend(friend.user.username)).toContainText('Request sent');
+    await expect(askerProfile.friend(friend.user.username)).toContainText('Sent');
     expect(await libraryStatus()).toBe(403);
 
     // …and accept.
@@ -49,7 +49,7 @@ test.describe('Friends', () => {
     await expect(library.book('saved', lentBook.id)).toBeVisible();
     await expect(library.reviews.filter({ hasText: lentBook.title })).toContainText('A keeper.');
     await expect(library.book('loans', lentBook.id)).toHaveCount(0);
-    await expect(library.notShared(friend.user.username)).toHaveCount(2); // loans + downloads
+    await expect(library.privateNote).toHaveText('Keeps their books they’re borrowing and downloads private.');
 
     // The friend hides saved books and shares what they're borrowing.
     await expect(friendProfile.sharing('saved')).toBeChecked();
@@ -64,11 +64,12 @@ test.describe('Friends', () => {
     await library.open(friendId);
     await expect(library.book('loans', lentBook.id)).toBeVisible();
     await expect(library.book('saved', lentBook.id)).toHaveCount(0);
-    await expect(library.notShared(friend.user.username)).toHaveCount(2); // saved + downloads
+    await expect(library.privateNote).toHaveText('Keeps their saved books and downloads private.');
 
     // Unfriending closes it again.
     await askerProfile.open();
     await askerProfile.friendsTab.click();
+    asker.page.once('dialog', (dialog) => dialog.accept()); // "Remove … from your friends?"
     await askerProfile.friend(friend.user.username).getByRole('button', { name: 'Remove' }).click();
     await expect(askerProfile.friend(friend.user.username)).toHaveCount(0);
     expect(await libraryStatus()).toBe(403);

@@ -19,8 +19,8 @@ export class FriendLibraryPage extends BasePage {
     return this.page.getByTestId(`friend-${section}`).getByTestId(`book-card-${bookId}`);
   }
 
-  /** One "<name> doesn't share this." line per section the friend keeps private. */
-  notShared(username: string): Locator {
-    return this.page.getByText(`${username} doesn't share this.`);
+  /** "Keeps their … private." under the friend's name; absent when they share everything. */
+  get privateNote(): Locator {
+    return this.page.getByTestId('friend-private');
   }
 }
