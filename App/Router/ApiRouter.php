@@ -62,6 +62,11 @@ class ApiRouter
                 'handler' => [new AnnotationController(), 'listForBook'],
             ],
             [
+                'method' => 'GET',
+                'path' => '/api/v1/books/([0-9a-f]{24})/annotations/friends',
+                'handler' => [new AnnotationController(), 'listFriendsForBook'],
+            ],
+            [
                 'method' => 'POST',
                 'path' => '/api/v1/books/([0-9a-f]{24})/annotations',
                 'handler' => [new AnnotationController(), 'create'],

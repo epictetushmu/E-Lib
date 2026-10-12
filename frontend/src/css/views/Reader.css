@@ -495,6 +495,15 @@ svg {
   box-shadow: 0 0 0 1.5px rgba(var(--color-navy-rgb), 0.55);
 }
 
+/* Friends' highlights: a dotted rule under the line in the desk's ink, never a fill, so your own marks
+   stay the loud ones. Click-through is decided in Reader.vue (friendHighlightAt), not by the element. */
+.pdf-container :deep(.friend-highlight) {
+  position: absolute;
+  pointer-events: none;
+  border-bottom: 2px dotted var(--desk-ink);
+  opacity: 0.85;
+}
+
 /* On the inverted night page, multiply would vanish; screen lifts the ink instead. */
 .theme-dark .pdf-container :deep(.user-highlight) {
   mix-blend-mode: screen;
@@ -882,4 +891,53 @@ svg {
   .pdf-container {
     padding: 1rem 0.5rem 2rem;
   }
+}
+
+/* Friends' notes: read-only, under your own, each signed by its author. */
+.friend-notes {
+  margin-top: 1.5rem;
+}
+
+.friend-notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.friend-notes-header h3 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.friend-notes-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.friend-notes-toggle input {
+  accent-color: var(--color-primary);
+}
+
+.friend-note {
+  grid-template-columns: 3rem 1fr;
+  transition: background-color 0.6s ease;
+}
+
+.friend-note.is-focused {
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.note-author {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
 }

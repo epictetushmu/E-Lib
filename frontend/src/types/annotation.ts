@@ -18,4 +18,10 @@ export interface Annotation {
   created_at: string | null
 }
 
+/** A friend's highlight or note, shared with friends who can read the book; read-only here. */
+export interface FriendAnnotation extends Annotation {
+  user_id: string
+  username: string
+}
+
 export type NewAnnotation = Pick<Annotation, 'page' | 'rects' | 'quote' | 'note' | 'color'>

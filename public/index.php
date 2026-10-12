@@ -76,6 +76,7 @@ $router->addMiddleware(new JwtAuthMiddleware([
     // Private highlights and notes
     ['path' => '/api/v1/books/([0-9a-f]{24})/annotations', 'method' => 'GET'],
     ['path' => '/api/v1/books/([0-9a-f]{24})/annotations', 'method' => 'POST'],
+    ['path' => '/api/v1/books/([0-9a-f]{24})/annotations/friends', 'method' => 'GET'],
     ['path' => '/api/v1/annotations', 'method' => 'PUT'],
     ['path' => '/api/v1/annotations', 'method' => 'DELETE'],
     // Friends (prefix match covers /api/v1/friends/{id}/accept and /library)

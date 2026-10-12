@@ -145,7 +145,7 @@ $indexPlan = [
     ],
     'Annotations' => [
         [
-            // Every read is "this user's annotations for this book".
+            // Every read is "this user's (or these friends') annotations for this book".
             'key' => ['user_id' => 1, 'book_id' => 1, 'page' => 1],
             'options' => ['name' => 'idx_user_book_page'],
         ],

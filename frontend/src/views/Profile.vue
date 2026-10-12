@@ -151,6 +151,7 @@ const sharingOptions: { key: keyof friendsApi.Sharing; label: string }[] = [
   { key: 'reviews', label: 'Reviews' },
   { key: 'loans', label: "Books I'm borrowing now" },
   { key: 'downloads', label: 'Downloaded books' },
+  { key: 'notes', label: 'Notes and highlights, when they read the same book' },
 ]
 // Requests that need an answer first, then friends, then requests still waiting on the other reader.
 const friendGroups = computed(() =>

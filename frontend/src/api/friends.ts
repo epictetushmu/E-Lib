@@ -38,6 +38,8 @@ export interface Sharing {
   reviews: boolean
   loans: boolean
   downloads: boolean
+  /** Shown to friends inside the reader, on books they can read. */
+  notes: boolean
 }
 
 export function getFriends() {

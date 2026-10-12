@@ -373,6 +373,26 @@ class BookServiceTest extends ServiceTestCase
         ];
     }
 
+    public function testCanReadFollowsTheReadersPdfRule(): void
+    {
+        $id = 'bbbbbbbbbbbbbbbbbbbbbbbb';
+        $loans = $this->createMock(Loans::class);
+        $loans->method('activeFor')->willReturnCallback(fn ($book, $user) => $user === 'borrower' ? ['book_id' => $book] : null);
+        $service = $this->service();
+        $this->inject($service, 'loans', $loans);
+
+        $open = ['_id' => $id, 'status' => 'public', 'loan_copies' => 0];
+        $lent = ['_id' => $id, 'status' => 'public', 'loan_copies' => 2];
+        $draft = ['_id' => $id, 'status' => 'draft', 'loan_copies' => 0];
+
+        $this->assertTrue($service->canRead($open, null, false), 'open access needs no login');
+        $this->assertFalse($service->canRead($lent, null, false));
+        $this->assertFalse($service->canRead($lent, 'someone', false), 'lent: only while borrowed');
+        $this->assertTrue($service->canRead($lent, 'borrower', false));
+        $this->assertFalse($service->canRead($draft, 'borrower', false), 'drafts are hidden');
+        $this->assertTrue($service->canRead($draft, null, true), 'admins read everything');
+    }
+
     public function testFreedCopyGoesToTheHeadOfTheWaitlist(): void
     {
         $loans = $this->createMock(Loans::class);

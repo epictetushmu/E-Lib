@@ -7,8 +7,8 @@ use InvalidArgumentException;
 use MongoDB\BSON\UTCDateTime;
 
 /**
- * Private per-user highlights and notes. The user id always comes from the
- * authenticated request, never from client input.
+ * Per-user highlights and notes. The user id always comes from the authenticated request, never from
+ * client input. Friends who share their notes are listed read-only by listForFriends().
  */
 class AnnotationService
 {
@@ -25,6 +25,24 @@ class AnnotationService
     public function listForBook(string $userId, string $bookId): array
     {
         return array_map([$this, 'toClient'], $this->annotations->findForUserAndBook($userId, $bookId));
+    }
+
+    /**
+     * Notes and highlights on this book by the user's friends who share their notes, each with its author.
+     * The caller must already have checked the user may read the book (quotes are the book's text).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function listForFriends(string $userId, string $bookId): array
+    {
+        $friends = (new FriendService())->friendsSharing($userId, 'notes');
+        return array_map(
+            fn ($doc) => $this->toClient($doc) + [
+                'user_id' => (string) $doc['user_id'],
+                'username' => $friends[(string) $doc['user_id']] ?? '',
+            ],
+            $this->annotations->listForUsersAndBook(array_map('strval', array_keys($friends)), $bookId)
+        );
     }
 
     /**

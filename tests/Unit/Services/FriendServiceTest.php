@@ -41,6 +41,32 @@ class FriendServiceTest extends ServiceTestCase
         return $service;
     }
 
+    public function testFriendsSharingListsOnlyAcceptedFriendsWithTheSwitchOn(): void
+    {
+        $pending = 'eeeeeeeeeeeeeeeeeeeeeeee';
+        $private = 'ffffffffffffffffffffffff';
+        $friendships = $this->createMock(Friendships::class);
+        $friendships->method('forUser')->willReturn([
+            ['users' => [self::USER, self::FRIEND], 'status' => 'accepted'],
+            ['users' => [$private, self::USER], 'status' => 'accepted'],
+            ['users' => [self::USER, $pending], 'status' => 'pending'],
+        ]);
+        $users = $this->createMock(Users::class);
+        $users->expects($this->once())->method('findAll')
+            // Only accepted friends are looked up; the pending request never is.
+            ->with($this->callback(fn ($f) => count($f['_id']['$in']) === 2))
+            ->willReturn([
+                ['_id' => self::FRIEND, 'username' => 'Nikos', 'sharing' => ['notes' => true]],
+                ['_id' => $private, 'username' => 'Eleni'], // never turned notes on
+            ]);
+
+        /** @var FriendService $service */
+        $service = $this->makeService(FriendService::class, 'friendships', $friendships);
+        $this->inject($service, 'users', $users);
+
+        $this->assertSame([self::FRIEND => 'Nikos'], $service->friendsSharing(self::USER, 'notes'));
+    }
+
     public function testLibraryIsHiddenFromNonFriends(): void
     {
         $this->assertNull($this->makeLibraryService(false, ['username' => 'b'])->library(self::USER, self::FRIEND));
@@ -80,7 +106,7 @@ class FriendServiceTest extends ServiceTestCase
     public function testSharingDefaultsForUsersWhoNeverChose(): void
     {
         $this->assertSame(
-            ['saved' => true, 'reviews' => true, 'loans' => false, 'downloads' => false],
+            ['saved' => true, 'reviews' => true, 'loans' => false, 'downloads' => false, 'notes' => false],
             FriendService::sharing(['username' => 'x'])
         );
     }
@@ -88,7 +114,7 @@ class FriendServiceTest extends ServiceTestCase
     public function testSharingKeepsOnlyBooleanChoices(): void
     {
         $this->assertSame(
-            ['saved' => false, 'reviews' => true, 'loans' => true, 'downloads' => false],
+            ['saved' => false, 'reviews' => true, 'loans' => true, 'downloads' => false, 'notes' => false],
             FriendService::sharing(['sharing' => ['saved' => false, 'loans' => true, 'downloads' => 'yes']])
         );
     }
@@ -104,6 +130,6 @@ class FriendServiceTest extends ServiceTestCase
         $service = $this->makeService(FriendService::class, 'users', $users);
         $result = $service->setSharing(self::USER, ['saved' => false, 'loans' => true, 'downloads' => 1, 'isAdmin' => true]);
 
-        $this->assertSame(['saved' => false, 'reviews' => true, 'loans' => true, 'downloads' => false], $result);
+        $this->assertSame(['saved' => false, 'reviews' => true, 'loans' => true, 'downloads' => false, 'notes' => false], $result);
     }
 }

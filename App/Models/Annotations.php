@@ -3,10 +3,11 @@
 namespace App\Models;
 
 /**
- * A reader's private highlight or note on a book page.
+ * A reader's highlight or note on a book page.
  *
- * Every query here is scoped by user_id: annotations are never visible to, or
- * editable by, anyone but the user who made them (admins included).
+ * Every query here is scoped by user_id: annotations are only ever editable by the user who made them
+ * (admins included), and only visible to them — plus, read-only, to friends when the author turns on
+ * sharing notes (FriendService::SHARING_DEFAULTS 'notes', off by default; see listForUsersAndBook).
  */
 class Annotations extends BaseModel
 {
@@ -24,6 +25,23 @@ class Annotations extends BaseModel
     {
         return $this->findAll(
             ['user_id' => $userId, 'book_id' => $bookId],
+            ['limit' => 5000, 'sort' => ['page' => 1, 'created_at' => 1]]
+        );
+    }
+
+    /**
+     * Several users' annotations on one book — friends who share their notes, already checked by the caller.
+     *
+     * @param list<string> $userIds
+     * @return list<array<string, mixed>>
+     */
+    public function listForUsersAndBook(array $userIds, string $bookId): array
+    {
+        if ($userIds === []) {
+            return [];
+        }
+        return $this->findAll(
+            ['user_id' => ['$in' => $userIds], 'book_id' => $bookId],
             ['limit' => 5000, 'sort' => ['page' => 1, 'created_at' => 1]]
         );
     }

@@ -6,6 +6,7 @@ use App\Models\Books;
 use App\Models\Loans;
 use App\Models\ReviewReplies;
 use App\Models\Users;
+use App\Helpers\BookDisplayHelper;
 use App\Helpers\Database\MongoHelper;
 use MongoDB\BSON\UTCDateTime;
 
@@ -54,6 +55,24 @@ class BookService
     private static function loanDays(array $book): int
     {
         return (int) ($book['loan_days'] ?? 0) ?: self::DEFAULT_LOAN_DAYS;
+    }
+
+    /**
+     * Whether the caller may read the book's PDF: public (or they're an admin), and for a lent book an
+     * active loan. The rule streamBookFile applies, for anything that shows the book's text elsewhere.
+     *
+     * @param array<string, mixed> $book
+     */
+    public function canRead(array $book, ?string $userId, bool $isAdmin): bool
+    {
+        if ($isAdmin) {
+            return true;
+        }
+        if (($book['status'] ?? null) !== 'public') {
+            return false;
+        }
+        return self::loanCopies($book) === 0
+            || ($userId !== null && $this->hasActiveLoan(BookDisplayHelper::bookIdString($book), $userId));
     }
 
     public function hasActiveLoan(string $bookId, string $userId): bool

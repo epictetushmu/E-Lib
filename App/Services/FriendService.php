@@ -18,9 +18,10 @@ class FriendService
     /**
      * What a reader shares with friends until they change it. Saved books and reviews are on, so friendships
      * made before the switches existed see what they always saw (reviews are public on book pages anyway);
-     * reading activity — loans and downloads — is private by default.
+     * reading activity (loans, downloads) and notes — written as private until the switch existed — are off.
+     * Notes are shown only inside the reader (AnnotationService::listForFriends), never on the friend page.
      */
-    public const SHARING_DEFAULTS = ['saved' => true, 'reviews' => true, 'loans' => false, 'downloads' => false];
+    public const SHARING_DEFAULTS = ['saved' => true, 'reviews' => true, 'loans' => false, 'downloads' => false, 'notes' => false];
 
     private Friendships $friendships;
     private Users $users;
@@ -114,7 +115,7 @@ class FriendService
      * The user's sharing switches, with defaults for any they never set.
      *
      * @param array<string, mixed> $user
-     * @return array{saved: bool, reviews: bool, loans: bool, downloads: bool}
+     * @return array{saved: bool, reviews: bool, loans: bool, downloads: bool, notes: bool}
      */
     public static function sharing(array $user): array
     {
@@ -130,7 +131,7 @@ class FriendService
     }
 
     /**
-     * @return array{saved: bool, reviews: bool, loans: bool, downloads: bool}|null Null if the user is gone
+     * @return array{saved: bool, reviews: bool, loans: bool, downloads: bool, notes: bool}|null Null if the user is gone
      */
     public function getSharing(string $userId): ?array
     {
@@ -142,7 +143,7 @@ class FriendService
      * Change some of the user's switches; unknown keys and non-booleans are ignored.
      *
      * @param array<string, mixed> $changes
-     * @return array{saved: bool, reviews: bool, loans: bool, downloads: bool}|null Null if the user is gone
+     * @return array{saved: bool, reviews: bool, loans: bool, downloads: bool, notes: bool}|null Null if the user is gone
      */
     public function setSharing(string $userId, array $changes): ?array
     {
@@ -156,6 +157,37 @@ class FriendService
             $this->users->updateById($userId, $set);
         }
         return $this->getSharing($userId);
+    }
+
+    /**
+     * The user's friends who share $section with friends, as id => username.
+     *
+     * @param key-of<self::SHARING_DEFAULTS> $section
+     * @return array<string, string>
+     */
+    public function friendsSharing(string $userId, string $section): array
+    {
+        $friendIds = [];
+        foreach ($this->friendships->forUser($userId) as $doc) {
+            if ($doc['status'] === 'accepted') {
+                $friendIds[] = self::other($doc, $userId);
+            }
+        }
+        if ($friendIds === []) {
+            return [];
+        }
+        $sharing = [];
+        foreach (
+            $this->users->findAll(
+                ['_id' => ['$in' => array_map([MongoHelper::class, 'createObjectId'], $friendIds)]],
+                ['projection' => ['username' => 1, 'sharing' => 1], 'limit' => 0]
+            ) as $friend
+        ) {
+            if (self::sharing($friend)[$section]) {
+                $sharing[(string) $friend['_id']] = (string) ($friend['username'] ?? '');
+            }
+        }
+        return $sharing;
     }
 
     /**
