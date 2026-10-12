@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "E2E test tooling for E-Lib (Playwright + TypeScript)",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",

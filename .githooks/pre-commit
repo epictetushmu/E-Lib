@@ -1,0 +1,7 @@
+#!/bin/sh
+# Block commits that stage a secret. Enabled by `npm install` (root "prepare" script).
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "pre-commit: gitleaks not installed, skipping secret scan (nix-shell provides it)" >&2
+    exit 0
+fi
+exec gitleaks git --pre-commit --staged --redact --verbose
