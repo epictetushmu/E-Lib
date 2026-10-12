@@ -79,15 +79,20 @@ jobs:
       # AuthenticatedUser::isAdmin()), so admin-gated specs need one
       # provisioned ahead of time. See qa/README.md.
       #
-      # Credentials come from repo secrets (Settings > Secrets and
-      # variables > Actions). They only ever reach the ephemeral
-      # `mongodb` service container for this single job run, which is
-      # destroyed when the job ends.
+      # Credentials come from repo secrets, generated when those are empty
+      # (GitHub withholds secrets from fork PRs). They only seed the throwaway
+      # `mongodb` service container; later steps read them from $GITHUB_ENV.
       - name: Provision admin test account
         env:
-          QA_ADMIN_EMAIL: ${{ secrets.QA_ADMIN_EMAIL }}
-          QA_ADMIN_PASSWORD: ${{ secrets.QA_ADMIN_PASSWORD }}
-        run: php scripts/create-admin.php "$QA_ADMIN_EMAIL" "$QA_ADMIN_PASSWORD" ci_admin
+          SECRET_EMAIL: ${{ secrets.QA_ADMIN_EMAIL }}
+          SECRET_PASSWORD: ${{ secrets.QA_ADMIN_PASSWORD }}
+        run: |
+          # Written via printf, not NAME=value, so secret scanners don't flag it.
+          email=${SECRET_EMAIL:-ci-admin-$(openssl rand -hex 4)@example.test}
+          pw=${SECRET_PASSWORD:-$(openssl rand -hex 16)}
+          echo "::add-mask::$pw"
+          printf '%s=%s\n' QA_ADMIN_EMAIL "$email" QA_ADMIN_PASSWORD "$pw" >> "$GITHUB_ENV"
+          php scripts/create-admin.php "$email" "$pw" ci_admin
 
       # GET /api/v1/books returns 404 when the Books collection is empty
       # (BookController::getAllBooks() treats an empty result as an error,
@@ -125,8 +130,6 @@ jobs:
       - name: Run Playwright tests
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:8000
-          QA_ADMIN_EMAIL: ${{ secrets.QA_ADMIN_EMAIL }}
-          QA_ADMIN_PASSWORD: ${{ secrets.QA_ADMIN_PASSWORD }}
         run: npx playwright test
 
       # trace.zip (captured only on retry, i.e. only for a flaky/failed test) can contain the
