@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import * as usersApi from '@/api/users'
 import * as booksApi from '@/api/books'
+import * as friendsApi from '@/api/friends'
 import { isApiSuccess, apiErrorMessage, requestErrorMessage, type ApiError } from '@/types/api'
 import type { Book } from '@/types/book'
 import { idToString, type LoanRecord } from '@/types/book'
@@ -12,9 +14,11 @@ import { useToast } from '@/composables/useToast'
 import BookCard from '@/components/BookCard.vue'
 
 const auth = useAuthStore()
+const route = useRoute()
 const toast = useToast()
 
-type Tab = 'saved' | 'loans' | 'notifications' | 'downloaded' | 'account'
+const tabs = ['saved', 'loans', 'friends', 'notifications', 'downloaded', 'account'] as const
+type Tab = (typeof tabs)[number]
 const activeTab = ref<Tab>('saved')
 
 const profileLoading = ref(true)
@@ -139,12 +143,100 @@ async function loadNotifications() {
   }
 }
 
+const friends = ref<friendsApi.Friend[] | null>(null)
+const incoming = computed(() => (friends.value ?? []).filter((f) => f.status === 'incoming'))
+const sharing = ref<friendsApi.Sharing | null>(null)
+const sharingOptions: { key: keyof friendsApi.Sharing; label: string }[] = [
+  { key: 'saved', label: 'Saved books' },
+  { key: 'reviews', label: 'Reviews' },
+  { key: 'loans', label: "Books I'm borrowing now" },
+  { key: 'downloads', label: 'Downloaded books' },
+  { key: 'notes', label: 'Notes and highlights, when they read the same book' },
+]
+// Requests that need an answer first, then friends, then requests still waiting on the other reader.
+const friendGroups = computed(() =>
+  (
+    [
+      { status: 'incoming', title: 'Requests' },
+      { status: 'friends', title: 'Friends' },
+      { status: 'outgoing', title: 'Sent requests' },
+    ] as const
+  ).map((g) => ({ ...g, items: (friends.value ?? []).filter((f) => f.status === g.status) })),
+)
+const friendEmail = ref('')
+const friendSending = ref(false)
+
+async function loadFriends() {
+  try {
+    const { data: body } = await friendsApi.getFriends()
+    friends.value = isApiSuccess(body) ? body.data : []
+  } catch {
+    friends.value = []
+  }
+}
+
+async function loadSharing() {
+  try {
+    const { data: body } = await friendsApi.getSharing()
+    if (isApiSuccess(body)) sharing.value = body.data
+  } catch {
+    // The switches stay hidden; the tab retries when reopened.
+  }
+}
+
+async function toggleSharing(key: keyof friendsApi.Sharing, value: boolean) {
+  try {
+    const { data: body } = await friendsApi.setSharing({ [key]: value })
+    if (isApiSuccess(body)) {
+      sharing.value = body.data
+      return
+    }
+    toast.error(apiErrorMessage(body as ApiError, 'Could not save'))
+  } catch (err) {
+    toast.error(requestErrorMessage(err, 'Could not save'))
+  }
+  await loadSharing() // put the checkbox back to what's stored
+}
+
+async function sendFriendRequest() {
+  if (!friendEmail.value.trim()) return
+  friendSending.value = true
+  try {
+    const { data: body } = await friendsApi.sendRequest(friendEmail.value.trim())
+    if (isApiSuccess(body)) {
+      toast.success(body.data)
+      friendEmail.value = ''
+      await loadFriends()
+    } else {
+      toast.error(apiErrorMessage(body as ApiError, 'Could not send the request'))
+    }
+  } catch (err) {
+    toast.error(requestErrorMessage(err, 'Could not send the request'))
+  } finally {
+    friendSending.value = false
+  }
+}
+
+async function answerFriend(f: friendsApi.Friend, accept: boolean) {
+  if (f.status === 'friends' && !confirm(`Remove ${f.username} from your friends? You'll stop seeing what each other shares.`)) return
+  try {
+    const { data: body } = accept ? await friendsApi.acceptRequest(f.user_id) : await friendsApi.removeFriend(f.user_id)
+    if (!isApiSuccess(body)) toast.error(apiErrorMessage(body as ApiError, 'Something went wrong'))
+  } catch (err) {
+    toast.error(requestErrorMessage(err, 'Something went wrong'))
+  }
+  await loadFriends()
+}
+
 function selectTab(tab: Tab) {
   activeTab.value = tab
   if (tab === 'downloaded') {
     loadDownloaded()
   } else if (tab === 'loans') {
     loadLoans()
+  } else if (tab === 'friends') {
+    loadFriends()
+    loadSharing()
   } else if (tab === 'notifications') {
     loadNotifications().then(() => {
       if (unread.value) usersApi.markNotificationsRead().catch(() => {})
@@ -234,6 +326,14 @@ onMounted(() => {
   loadProfile()
   loadSaved()
   loadNotifications()
+  // /profile?tab=friends — where the friend page's back link lands. Opening the Friends tab loads friends and
+  // sharing itself; otherwise load them now, for the requests badge and so the tab opens complete.
+  const tab = typeof route.query.tab === 'string' && tabs.includes(route.query.tab as Tab) ? (route.query.tab as Tab) : null
+  if (tab) selectTab(tab)
+  if (tab !== 'friends') {
+    loadFriends()
+    loadSharing()
+  }
 })
 </script>
 
@@ -264,6 +364,14 @@ onMounted(() => {
         @click="selectTab('loans')"
       >
         Loans
+      </button>
+      <button
+        type="button"
+        :class="{ active: activeTab === 'friends' }"
+        data-testid="profile-tab-friends"
+        @click="selectTab('friends')"
+      >
+        Friends<span v-if="incoming.length" class="unread-badge" :aria-label="`${incoming.length} requests`">{{ incoming.length }}</span>
       </button>
       <button
         type="button"
@@ -338,6 +446,75 @@ onMounted(() => {
           </div>
         </li>
       </ul>
+    </section>
+
+    <section v-else-if="activeTab === 'friends'" class="tab-panel friends-panel">
+      <div class="friends-main">
+        <div v-if="friends === null" class="spinner" role="status" aria-label="Loading friends"></div>
+        <div v-else-if="!friends.length" class="empty-state">
+          <p>No friends yet. Add someone by their email to see what they're reading.</p>
+        </div>
+        <template v-else>
+          <template v-for="group in friendGroups" :key="group.status">
+            <h3 v-if="group.items.length" class="friends-heading">{{ group.title }}</h3>
+            <ul v-if="group.items.length" class="loan-list" data-testid="friends">
+              <li v-for="f in group.items" :key="f.user_id" class="card loan-item" :class="{ unread: f.status === 'incoming' }">
+                <div class="loan-main">
+                  <RouterLink v-if="f.status === 'friends'" :to="`/friends/${f.user_id}`" class="loan-title">{{ f.username }}</RouterLink>
+                  <span v-else class="loan-title">{{ f.username }}</span>
+                  <span class="loan-when">
+                    <template v-if="f.status === 'friends'">Friends since {{ shortDate(f.since) }}</template>
+                    <template v-else-if="f.status === 'incoming'">Wants to be your friend</template>
+                    <template v-else>Sent {{ shortDate(f.since) }}</template>
+                  </span>
+                </div>
+                <div class="loan-side">
+                  <button v-if="f.status === 'incoming'" type="button" class="btn btn-primary btn-sm" @click="answerFriend(f, true)">
+                    Accept
+                  </button>
+                  <button type="button" class="btn btn-outline btn-sm" @click="answerFriend(f, false)">
+                    {{ f.status === 'friends' ? 'Remove' : f.status === 'incoming' ? 'Decline' : 'Cancel request' }}
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </template>
+        </template>
+      </div>
+
+      <aside class="friends-aside">
+        <form class="card account-card" data-testid="friend-request-form" @submit.prevent="sendFriendRequest">
+          <h3>Add a friend</h3>
+          <p class="text-muted small">Once they accept, you can each see what the other shares.</p>
+          <div class="form-field">
+            <label for="friend-email">Their email</label>
+            <input id="friend-email" v-model="friendEmail" type="email" required autocomplete="off" data-testid="friend-email-input" />
+          </div>
+          <button type="submit" class="btn btn-primary" :disabled="friendSending">
+            {{ friendSending ? 'Sending…' : 'Send request' }}
+          </button>
+        </form>
+
+        <div
+          v-if="sharing"
+          class="card account-card"
+          role="group"
+          aria-labelledby="sharing-heading"
+          data-testid="sharing-settings"
+        >
+          <h3 id="sharing-heading">What your friends can see</h3>
+          <label v-for="o in sharingOptions" :key="o.key" class="sharing-option">
+            <input
+              type="checkbox"
+              :checked="sharing[o.key]"
+              :data-testid="`sharing-${o.key}`"
+              @change="toggleSharing(o.key, ($event.target as HTMLInputElement).checked)"
+            />
+            {{ o.label }}
+          </label>
+          <p class="text-muted small sharing-hint">Changes save as you tick them.</p>
+        </div>
+      </aside>
     </section>
 
     <section v-else-if="activeTab === 'notifications'" class="tab-panel">

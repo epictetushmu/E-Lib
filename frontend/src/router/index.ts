@@ -35,6 +35,12 @@ const router = createRouter({
       beforeEnter: requireAuth,
     },
     {
+      path: '/friends/:id',
+      name: 'friend-library',
+      component: () => import('@/views/FriendLibrary.vue'),
+      beforeEnter: requireAuth,
+    },
+    {
       path: '/admin',
       name: 'admin-dashboard',
       component: () => import('@/views/admin/Dashboard.vue'),

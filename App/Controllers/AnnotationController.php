@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Includes\AuthenticatedUser;
 use App\Includes\ResponseHandler;
 use App\Services\AnnotationService;
+use App\Services\BookService;
 use InvalidArgumentException;
 
 /**
@@ -24,6 +25,21 @@ class AnnotationController
     {
         $userId = $this->requireUser();
         ResponseHandler::respond(true, $this->annotationService->listForBook($userId, $bookId));
+    }
+
+    /**
+     * GET /api/v1/books/{id}/annotations/friends — friends' shared notes on a book the caller can read.
+     */
+    public function listFriendsForBook(string $bookId): void
+    {
+        $userId = $this->requireUser();
+        $books = new BookService();
+        $book = $books->getBookDetails($bookId);
+        if (!$book || !$books->canRead($book, $userId, AuthenticatedUser::isAdmin())) {
+            ResponseHandler::respond(false, 'Book not found', 404);
+            return;
+        }
+        ResponseHandler::respond(true, $this->annotationService->listForFriends($userId, $bookId));
     }
 
     public function create(string $bookId): void

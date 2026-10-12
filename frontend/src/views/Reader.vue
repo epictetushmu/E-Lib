@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePdfDocument } from '@/composables/reader/usePdfDocument'
 import { useZoomRotate, DEFAULT_SCALE } from '@/composables/reader/useZoomRotate'
@@ -9,6 +9,7 @@ import { clientPointToPdf, clientRectToPdf, mergeLineRects } from '@/composables
 import { getSavedPanelWidth, setSavedPanelWidth, useReaderPersistence } from '@/composables/reader/useReaderPersistence'
 import { useToast } from '@/composables/useToast'
 import * as booksApi from '@/api/books'
+import * as friendsApi from '@/api/friends'
 import type { Book } from '@/types/book'
 import { isApiSuccess, requestErrorMessage } from '@/types/api'
 import type { Annotation, HighlightColor, NewAnnotation } from '@/types/annotation'
@@ -163,7 +164,19 @@ interface PopoverState {
 const popover = ref<PopoverState | null>(null)
 const popoverBusy = ref(false)
 
-watch([annotations.items, popover], () => pdf.redecorate())
+watch([annotations.items, annotations.friendItems, annotations.hiddenFriends, popover], () => pdf.redecorate())
+
+/* Friends' notes: read-only. Clicking one of their underlines opens it in the notes panel. */
+const focusedFriendNote = ref<string | null>(null)
+// Whether the reader's own notes are shared, so the panel says honestly who can see them.
+const sharingMyNotes = ref(false)
+
+async function showFriendNote(id: string) {
+  notesOpen.value = true
+  focusedFriendNote.value = id
+  await nextTick()
+  document.getElementById(`friend-note-${id}`)?.scrollIntoView({ block: 'nearest' })
+}
 
 /** Below the anchor, or above it when there isn't room; kept clear of the window edges. */
 function anchorFor(box: { left: number; right: number; top: number; bottom: number }) {
@@ -232,7 +245,10 @@ function handlePagePointerUp(event: PointerEvent) {
     if (hit) {
       const point = { left: event.clientX, right: event.clientX, top: event.clientY, bottom: event.clientY + 12 }
       popover.value = { mode: 'edit', ...anchorFor(point), annotation: hit }
+      return
     }
+    const friendHit = annotations.friendHighlightAt(pageNumber, clientPointToPdf(event.clientX, event.clientY, page, viewport))
+    if (friendHit) showFriendNote(friendHit.id)
   })
 }
 
@@ -379,6 +395,14 @@ onMounted(async () => {
     .catch(() => {})
   await pdf.load()
   annotations.load().catch(() => toast.error('Could not load your notes and highlights.'))
+  if (annotations.canAnnotate.value) {
+    friendsApi
+      .getSharing()
+      .then(({ data }) => {
+        if (isApiSuccess(data)) sharingMyNotes.value = data.data.notes
+      })
+      .catch(() => {})
+  }
 
   if (savedZoom === null) {
     await handleFitWidth()
@@ -570,7 +594,13 @@ onBeforeUnmount(() => {
           <h2>Notes</h2>
           <button type="button" class="btn-close" aria-label="Close notes" @click="notesOpen = false">&times;</button>
         </div>
-        <p class="notes-hint">Only you can see your notes and highlights.</p>
+        <p class="notes-hint" data-testid="notes-privacy">
+          <template v-if="sharingMyNotes">
+            Friends can see your notes and highlights when they read this book.
+            <RouterLink to="/profile?tab=friends">Change</RouterLink>
+          </template>
+          <template v-else>Only you can see your notes and highlights.</template>
+        </p>
 
         <div v-if="!annotations.canAnnotate.value" class="notes-guest">
           <p>Log in to highlight passages and keep notes on this book. They're saved to your account and stay private.</p>
@@ -636,6 +666,41 @@ onBeforeUnmount(() => {
               </div>
             </li>
           </ul>
+
+          <section v-if="annotations.friendItems.value.length" class="friend-notes" aria-labelledby="friend-notes-heading">
+            <h3 id="friend-notes-heading">From friends</h3>
+            <div class="friend-filter" role="group" aria-label="Whose notes to show" data-testid="friend-filter">
+              <button
+                v-for="f in annotations.noteFriends.value"
+                :key="f.id"
+                type="button"
+                class="friend-chip"
+                :aria-pressed="f.shown"
+                :data-testid="`friend-filter-${f.id}`"
+                @click="annotations.toggleFriend(f.id)"
+              >
+                {{ f.username }} <span class="friend-chip-count">{{ f.count }}</span>
+              </button>
+            </div>
+            <p v-if="!annotations.friendsSorted.value.length" class="notes-empty">Turn on a friend above to see their notes.</p>
+            <ul v-else class="notes-list">
+              <li
+                v-for="item in annotations.friendsSorted.value"
+                :id="`friend-note-${item.id}`"
+                :key="item.id"
+                class="note-item friend-note"
+                :class="{ 'is-focused': focusedFriendNote === item.id }"
+                data-testid="friend-note-item"
+              >
+                <button type="button" class="note-page" @click="pdf.goToPage(item.page)">p. {{ item.page }}</button>
+                <div class="note-body">
+                  <span class="note-author">{{ item.username }}</span>
+                  <blockquote v-if="item.quote" :class="['note-quote', `hl-${item.color ?? 'saffron'}`]">{{ item.quote }}</blockquote>
+                  <NoteContent v-if="item.note" :key="theme" class="note-text" :text="item.note" />
+                </div>
+              </li>
+            </ul>
+          </section>
         </template>
       </aside>
     </div>

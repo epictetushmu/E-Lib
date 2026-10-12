@@ -495,6 +495,15 @@ svg {
   box-shadow: 0 0 0 1.5px rgba(var(--color-navy-rgb), 0.55);
 }
 
+/* Friends' highlights: a dotted rule under the line in the desk's ink, never a fill, so your own marks
+   stay the loud ones. Click-through is decided in Reader.vue (friendHighlightAt), not by the element. */
+.pdf-container :deep(.friend-highlight) {
+  position: absolute;
+  pointer-events: none;
+  border-bottom: 2px dotted var(--desk-ink);
+  opacity: 0.85;
+}
+
 /* On the inverted night page, multiply would vanish; screen lifts the ink instead. */
 .theme-dark .pdf-container :deep(.user-highlight) {
   mix-blend-mode: screen;
@@ -882,4 +891,89 @@ svg {
   .pdf-container {
     padding: 1rem 0.5rem 2rem;
   }
+}
+
+/* Friends' notes: read-only, under your own, each signed by its author. */
+.friend-notes {
+  margin-top: 1.5rem;
+}
+
+.friend-notes h3 {
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem;
+}
+
+/* Whose notes to show: one pill per friend, like the category chips; on = tinted, off = faded. */
+.friend-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.friend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.friend-chip[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-text);
+}
+
+/* A tick, not just the tint, says which are on (state never rides on colour alone). */
+.friend-chip[aria-pressed='true']::before {
+  content: '✓';
+  font-size: 0.75rem;
+  color: var(--color-primary);
+}
+
+.friend-chip[aria-pressed='false'] {
+  border-style: dashed;
+}
+
+.friend-chip:hover {
+  color: var(--color-text);
+}
+
+.friend-chip:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.friend-chip-count {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.friend-notes .notes-empty {
+  margin-top: 0.65rem;
+}
+
+.friend-note {
+  grid-template-columns: 3rem 1fr;
+  transition: background-color 0.6s ease;
+}
+
+.friend-note.is-focused {
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.note-author {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
 }

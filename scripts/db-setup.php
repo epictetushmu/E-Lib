@@ -145,7 +145,7 @@ $indexPlan = [
     ],
     'Annotations' => [
         [
-            // Every read is "this user's annotations for this book".
+            // Every read is "this user's (or these friends') annotations for this book".
             'key' => ['user_id' => 1, 'book_id' => 1, 'page' => 1],
             'options' => ['name' => 'idx_user_book_page'],
         ],
@@ -174,6 +174,26 @@ $indexPlan = [
             // The queue for a book, in order; also serves the scheduler's distinct book_id.
             'key' => ['book_id' => 1, 'joined_at' => 1],
             'options' => ['name' => 'idx_book_joined'],
+        ],
+    ],
+    'ReviewReplies' => [
+        [
+            // A book's reply threads, oldest first; also per-review and per-book cascade deletes.
+            'key' => ['book_id' => 1, 'review_user_id' => 1, 'created_at' => 1],
+            'options' => ['name' => 'idx_book_review_created'],
+        ],
+        [
+            // "Does this reply have answers?" — asked on every reply delete, and per ancestor while
+            // deleteReply clears placeholders left with nothing under them.
+            'key' => ['parent_id' => 1],
+            'options' => ['name' => 'idx_parent'],
+        ],
+    ],
+    'Friendships' => [
+        [
+            // A reader's friends and requests (users holds both ids).
+            'key' => ['users' => 1, 'created_at' => -1],
+            'options' => ['name' => 'idx_users_created'],
         ],
     ],
     'Notifications' => [

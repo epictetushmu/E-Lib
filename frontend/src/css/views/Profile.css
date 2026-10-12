@@ -134,3 +134,53 @@
     align-items: flex-start;
   }
 }
+
+/* Friends: the list is what you come for; adding friends and sharing sit beside it. */
+.friends-panel {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (min-width: 860px) {
+  .friends-panel {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+
+.friends-heading {
+  margin: 1.25rem 0 0.6rem;
+  font-size: 1.05rem;
+}
+
+.friends-heading:first-child {
+  margin-top: 0;
+}
+
+.friends-main .empty-state {
+  padding: 1.5rem 0;
+}
+
+.friends-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sharing-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  cursor: pointer;
+}
+
+.sharing-option input {
+  accent-color: var(--color-primary);
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.sharing-hint {
+  margin: 0.75rem 0 0;
+}
