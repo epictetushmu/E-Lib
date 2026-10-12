@@ -7,6 +7,12 @@ import { fromServerTime, shortDate } from '@/utils/date'
 import BookCard from '@/components/BookCard.vue'
 import StarRating from '@/components/StarRating.vue'
 
+const bookSections = [
+  { key: 'saved', title: 'Saved books' },
+  { key: 'loans', title: 'Borrowed right now' },
+  { key: 'downloads', title: 'Downloaded' },
+] as const
+
 const route = useRoute()
 const library = ref<friendsApi.FriendLibrary | null>(null)
 const error = ref('')
@@ -35,14 +41,18 @@ onMounted(async () => {
         </div>
       </div>
 
-      <h2>Saved books</h2>
-      <p v-if="!library.saved.length" class="text-muted">No saved books yet.</p>
-      <div v-else class="grid-books" data-testid="friend-saved">
-        <BookCard v-for="book in library.saved" :key="String(book._id)" :book="book" />
-      </div>
+      <template v-for="section in bookSections" :key="section.key">
+        <h2>{{ section.title }}</h2>
+        <p v-if="library[section.key] === null" class="text-muted">{{ library.username }} doesn't share this.</p>
+        <p v-else-if="!library[section.key]!.length" class="text-muted">Nothing here yet.</p>
+        <div v-else class="grid-books" :data-testid="`friend-${section.key}`">
+          <BookCard v-for="book in library[section.key]!" :key="String(book._id)" :book="book" />
+        </div>
+      </template>
 
       <h2>Reviews</h2>
-      <p v-if="!library.reviews.length" class="text-muted">No reviews yet.</p>
+      <p v-if="library.reviews === null" class="text-muted">{{ library.username }} doesn't share this.</p>
+      <p v-else-if="!library.reviews.length" class="text-muted">Nothing here yet.</p>
       <ul v-else class="loan-list" data-testid="friend-reviews">
         <li v-for="r in library.reviews" :key="r.book_id" class="card loan-item">
           <div class="loan-main">

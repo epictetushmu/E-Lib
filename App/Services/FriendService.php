@@ -10,10 +10,18 @@ use App\Models\Users;
 use MongoDB\BSON\UTCDateTime;
 
 /**
- * Friend requests between readers. Once both have accepted, each can see the other's saved books and reviews.
+ * Friend requests between readers. Once both have accepted, each can see what the other chose to share
+ * (saved books, reviews, current loans, downloads — one switch each, see SHARING_DEFAULTS).
  */
 class FriendService
 {
+    /**
+     * What a reader shares with friends until they change it. Saved books and reviews are on, so friendships
+     * made before the switches existed see what they always saw (reviews are public on book pages anyway);
+     * reading activity — loans and downloads — is private by default.
+     */
+    public const SHARING_DEFAULTS = ['saved' => true, 'reviews' => true, 'loans' => false, 'downloads' => false];
+
     private Friendships $friendships;
     private Users $users;
     private Books $books;
@@ -103,9 +111,64 @@ class FriendService
     }
 
     /**
-     * A friend's saved books and reviews; null unless the two are friends.
+     * The user's sharing switches, with defaults for any they never set.
      *
-     * @return array{username: string, saved: list<array<string, mixed>>, reviews: list<array<string, mixed>>}|null
+     * @param array<string, mixed> $user
+     * @return array{saved: bool, reviews: bool, loans: bool, downloads: bool}
+     */
+    public static function sharing(array $user): array
+    {
+        $set = $user['sharing'] ?? [];
+        $set = is_array($set) || is_object($set) ? (array) $set : [];
+        $sharing = self::SHARING_DEFAULTS;
+        foreach ($sharing as $key => $default) {
+            if (is_bool($set[$key] ?? null)) {
+                $sharing[$key] = $set[$key];
+            }
+        }
+        return $sharing;
+    }
+
+    /**
+     * @return array{saved: bool, reviews: bool, loans: bool, downloads: bool}|null Null if the user is gone
+     */
+    public function getSharing(string $userId): ?array
+    {
+        $user = $this->users->getUserById($userId);
+        return $user === null ? null : self::sharing($user);
+    }
+
+    /**
+     * Change some of the user's switches; unknown keys and non-booleans are ignored.
+     *
+     * @param array<string, mixed> $changes
+     * @return array{saved: bool, reviews: bool, loans: bool, downloads: bool}|null Null if the user is gone
+     */
+    public function setSharing(string $userId, array $changes): ?array
+    {
+        $set = [];
+        foreach (array_keys(self::SHARING_DEFAULTS) as $key) {
+            if (is_bool($changes[$key] ?? null)) {
+                $set["sharing.$key"] = $changes[$key];
+            }
+        }
+        if ($set !== []) {
+            $this->users->updateById($userId, $set);
+        }
+        return $this->getSharing($userId);
+    }
+
+    /**
+     * What a friend shares; null unless the two are friends. A section they don't share is null (not []),
+     * so the page can say "not shared" rather than "nothing here".
+     *
+     * @return array{
+     *     username: string,
+     *     saved: list<array<string, mixed>>|null,
+     *     reviews: list<array<string, mixed>>|null,
+     *     loans: list<array<string, mixed>>|null,
+     *     downloads: list<array<string, mixed>>|null
+     * }|null
      */
     public function library(string $userId, string $friendId): ?array
     {
@@ -116,19 +179,46 @@ class FriendService
         if ($friend === null) {
             return null;
         }
+        $sharing = self::sharing($friend);
 
-        $saved = [];
-        foreach (MongoHelper::toArray($friend['savedBooks'] ?? []) as $bookId) {
-            $book = $this->books->getBookDetails((string) $bookId);
+        return [
+            'username' => (string) ($friend['username'] ?? ''),
+            'saved' => $sharing['saved'] ? $this->publicBooks(MongoHelper::toArray($friend['savedBooks'] ?? [])) : null,
+            'reviews' => $sharing['reviews'] ? $this->reviews($friendId) : null,
+            'loans' => $sharing['loans'] ? $this->publicBooks(array_column(array_filter(
+                (new BookService())->loanHistory($friendId),
+                // Books they have right now — not reservations or past loans.
+                fn ($l) => in_array($l['status'], ['active', 'out', 'overdue'], true)
+            ), 'book_id')) : null,
+            'downloads' => $sharing['downloads'] ? $this->publicBooks(MongoHelper::toArray($friend['downloadedBooks'] ?? [])) : null,
+        ];
+    }
+
+    /**
+     * @param array<int, mixed> $bookIds
+     * @return list<array<string, mixed>>
+     */
+    private function publicBooks(array $bookIds): array
+    {
+        $books = [];
+        foreach (array_unique(array_map('strval', $bookIds)) as $bookId) {
+            $book = $this->books->getBookDetails($bookId);
             // Drafts stay hidden: a friend sees what any reader could open.
             if ($book && ($book['status'] ?? null) === 'public') {
                 BookDisplayHelper::applyThumbnailForApi($book);
-                $saved[] = $book;
+                $books[] = $book;
             }
         }
+        return $books;
+    }
 
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function reviews(string $userId): array
+    {
         $reviews = [];
-        foreach ($this->books->reviewedBy($friendId) as $book) {
+        foreach ($this->books->reviewedBy($userId) as $book) {
             // The $elemMatch projection leaves only this user's review (a BSON document, not cast by find()).
             $first = $book['reviews'][0] ?? null;
             $review = is_array($first) || is_object($first) ? (array) $first : [];
@@ -142,8 +232,7 @@ class FriendService
                 'created_at' => $review['created_at'] ?? null,
             ];
         }
-
-        return ['username' => (string) ($friend['username'] ?? ''), 'saved' => $saved, 'reviews' => $reviews];
+        return $reviews;
     }
 
     /**

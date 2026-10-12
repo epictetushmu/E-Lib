@@ -79,6 +79,7 @@ $router->addMiddleware(new JwtAuthMiddleware([
     ['path' => '/api/v1/annotations', 'method' => 'PUT'],
     ['path' => '/api/v1/annotations', 'method' => 'DELETE'],
     // Friends (prefix match covers /api/v1/friends/{id}/accept and /library)
+    ['path' => '/api/v1/user/sharing', 'method' => 'POST'],
     ['path' => '/api/v1/friends', 'method' => 'GET'],
     ['path' => '/api/v1/friends', 'method' => 'POST'],
     ['path' => '/api/v1/friends', 'method' => 'DELETE'],

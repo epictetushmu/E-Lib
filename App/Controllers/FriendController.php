@@ -75,7 +75,7 @@ class FriendController
     }
 
     /**
-     * GET /api/v1/friends/{userId}/library — their saved books and reviews.
+     * GET /api/v1/friends/{userId}/library — what they share: saved books, reviews, current loans, downloads.
      */
     public function library(string $friendId): void
     {
@@ -85,6 +85,33 @@ class FriendController
             return;
         }
         ResponseHandler::respond(true, $library);
+    }
+
+    /**
+     * GET /api/v1/user/sharing — what the caller shares with friends.
+     */
+    public function getSharing(): void
+    {
+        $sharing = $this->friendService->getSharing($this->requireUser());
+        if ($sharing === null) {
+            ResponseHandler::respond(false, 'User not found', 404);
+            return;
+        }
+        ResponseHandler::respond(true, $sharing);
+    }
+
+    /**
+     * POST /api/v1/user/sharing {saved?, reviews?, loans?, downloads?: bool} — change some switches.
+     */
+    public function setSharing(): void
+    {
+        $input = json_decode((string) file_get_contents('php://input'), true);
+        $sharing = $this->friendService->setSharing($this->requireUser(), is_array($input) ? $input : []);
+        if ($sharing === null) {
+            ResponseHandler::respond(false, 'User not found', 404);
+            return;
+        }
+        ResponseHandler::respond(true, $sharing);
     }
 
     private function requireUser(): string

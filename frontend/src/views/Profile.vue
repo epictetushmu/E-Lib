@@ -142,6 +142,13 @@ async function loadNotifications() {
 
 const friends = ref<friendsApi.Friend[] | null>(null)
 const incoming = computed(() => (friends.value ?? []).filter((f) => f.status === 'incoming'))
+const sharing = ref<friendsApi.Sharing | null>(null)
+const sharingOptions: { key: keyof friendsApi.Sharing; label: string }[] = [
+  { key: 'saved', label: 'Saved books' },
+  { key: 'reviews', label: 'Reviews' },
+  { key: 'loans', label: 'Books I have borrowed right now' },
+  { key: 'downloads', label: 'Downloaded books' },
+]
 const friendEmail = ref('')
 const friendSending = ref(false)
 
@@ -152,6 +159,29 @@ async function loadFriends() {
   } catch {
     friends.value = []
   }
+}
+
+async function loadSharing() {
+  try {
+    const { data: body } = await friendsApi.getSharing()
+    if (isApiSuccess(body)) sharing.value = body.data
+  } catch {
+    // The switches stay hidden; the tab retries when reopened.
+  }
+}
+
+async function toggleSharing(key: keyof friendsApi.Sharing, value: boolean) {
+  try {
+    const { data: body } = await friendsApi.setSharing({ [key]: value })
+    if (isApiSuccess(body)) {
+      sharing.value = body.data
+      return
+    }
+    toast.error(apiErrorMessage(body as ApiError, 'Could not save'))
+  } catch (err) {
+    toast.error(requestErrorMessage(err, 'Could not save'))
+  }
+  await loadSharing() // put the checkbox back to what's stored
 }
 
 async function sendFriendRequest() {
@@ -191,6 +221,7 @@ function selectTab(tab: Tab) {
     loadLoans()
   } else if (tab === 'friends') {
     loadFriends()
+    loadSharing()
   } else if (tab === 'notifications') {
     loadNotifications().then(() => {
       if (unread.value) usersApi.markNotificationsRead().catch(() => {})
@@ -398,7 +429,7 @@ onMounted(() => {
     <section v-else-if="activeTab === 'friends'" class="tab-panel">
       <form class="card account-card" data-testid="friend-request-form" @submit.prevent="sendFriendRequest">
         <h3>Add a friend</h3>
-        <p class="text-muted small">Once they accept, you can see each other's saved books and reviews.</p>
+        <p class="text-muted small">Once they accept, you can each see what the other shares.</p>
         <div class="form-field">
           <label for="friend-email">Their email</label>
           <input id="friend-email" v-model="friendEmail" type="email" required data-testid="friend-email-input" />
@@ -407,6 +438,19 @@ onMounted(() => {
           {{ friendSending ? 'Sending…' : 'Send request' }}
         </button>
       </form>
+
+      <div v-if="sharing" class="card account-card" data-testid="sharing-settings">
+        <h3>What your friends can see</h3>
+        <label v-for="o in sharingOptions" :key="o.key" class="sharing-option">
+          <input
+            type="checkbox"
+            :checked="sharing[o.key]"
+            :data-testid="`sharing-${o.key}`"
+            @change="toggleSharing(o.key, ($event.target as HTMLInputElement).checked)"
+          />
+          {{ o.label }}
+        </label>
+      </div>
 
       <div v-if="friends === null" class="spinner" role="status" aria-label="Loading friends"></div>
       <p v-else-if="!friends.length" class="text-muted">No friends or requests yet.</p>

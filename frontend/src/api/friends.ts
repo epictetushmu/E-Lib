@@ -22,10 +22,22 @@ export interface FriendReview {
   created_at: string | null
 }
 
+/** Each section is null when the friend doesn't share it. */
 export interface FriendLibrary {
   username: string
-  saved: Book[]
-  reviews: FriendReview[]
+  saved: Book[] | null
+  reviews: FriendReview[] | null
+  /** Books they have borrowed right now. */
+  loans: Book[] | null
+  downloads: Book[] | null
+}
+
+/** What the signed-in user shares with friends. */
+export interface Sharing {
+  saved: boolean
+  reviews: boolean
+  loans: boolean
+  downloads: boolean
 }
 
 export function getFriends() {
@@ -43,6 +55,14 @@ export function acceptRequest(userId: string) {
 /** Decline, cancel or unfriend. */
 export function removeFriend(userId: string) {
   return client.delete<ApiResponse<string>>(`/v1/friends/${userId}`)
+}
+
+export function getSharing() {
+  return client.get<ApiResponse<Sharing>>('/v1/user/sharing')
+}
+
+export function setSharing(changes: Partial<Sharing>) {
+  return client.post<ApiResponse<Sharing>>('/v1/user/sharing', changes)
 }
 
 export function getFriendLibrary(userId: string) {
