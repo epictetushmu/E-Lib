@@ -13,3 +13,9 @@ export function shortDateTime(iso: string | null | undefined): string {
   const d = new Date(iso)
   return `${shortDate(iso)} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
+
+/** Server timestamps stored as "Y-m-d H:i:s" (UTC, see App/bootstrap.php) as ISO, so they show in local time. */
+export function fromServerTime(value: string | null | undefined): string | null {
+  if (!value) return null
+  return value.includes('T') ? value : `${value.replace(' ', 'T')}Z`
+}

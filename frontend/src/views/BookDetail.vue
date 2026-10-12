@@ -418,7 +418,7 @@ onMounted(async () => {
           <RouterLink :to="{ path: '/login', query: { redirect: route.fullPath } }">Log in</RouterLink>
           to leave a review.
         </p>
-        <ReviewList :reviews="reviews" />
+        <ReviewList :reviews="reviews" :book-id="bookId" @changed="loadReviews" />
       </div>
     </div>
   </div>
