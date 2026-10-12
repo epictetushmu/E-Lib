@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Books;
 use App\Models\Loans;
+use App\Models\ReviewReplies;
 use App\Models\Users;
 use App\Helpers\Database\MongoHelper;
 use MongoDB\BSON\UTCDateTime;
@@ -18,12 +19,14 @@ class BookService
     private Books $book;
     private Loans $loans;
     private NotificationService $notifications;
+    private ReviewReplies $replies;
 
     public function __construct()
     {
         $this->book = new Books();
         $this->loans = new Loans();
         $this->notifications = new NotificationService();
+        $this->replies = new ReviewReplies();
     }
 
     /**
@@ -687,6 +690,116 @@ class BookService
     }
 
     /**
+     * Delete the user's review of a book, with its reply thread, and recount the book's rating.
+     *
+     * @return bool Whether they had a review to delete
+     */
+    public function deleteReview(string $bookId, string $userId): bool
+    {
+        if (!$this->book->removeReview($bookId, $userId)) {
+            return false;
+        }
+        $this->replies->deleteForReview($bookId, $userId);
+        $this->updateBookRating($bookId);
+        return true;
+    }
+
+    /**
+     * The book's reviews, each with its reply thread (oldest reply first) under `replies`.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function getReviewsWithReplies(string $bookId): array
+    {
+        $threads = [];
+        foreach ($this->replies->forBook($bookId) as $reply) {
+            $threads[(string) $reply['review_user_id']][] = [
+                'id' => (string) $reply['_id'],
+                'parent_id' => isset($reply['parent_id']) ? (string) $reply['parent_id'] : null,
+                'user_id' => isset($reply['user_id']) ? (string) $reply['user_id'] : null,
+                'username' => (string) ($reply['username'] ?? ''),
+                'text' => (string) $reply['text'],
+                'deleted' => !empty($reply['deleted']),
+                'created_at' => self::isoDate($reply['created_at'] ?? null),
+                'updated_at' => self::isoDate($reply['updated_at'] ?? null),
+            ];
+        }
+        return array_map(
+            fn ($review) => $review + ['replies' => $threads[(string) ($review['user_id'] ?? '')] ?? []],
+            $this->getBookReviews($bookId)
+        );
+    }
+
+    /**
+     * Reply to the review that $reviewUserId wrote on the book — to the review itself, or (with
+     * $parentId) to a reply in its thread.
+     *
+     * @return string|null Null on success, else why not
+     */
+    public function addReply(
+        string $bookId,
+        string $reviewUserId,
+        ?string $parentId,
+        string $userId,
+        string $username,
+        string $text
+    ): ?string {
+        $reviewExists = in_array($reviewUserId, array_map('strval', array_column($this->getBookReviews($bookId), 'user_id')), true);
+        if (!$reviewExists) {
+            return 'That review no longer exists';
+        }
+        if ($parentId !== null) {
+            $parent = $this->replies->find($parentId);
+            $sameThread = $parent !== null && $parent['book_id'] === $bookId && $parent['review_user_id'] === $reviewUserId;
+            if (!$sameThread || !empty($parent['deleted'])) {
+                return 'That reply no longer exists';
+            }
+        }
+        $this->replies->add($bookId, $reviewUserId, $parentId, $userId, $username, $text);
+        return null;
+    }
+
+    /**
+     * Edit a reply — only its author can.
+     */
+    public function editReply(string $replyId, string $userId, string $text): bool
+    {
+        if ($this->replies->findOwned($replyId, $userId) === null) {
+            return false;
+        }
+        $this->replies->updateOwned($replyId, $userId, $text);
+        return true;
+    }
+
+    /**
+     * Delete a reply — only its author can. If others answered it, it stays as a placeholder so their
+     * answers keep their place; otherwise it goes, along with any placeholders left with nothing under them.
+     */
+    public function deleteReply(string $replyId, string $userId): bool
+    {
+        $reply = $this->replies->findOwned($replyId, $userId);
+        if ($reply === null) {
+            return false;
+        }
+        if ($this->replies->hasAnswers($replyId)) {
+            $this->replies->markDeleted($replyId);
+            return true;
+        }
+        $this->replies->remove($replyId);
+        // Walk up: a placeholder whose last answer just went has nothing left to hold a place for.
+        $parentId = $reply['parent_id'] ?? null;
+        while ($parentId !== null) {
+            $parent = $this->replies->find((string) $parentId);
+            if ($parent === null || empty($parent['deleted']) || $this->replies->hasAnswers((string) $parentId)) {
+                break;
+            }
+            $this->replies->remove((string) $parentId);
+            $parentId = $parent['parent_id'] ?? null;
+        }
+        return true;
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public function getBookByTitle(string $title): ?array
@@ -696,22 +809,14 @@ class BookService
 
     /**
      * Update book's average rating based on all reviews
-     *
-     * @return array<string, mixed>|false
      */
-    private function updateBookRating(string $bookId): array|false
+    private function updateBookRating(string $bookId): void
     {
         // getBookReviews() turns the driver's BSONArray/BSONDocument values into plain arrays array_column() accepts.
         $ratings = array_column($this->getBookReviews($bookId), 'rating');
-        if ($ratings === []) {
-            return false;
-        }
-
         $count = count($ratings);
-        $averageRating = round(array_sum($ratings) / $count, 1);
-
-        // Update the book with the new average rating
-        return $this->book->updateBookRating($bookId, $averageRating, $count);
+        // No reviews left (the last one was deleted): no rating rather than a stale one.
+        $this->book->updateBookRating($bookId, $count === 0 ? 0.0 : round(array_sum($ratings) / $count, 1), $count);
     }
 
     /**

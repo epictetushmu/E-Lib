@@ -252,6 +252,22 @@ class Books extends BaseModel
     }
 
     /**
+     * Remove a user's review of a book.
+     *
+     * @return bool Whether there was one to remove
+     * @throws InvalidArgumentException If the ID format is invalid
+     */
+    public function removeReview(string $bookId, string $userId): bool
+    {
+        $result = $this->db->update(
+            $this->collection,
+            ['_id' => $this->ensureId($bookId)],
+            ['$pull' => ['reviews' => ['user_id' => $userId]]]
+        );
+        return ($result['modifiedCount'] ?? 0) > 0;
+    }
+
+    /**
      * Find a book by title (case-insensitive)
      *
      * @param string $title Book title
@@ -304,6 +320,7 @@ class Books extends BaseModel
         // Its search chunks and loans go with it — here, the one place every delete goes through.
         (new BookChunks($this->db))->deleteForBook($id);
         (new Loans($this->db))->deleteForBook($id);
+        (new ReviewReplies($this->db))->deleteForBook($id);
         return $result;
     }
 

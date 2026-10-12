@@ -176,6 +176,13 @@ $indexPlan = [
             'options' => ['name' => 'idx_book_joined'],
         ],
     ],
+    'ReviewReplies' => [
+        [
+            // A book's reply threads, oldest first; also per-review and per-book cascade deletes.
+            'key' => ['book_id' => 1, 'review_user_id' => 1, 'created_at' => 1],
+            'options' => ['name' => 'idx_book_review_created'],
+        ],
+    ],
     'Notifications' => [
         [
             'key' => ['user_id' => 1, 'created_at' => -1],

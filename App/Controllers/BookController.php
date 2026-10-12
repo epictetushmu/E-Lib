@@ -11,6 +11,7 @@ use App\Includes\ResponseHandler;
 use App\Helpers\FileHelper;
 use App\Helpers\BookDisplayHelper;
 use App\Helpers\Database\MongoHelper;
+use App\Models\ReviewReplies;
 
 class BookController
 {
@@ -780,12 +781,115 @@ class BookController
             return;
         }
 
-        $reviews = $this->bookService->getBookReviews($bookId);
+        $reviews = $this->bookService->getReviewsWithReplies($bookId);
         if ($reviews) {
             ResponseHandler::respond(true, $reviews, 200);
         } else {
             ResponseHandler::respond(false, 'No reviews found', 404);
         }
+    }
+
+    /**
+     * DELETE /api/v1/reviews/{bookId} — delete the caller's own review of the book (and its replies).
+     */
+    public function deleteReview(string $bookId): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        if (!$this->bookService->deleteReview($bookId, $userId)) {
+            ResponseHandler::respond(false, 'You have no review of this book', 404);
+            return;
+        }
+        ResponseHandler::respond(true, 'Review deleted');
+    }
+
+    /**
+     * POST /api/v1/reviews/{bookId}/replies {review_user_id, parent_id?, text} — reply to a review, or
+     * (parent_id) to a reply in its thread.
+     */
+    public function addReply(string $bookId): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        $book = $this->bookService->getBookDetails($bookId);
+        if (!$book || $this->isHiddenFromCaller($book)) {
+            ResponseHandler::respond(false, 'Book not found', 404);
+            return;
+        }
+        $data = $this->jsonBody();
+        $text = $this->replyText($data);
+        $reviewUserId = (string) ($data['review_user_id'] ?? '');
+        $parentId = is_string($data['parent_id'] ?? null) && $data['parent_id'] !== '' ? $data['parent_id'] : null;
+        if ($text === null || $reviewUserId === '') {
+            return;
+        }
+        $user = (new UserService())->getUserById($userId);
+        $username = (string) ($user['username'] ?? 'Anonymous User');
+        $error = $this->bookService->addReply($bookId, $reviewUserId, $parentId, $userId, $username, $text);
+        if ($error !== null) {
+            ResponseHandler::respond(false, $error, 404);
+            return;
+        }
+        ResponseHandler::respond(true, 'Reply posted');
+    }
+
+    /**
+     * PUT /api/v1/replies/{id} {text} — edit the caller's own reply.
+     */
+    public function updateReply(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        $text = $this->replyText($this->jsonBody());
+        if ($text === null) {
+            return;
+        }
+        if (!$this->bookService->editReply($id, $userId, $text)) {
+            ResponseHandler::respond(false, 'Reply not found', 404);
+            return;
+        }
+        ResponseHandler::respond(true, 'Reply updated');
+    }
+
+    /**
+     * DELETE /api/v1/replies/{id} — delete the caller's own reply.
+     */
+    public function deleteReply(string $id): void
+    {
+        $userId = AuthenticatedUser::id();
+        if ($userId === null) {
+            ResponseHandler::respond(false, 'Authentication required', 401);
+            return;
+        }
+        if (!$this->bookService->deleteReply($id, $userId)) {
+            ResponseHandler::respond(false, 'Reply not found', 404);
+            return;
+        }
+        ResponseHandler::respond(true, 'Reply deleted');
+    }
+
+    /**
+     * The trimmed reply text from a request body, or null (after responding 400) when it's empty or too long.
+     *
+     * @param array<string, mixed> $data
+     */
+    private function replyText(array $data): ?string
+    {
+        $text = trim(is_string($data['text'] ?? null) ? $data['text'] : '');
+        if ($text === '' || mb_strlen($text) > ReviewReplies::MAX_LENGTH) {
+            ResponseHandler::respond(false, 'A reply needs 1 to ' . ReviewReplies::MAX_LENGTH . ' characters', 400);
+            return null;
+        }
+        return $text;
     }
 
     /**

@@ -49,6 +49,10 @@ class ApiRouter
 
             ['method' => 'POST', 'path' => '/api/v1/reviews', 'handler' => [new BookController(), 'saveReview']],
             ['method' => 'GET', 'path' => '/api/v1/reviews/([0-9a-f]{24})', 'handler' => [new BookController(), 'getReviews']],
+            ['method' => 'DELETE', 'path' => '/api/v1/reviews/([0-9a-f]{24})', 'handler' => [new BookController(), 'deleteReview']],
+            ['method' => 'POST', 'path' => '/api/v1/reviews/([0-9a-f]{24})/replies', 'handler' => [new BookController(), 'addReply']],
+            ['method' => 'PUT', 'path' => '/api/v1/replies/([0-9a-f]{24})', 'handler' => [new BookController(), 'updateReply']],
+            ['method' => 'DELETE', 'path' => '/api/v1/replies/([0-9a-f]{24})', 'handler' => [new BookController(), 'deleteReply']],
 
             // The signed-in user's private highlights and notes
             [

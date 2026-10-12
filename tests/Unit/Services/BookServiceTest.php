@@ -4,6 +4,7 @@ namespace Tests\Unit\Services;
 
 use App\Models\Books;
 use App\Models\Loans;
+use App\Models\ReviewReplies;
 use App\Services\NotificationService;
 use App\Services\BookService;
 use MongoDB\BSON\UTCDateTime;
@@ -403,5 +404,119 @@ class BookServiceTest extends ServiceTestCase
         $this->inject($service, 'loans', $loans);
 
         $this->assertSame('queue', $service->borrow('b1', ['loan_copies' => 3], 'u1'));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $reviews
+     */
+    private function bookWithReviews(array $reviews): Books
+    {
+        $books = $this->createMock(Books::class);
+        $books->method('getBookDetails')->willReturn(['reviews' => $reviews]);
+        return $books;
+    }
+
+    public function testRepliesAreThreadedUnderTheirReview(): void
+    {
+        $replies = $this->createMock(ReviewReplies::class);
+        $replies->method('forBook')->willReturn([
+            ['_id' => 'r1', 'review_user_id' => 'alice', 'user_id' => 'bob', 'username' => 'Bob', 'text' => 'Agreed'],
+            ['_id' => 'r2', 'review_user_id' => 'alice', 'user_id' => 'alice', 'username' => 'Alice', 'text' => 'Thanks'],
+        ]);
+        $service = $this->service($this->bookWithReviews([
+            ['user_id' => 'alice', 'rating' => 5, 'comment' => 'Great'],
+            ['user_id' => 'carol', 'rating' => 3, 'comment' => 'Fine'],
+        ]));
+        $this->inject($service, 'replies', $replies);
+
+        $reviews = $service->getReviewsWithReplies('b1');
+
+        $this->assertSame(['Agreed', 'Thanks'], array_column($reviews[0]['replies'], 'text'));
+        $this->assertSame([], $reviews[1]['replies']);
+    }
+
+    public function testCannotReplyToAReviewThatIsGone(): void
+    {
+        $replies = $this->createMock(ReviewReplies::class);
+        $replies->expects($this->never())->method('add');
+        $service = $this->service($this->bookWithReviews([['user_id' => 'alice', 'rating' => 5]]));
+        $this->inject($service, 'replies', $replies);
+
+        $this->assertNotNull($service->addReply('b1', 'deleted-author', null, 'bob', 'Bob', 'Hello?'));
+    }
+
+    public function testCannotAnswerAReplyFromAnotherThreadOrADeletedOne(): void
+    {
+        $replies = $this->createMock(ReviewReplies::class);
+        $replies->method('find')->willReturnMap([
+            ['other', ['book_id' => 'b1', 'review_user_id' => 'carol', 'deleted' => false]],
+            ['gone', ['book_id' => 'b1', 'review_user_id' => 'alice', 'deleted' => true]],
+            ['ok', ['book_id' => 'b1', 'review_user_id' => 'alice', 'deleted' => false]],
+        ]);
+        $replies->expects($this->once())->method('add')->with('b1', 'alice', 'ok');
+        $service = $this->service($this->bookWithReviews([['user_id' => 'alice'], ['user_id' => 'carol']]));
+        $this->inject($service, 'replies', $replies);
+
+        $this->assertNotNull($service->addReply('b1', 'alice', 'other', 'bob', 'Bob', 'x'));
+        $this->assertNotNull($service->addReply('b1', 'alice', 'gone', 'bob', 'Bob', 'x'));
+        $this->assertNull($service->addReply('b1', 'alice', 'ok', 'bob', 'Bob', 'x'));
+    }
+
+    public function testDeletingAnAnsweredReplyLeavesAPlaceholder(): void
+    {
+        $replies = $this->createMock(ReviewReplies::class);
+        $replies->method('findOwned')->willReturn(['_id' => 'r1', 'parent_id' => null]);
+        $replies->method('hasAnswers')->willReturn(true);
+        $replies->expects($this->once())->method('markDeleted')->with('r1');
+        $replies->expects($this->never())->method('remove');
+        $service = $this->service();
+        $this->inject($service, 'replies', $replies);
+
+        $this->assertTrue($service->deleteReply('r1', 'bob'));
+    }
+
+    public function testDeletingTheLastAnswerClearsPlaceholdersAboveIt(): void
+    {
+        // r3 answers placeholder r2, which answers live reply r1: deleting r3 takes r2 too, but not r1.
+        $replies = $this->createMock(ReviewReplies::class);
+        $replies->method('findOwned')->willReturn(['_id' => 'r3', 'parent_id' => 'r2']);
+        $replies->method('hasAnswers')->willReturn(false);
+        $replies->method('find')->willReturnMap([
+            ['r2', ['parent_id' => 'r1', 'deleted' => true]],
+            ['r1', ['parent_id' => null, 'deleted' => false]],
+        ]);
+        $removed = [];
+        $replies->method('remove')->willReturnCallback(function (string $id) use (&$removed) {
+            $removed[] = $id;
+        });
+        $service = $this->service();
+        $this->inject($service, 'replies', $replies);
+
+        $this->assertTrue($service->deleteReply('r3', 'bob'));
+        $this->assertSame(['r3', 'r2'], $removed);
+    }
+
+    public function testDeletingAReviewTakesItsThreadAndRecountsTheRating(): void
+    {
+        $books = $this->bookWithReviews([]);
+        $books->method('removeReview')->with('b1', 'alice')->willReturn(true);
+        $books->expects($this->once())->method('updateBookRating')->with('b1', 0.0, 0);
+        $replies = $this->createMock(ReviewReplies::class);
+        $replies->expects($this->once())->method('deleteForReview')->with('b1', 'alice');
+        $service = $this->service($books);
+        $this->inject($service, 'replies', $replies);
+
+        $this->assertTrue($service->deleteReview('b1', 'alice'));
+    }
+
+    public function testOnlyTheAuthorCanEditAReply(): void
+    {
+        $replies = $this->createMock(ReviewReplies::class);
+        $replies->method('findOwned')->willReturn(null);
+        $replies->expects($this->never())->method('updateOwned');
+        $service = $this->service();
+        $this->inject($service, 'replies', $replies);
+
+        $this->assertFalse($service->editReply('0123456789abcdef01234567', 'not-the-author', 'Edited'));
     }
 }
