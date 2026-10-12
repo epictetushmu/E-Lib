@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import * as usersApi from '@/api/users'
 import * as booksApi from '@/api/books'
+import * as friendsApi from '@/api/friends'
 import { isApiSuccess, apiErrorMessage, requestErrorMessage, type ApiError } from '@/types/api'
 import type { Book } from '@/types/book'
 import { idToString, type LoanRecord } from '@/types/book'
@@ -14,7 +15,7 @@ import BookCard from '@/components/BookCard.vue'
 const auth = useAuthStore()
 const toast = useToast()
 
-type Tab = 'saved' | 'loans' | 'notifications' | 'downloaded' | 'account'
+type Tab = 'saved' | 'loans' | 'friends' | 'notifications' | 'downloaded' | 'account'
 const activeTab = ref<Tab>('saved')
 
 const profileLoading = ref(true)
@@ -139,12 +140,57 @@ async function loadNotifications() {
   }
 }
 
+const friends = ref<friendsApi.Friend[] | null>(null)
+const incoming = computed(() => (friends.value ?? []).filter((f) => f.status === 'incoming'))
+const friendEmail = ref('')
+const friendSending = ref(false)
+
+async function loadFriends() {
+  try {
+    const { data: body } = await friendsApi.getFriends()
+    friends.value = isApiSuccess(body) ? body.data : []
+  } catch {
+    friends.value = []
+  }
+}
+
+async function sendFriendRequest() {
+  if (!friendEmail.value.trim()) return
+  friendSending.value = true
+  try {
+    const { data: body } = await friendsApi.sendRequest(friendEmail.value.trim())
+    if (isApiSuccess(body)) {
+      toast.success(body.data)
+      friendEmail.value = ''
+      await loadFriends()
+    } else {
+      toast.error(apiErrorMessage(body as ApiError, 'Could not send the request'))
+    }
+  } catch (err) {
+    toast.error(requestErrorMessage(err, 'Could not send the request'))
+  } finally {
+    friendSending.value = false
+  }
+}
+
+async function answerFriend(f: friendsApi.Friend, accept: boolean) {
+  try {
+    const { data: body } = accept ? await friendsApi.acceptRequest(f.user_id) : await friendsApi.removeFriend(f.user_id)
+    if (!isApiSuccess(body)) toast.error(apiErrorMessage(body as ApiError, 'Something went wrong'))
+  } catch (err) {
+    toast.error(requestErrorMessage(err, 'Something went wrong'))
+  }
+  await loadFriends()
+}
+
 function selectTab(tab: Tab) {
   activeTab.value = tab
   if (tab === 'downloaded') {
     loadDownloaded()
   } else if (tab === 'loans') {
     loadLoans()
+  } else if (tab === 'friends') {
+    loadFriends()
   } else if (tab === 'notifications') {
     loadNotifications().then(() => {
       if (unread.value) usersApi.markNotificationsRead().catch(() => {})
@@ -234,6 +280,7 @@ onMounted(() => {
   loadProfile()
   loadSaved()
   loadNotifications()
+  loadFriends()
 })
 </script>
 
@@ -264,6 +311,14 @@ onMounted(() => {
         @click="selectTab('loans')"
       >
         Loans
+      </button>
+      <button
+        type="button"
+        :class="{ active: activeTab === 'friends' }"
+        data-testid="profile-tab-friends"
+        @click="selectTab('friends')"
+      >
+        Friends<span v-if="incoming.length" class="unread-badge" :aria-label="`${incoming.length} requests`">{{ incoming.length }}</span>
       </button>
       <button
         type="button"
@@ -335,6 +390,44 @@ onMounted(() => {
               Renew
             </button>
             <LoanStatus :status="l.status" />
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section v-else-if="activeTab === 'friends'" class="tab-panel">
+      <form class="card account-card" data-testid="friend-request-form" @submit.prevent="sendFriendRequest">
+        <h3>Add a friend</h3>
+        <p class="text-muted small">Once they accept, you can see each other's saved books and reviews.</p>
+        <div class="form-field">
+          <label for="friend-email">Their email</label>
+          <input id="friend-email" v-model="friendEmail" type="email" required data-testid="friend-email-input" />
+        </div>
+        <button type="submit" class="btn btn-primary" :disabled="friendSending">
+          {{ friendSending ? 'Sending…' : 'Send request' }}
+        </button>
+      </form>
+
+      <div v-if="friends === null" class="spinner" role="status" aria-label="Loading friends"></div>
+      <p v-else-if="!friends.length" class="text-muted">No friends or requests yet.</p>
+      <ul v-else class="loan-list" data-testid="friends">
+        <li v-for="f in friends" :key="f.user_id" class="card loan-item" :class="{ unread: f.status === 'incoming' }">
+          <div class="loan-main">
+            <RouterLink v-if="f.status === 'friends'" :to="`/friends/${f.user_id}`" class="loan-title">{{ f.username }}</RouterLink>
+            <span v-else class="loan-title">{{ f.username }}</span>
+            <span class="loan-when">
+              <template v-if="f.status === 'friends'">Friends since {{ shortDate(f.since) }}</template>
+              <template v-else-if="f.status === 'incoming'">Wants to be your friend</template>
+              <template v-else>Request sent {{ shortDate(f.since) }}</template>
+            </span>
+          </div>
+          <div class="loan-side">
+            <button v-if="f.status === 'incoming'" type="button" class="btn btn-primary btn-sm" @click="answerFriend(f, true)">
+              Accept
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" @click="answerFriend(f, false)">
+              {{ f.status === 'friends' ? 'Remove' : f.status === 'incoming' ? 'Decline' : 'Cancel' }}
+            </button>
           </div>
         </li>
       </ul>
