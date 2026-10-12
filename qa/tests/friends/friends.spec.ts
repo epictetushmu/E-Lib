@@ -51,6 +51,15 @@ test.describe('Friends', () => {
     await expect(library.book('loans', lentBook.id)).toHaveCount(0);
     await expect(library.privateNote).toHaveText('Keeps their books they’re borrowing and downloads private.');
 
+    // The API sends only what a book card shows: never storage paths or every reader's embedded reviews.
+    const shared = (await (
+      await asker.api.get(`/api/v1/friends/${friendId}/library`, { headers: { Authorization: `Bearer ${asker.token}` } })
+    ).json()) as { data: { saved: Record<string, unknown>[] } };
+    expect(shared.data.saved).toHaveLength(1);
+    for (const field of ['file_path', 'pdf_path', 'reviews']) {
+      expect(shared.data.saved[0]).not.toHaveProperty(field);
+    }
+
     // The friend hides saved books and shares what they're borrowing.
     await expect(friendProfile.sharing('saved')).toBeChecked();
     await expect(friendProfile.sharing('loans')).not.toBeChecked();

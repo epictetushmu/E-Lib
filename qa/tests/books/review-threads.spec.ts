@@ -1,4 +1,5 @@
 import { expect, test } from '../../fixtures';
+import { loginAsAdmin, setBookVisibility } from '../../support/api';
 import { BookDetailPage } from '../../pages/BookDetailPage';
 
 // Every review has a nested reply thread. Reviews and replies can be edited and deleted only by whoever
@@ -67,5 +68,41 @@ test.describe('Review threads', () => {
     author.acceptNextConfirm();
     await review.getByTestId('delete-review-button').click();
     await expect(review).toHaveCount(0);
+  });
+
+  test("a draft's reviews stay hidden, and a reply's parent must be a reply id", async ({
+    reader,
+    readerBook,
+    request,
+    adminCredentials,
+  }) => {
+    const auth = { Authorization: `Bearer ${reader.token}` };
+    const me = ((await (await reader.api.get('/api/v1/user/profile', { headers: auth })).json()) as { data: { _id: string } }).data._id;
+    expect(
+      (await reader.api.post('/api/v1/reviews', { headers: auth, data: { book_id: readerBook.id, rating: 4, comment: 'Solid.' } })).ok(),
+    ).toBeTruthy();
+
+    // A malformed parent_id is refused rather than posted at the top of the thread.
+    for (const parent_id of [123, { $ne: null }, 'not-an-id']) {
+      const bad = await reader.api.post(`/api/v1/reviews/${readerBook.id}/replies`, {
+        headers: auth,
+        data: { review_user_id: me, parent_id, text: 'Misplaced?' },
+      });
+      expect(bad.status(), `parent_id ${JSON.stringify(parent_id)}`).toBe(400);
+    }
+    const reviews = async (as = request) => as.get(`/api/v1/reviews/${readerBook.id}`);
+    const thread = ((await (await reviews()).json()) as { data: { replies: unknown[] }[] }).data[0].replies;
+    expect(thread).toEqual([]);
+
+    // Once the book is a draft, its reviews and threads are gone for readers (as posting to it already was)…
+    const admin = await loginAsAdmin(request, adminCredentials.email, adminCredentials.password);
+    await setBookVisibility(request, admin, readerBook.id, { status: 'draft' });
+    try {
+      expect((await reviews(reader.api)).status()).toBe(404);
+      // …but not for admins.
+      expect((await request.get(`/api/v1/reviews/${readerBook.id}`, { headers: { Authorization: `Bearer ${admin}` } })).status()).toBe(200);
+    } finally {
+      await setBookVisibility(request, admin, readerBook.id, { status: 'public' });
+    }
   });
 });
