@@ -9,7 +9,7 @@
         "mongodb/mongodb": "^2.0",
         "guzzlehttp/guzzle": "^7.9",
         "firebase/php-jwt": "^6.11",
-        "phpmailer/phpmailer": "^6.10"
+        "phpmailer/phpmailer": "^7.1"
     },
     "autoload": {
         "psr-4": {
