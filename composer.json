@@ -7,7 +7,7 @@
         "php": ">=8.0",
         "ext-openssl": "*",
         "mongodb/mongodb": "^2.0",
-        "guzzlehttp/guzzle": "^7.9",
+        "guzzlehttp/guzzle": "^8.3",
         "firebase/php-jwt": "^6.11",
         "phpmailer/phpmailer": "^6.10"
     },
